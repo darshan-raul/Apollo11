@@ -1,11 +1,36 @@
 
-First do it
-Then do it right
-Then do it better
 
-`Apollo 11`
+# Apollo 11
 
 11 stage plan to know end-to-end of k8s/cloudnative ecosystem
+
+`First do it -> Then do it right -> Then do it better`
+
+**Stages**:
+
+- Stage 1: Basics + Local setup 
+
+- Stage 2: Rest api + backend in local k8s cluster 
+
+- Stage 3: Routing using ingress controller 
+
+- Stage 4: Move on from Minikube/Docker
+
+- Stage 5: Helm packaging
+
+- Stage 6: Service Mesh
+
+- Stage 7: Monitoring + Observability + Tracing
+
+- Stage 8: Deployment/Gitops + Autoscaling
+
+- Stage 9: Event driven architecture
+
+- Stage 10: Testing + Chaos Engineering + Backup and Restore
+
+- Stage 11: Security and Compliance
+
+  
 
 We will be creating a simple rest api in Golang and then extending it with a frontend and backend.
 Along the way we will explore all the services and features in the k8s ecosystem to get a handson on how to create a Complete app architecture
@@ -21,31 +46,33 @@ Pre-requisites
 Some basics have to be in place:
 
 - Linux : 
-	https://linuxjourney.com/
-	https://developer.ibm.com/tutorials/linux-basics-and-commands/
+	- https://linuxjourney.com/
+	- https://developer.ibm.com/tutorials/linux-basics-and-commands/
 
-- Vim: (Coz there will not always be ide) https://www.youtube.com/watch?v=ggSyF1SVFr4
+- Vim: (Coz there will not always be ide) 
+	- https://www.youtube.com/watch?v=ggSyF1SVFr4
+
 - Yaml: ( k8s is all yaml) 
-	https://www.youtube.com/watch?v=1uFVr15xDGg
-	https://developer.ibm.com/tutorials/yaml-basics-and-usage-in-kubernetes/
+	- https://www.youtube.com/watch?v=1uFVr15xDGg
+	- https://developer.ibm.com/tutorials/yaml-basics-and-usage-in-kubernetes/
 
 
-Optional:
-- 
+- Optional:
+	- 
 
 --------------------------------
 Stage 1: Basics + Local setup [ 2 weeks ]
 --------------------------------
 
-1. Go Lang basics
+1. **Go Lang basics**
 
 	https://www.youtube.com/watch?v=jpKysZwllVw&t=488s
 
 	> Note: Go lang for rest api is optional. Python can work too.
 
-2. Docker Basics:
+2. **Docker/Container Basics:**
 	
-	Because
+	Because even though docker is no more the only container runtime in town. Its still the best place to get to know about containers and explore them
 
 
 	https://developer.ibm.com/blogs/what-are-containers-and-why-do-you-need-them/
@@ -56,8 +83,9 @@ Stage 1: Basics + Local setup [ 2 weeks ]
 Optional:
 	- https://developer.ibm.com/articles/true-benefits-of-moving-to-containers-1/
 	- https://developer.ibm.com/articles/true-benefits-of-moving-to-containers-2/
+	- https://developer.ibm.com/videos/dev-diaries-app-modernization-containers/
 
-3. Kubernetes basics
+3. **Kubernetes basics**
 	
 	Watch this video completely. Take notes.
 
@@ -74,16 +102,19 @@ Optional:
 	
 
 	Optional:
+	
 	- https://developer.ibm.com/videos/learn-the-history-and-fundamentals-of-kubernetes/
+	- https://medium.com/containermind/a-beginners-guide-to-kubernetes-7e8ca56420b6 [2018 article but covers lot of topics]
+	- https://developer.ibm.com/articles/kubernetes-networking-what-you-need-to-know/
+	- Complete all scenarios here: https://www.katacoda.com/loodse/courses/kubernetes
 
-
-4. Install minikube & understand the basics:
+4. **Install minikube & understand the basics**:
 	https://kubernetes.io/docs/tutorials/hello-minikube/
 
-	> Note: Minikube is the simplest way to start a local k8s cluster. There are many other ways like kind,k3s,microk8s amongst others.https://developer.ibm.com/blogs/options-to-run-kubernetes-locally/
+	> Note: Minikube is the simplest way to start a local k8s cluster. There are many other ways like kind(Kubernetes in Docker) ,k3s,microk8s amongst others.https://developer.ibm.com/blogs/options-to-run-kubernetes-locally/
 
 
-5. Install and Get overview of kubectl
+5. **Install and Get overview of kubectl**
 
 
 	https://kubernetes.io/docs/reference/kubectl/overview/
@@ -193,10 +224,13 @@ Extra:
 Stage 5: Helm packaging
 --------------------------------
 
+https://developer.ibm.com/tutorials/helm-101-labs/
 
 - helm packages building
+- Helmfile
 
-katakoda
+- Optional: 
+	- Complete scenarios here: https://www.katacoda.com/javajon/courses/kubernetes-tools
 
 --------------------------------
 Stage 6: Service Mesh
@@ -205,12 +239,22 @@ Stage 6: Service Mesh
 
 A service mesh, like the open source project Istio, is a way to control how different parts of an application share data with one another. Unlike other systems for managing this communication, a service mesh is a dedicated infrastructure layer built right into an app. This visible infrastructure layer can document how well (or not) different parts of an app interact, so it becomes easier to optimize communication and avoid downtime as an app grows.
 
+
+Istio Service Mesh Explained https://www.youtube.com/watch?v=6zDrLvpfCK4
+
+
+
 --------------------------------
 Stage 7: Monitoring + Observability + Tracing
 --------------------------------
 
-- K8s monitoring
+
+- K8s logging
+	- https://developer.ibm.com/tutorials/debug-and-log-your-kubernetes-app/
 	- EFK Logging
+
+- K8s monitoring
+	
 	- lens
 	- prometheus
 	- Tracing using opentelementry
@@ -230,26 +274,32 @@ Stage 8: Deployment/Gitops + Autoscaling
 - gitops with flux v2
 
 --------------------------------
-Stage 8: Event driven architecture
+Stage 9: Event driven architecture
 --------------------------------
 
 - Introduce a event bus or stream eg. Apache FLink and operate using same
 
 
 --------------------------------
-Stage 9: Testing + Chaos Engineering + Backup and Restore
+Stage 10: Testing + Chaos Engineering + Backup and Restore
 -------------------------------- 
 
 - DevSecOps
 - inject failure into your Kubernetes clusters
 
 --------------------------------
-Stage 10: Security and Compliance
+Stage 11: Security and Compliance + threat detection 
 --------------------------------
 
 https://kubernetes.io/docs/concepts/security/
 
 - Secure the cluster based on the 4C’s of cloud native security
+https://developer.ibm.com/articles/journey-to-kubernetes-security/
+https://developer.ibm.com/blogs/basics-of-kubernetes-security/
+
+https://developer.ibm.com/tutorials/installing-and-using-sysdig-falco/
+
+- Falco
 - kubehunter
 - Gatekeeper
 
@@ -257,9 +307,27 @@ https://kubernetes.io/docs/concepts/security/
 
 https://www.stackrox.com/post/2020/05/kubernetes-security-101/
 
+
+
+Apollo program continues: Go deeper in this space!
 --------------------------------
-Stage 11: Go deeper
---------------------------------
+
+Explore Kubernetes Serverless:
+	
+	- K-native
+		https://cloud.google.com/knative/
+
+	- OpenFaas
+		https://www.openfaas.com/
+
+	- Kubeless
+
+	Optional:
+		https://www.katacoda.com/javajon/courses/kubernetes-serverless
+
+
+Openshift:
+https://developer.ibm.com/videos/openshift-vs-kubernetes-for-developers/
 
 - Admission controllers/webhooks https://www.youtube.com/watch?v=1mNYSn2KMZk
 - Kubernetes Operator
@@ -273,14 +341,34 @@ https://github.com/walidshaari/Kubernetes-Certified-Administrator
 https://github.com/walidshaari/Certified-Kubernetes-Security-Specialist
 https://github.com/ibrahimjelliti/CKSS-Certified-Kubernetes-Security-Specialist
 
-Cheatsheets
-https://kubernetes.io/docs/reference/kubectl/cheatsheet/
+
+
+## Cheatsheets
+
+- kubectl: https://kubernetes.io/docs/reference/kubectl/cheatsheet/
 
 
 --------------------------------
+
+
+## Labs:
+
+- https://developer.ibm.com/tutorials/kubernetes-101-labs/
+- https://labs.play-with-k8s.com/#
+- Complete all k8s scenarios in https://www.katacoda.com/
+
+
+
 References:
 --------------------------------
 
 	- https://github.com/tomhuang12/awesome-k8s-resources
 	https://labs.play-with-k8s.com/#
 	https://developer.ibm.com/components/kubernetes/series/kubernetes-learning-path/
+
+--------------------------------
+Reading lists:
+--------------------------------
+
+- Docker:
+	- https://developer.ibm.com/articles/containerization-of-legacy-applications/
