@@ -66,39 +66,55 @@ Stage 1: Basics + Local setup [ 2 weeks ]
 
 1. **Go Lang basics**
 
-	https://www.youtube.com/watch?v=jpKysZwllVw&t=488s
+	- https://www.youtube.com/watch?v=jpKysZwllVw&t=488s [Introduction to Go Programming for beginners]
+
 
 	> Note: Go lang for rest api is optional. Python can work too.
+
+	Optional:
+
+	- https://www.youtube.com/watch?v=YS4e4q9oBaU [Learn Go Programming - Golang Tutorial for Beginners]
+
 
 2. **Docker/Container Basics:**
 	
 	Because even though docker is no more the only container runtime in town. Its still the best place to get to know about containers and explore them
 
+	- https://www.youtube.com/watch?v=gAkwW2tuIqE [Learn Docker in 7 Easy Steps - Full Beginner's Tutorial]
+	- https://www.youtube.com/watch?v=eGz9DS-aIeY [you need to learn Docker RIGHT NOW!! // Docker Containers 101]
+	- https://www.youtube.com/watch?v=3c-iBn73dDE [Docker Tutorial for Beginners [FULL COURSE in 3 Hours]
+	- https://developer.ibm.com/blogs/what-are-containers-and-why-do-you-need-them/
+	- https://developer.ibm.com/tutorials/building-docker-images-locally-and-in-cloud/
+	
 
-	https://developer.ibm.com/blogs/what-are-containers-and-why-do-you-need-them/
-	https://developer.ibm.com/tutorials/building-docker-images-locally-and-in-cloud/
-	http://docker-saigon.github.io/post/Docker-Internals/
-
-
-Optional:
+	Optional:
+	
+	- http://docker-saigon.github.io/post/Docker-Internals/
 	- https://developer.ibm.com/articles/true-benefits-of-moving-to-containers-1/
 	- https://developer.ibm.com/articles/true-benefits-of-moving-to-containers-2/
 	- https://developer.ibm.com/videos/dev-diaries-app-modernization-containers/
 
+
 3. **Kubernetes basics**
 	
-	Watch this video completely. Take notes.
+	- Take an overview of K8s:
 
-	https://www.youtube.com/watch?v=X48VuDVv0do&t=6088s
+		https://www.youtube.com/watch?v=7bA0gTroJjw [you need to learn Kubernetes RIGHT NOW!!]
+	
+	- Watch this video completely. Take notes:
 
-	Get your hands dirty. This tutorial will give a good bootstrap on k8s operations
+		https://www.youtube.com/watch?v=X48VuDVv0do&t=6088s
 
-	https://kubernetes.io/docs/tutorials/kubernetes-basics/
+	- Get your hands dirty. This tutorial will give a good bootstrap on k8s operations
 
-	Brisk through https://kubernetes.io/docs/concepts.
-	(Coz reading the documentation for 15 mins is better than spending 2 hours on stackoverflow) :D
-	> The previous two tasks will make it pretty easy for you to understand the core concepts from the documentation. This will be just to consolidate those core concepts and collect more dots of k8s knowledge. In the later stages you will be able to connect those extra dots as well.
-	[ ETA 2-3 days ]
+		https://kubernetes.io/docs/tutorials/kubernetes-basics/
+
+		Brisk through https://kubernetes.io/docs/concepts.
+		(Coz reading the documentation for 15 mins is better than spending 2 hours on stackoverflow) :D
+		
+		The previous two tasks will make it pretty easy for you to understand the core concepts from the documentation. This will be just to consolidate those core concepts and collect more dots of k8s knowledge. In the later stages you will be able to connect those extra dots as well.
+		
+		[ ETA 2-3 days ]
 	
 
 	Optional:
@@ -107,6 +123,8 @@ Optional:
 	- https://medium.com/containermind/a-beginners-guide-to-kubernetes-7e8ca56420b6 [2018 article but covers lot of topics]
 	- https://developer.ibm.com/articles/kubernetes-networking-what-you-need-to-know/
 	- Complete all scenarios here: https://www.katacoda.com/loodse/courses/kubernetes
+	- https://www.youtube.com/watch?v=XJufs3ZZBVY [How to Setup a 3 Node Kubernetes Cluster for CKA Step by Step]
+
 
 4. **Install minikube & understand the basics**:
 	https://kubernetes.io/docs/tutorials/hello-minikube/
@@ -121,25 +139,31 @@ Optional:
 
 
 
--- Actual project
+**Optional**:
 
-Create namespace "application"
-Create everything using configuration yaml
-
-
-Extra reads:
 - Check all the terms and glossary https://kubernetes.io/docs/reference/glossary/?all=true
 
 
-Goal> good enough knowledge of k8s and golang to get started
+> Goal: Good enough knowledge of k8s and golang to get started
 
 --------------------------------
 Stage 2: Rest api + backend in local k8s cluster [ 2 weeks ]
 --------------------------------
 
-Create a simple go rest API
-Build docker image with it
-Figure how to link local image repo in minikube 
+
+1. Create namespace "application"
+	
+	`kubectl create namespace mynamespace`
+
+
+2. Create a simple go rest API [or in python]
+
+3. Build docker image with it
+
+	> Figure how to link local image repo in minikube.https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube
+
+
+> Create everything below using configuration yaml
 
 Create a deployment and expose as external service
 Should be able to access it from browser as <externalip>.port
@@ -154,6 +178,7 @@ Then referenced from mongoexpress deployment
 Learn peristent volumes and stateful sets and change mongodb to that instead of deployment
 
 Create a config map of non sensitive values if needed
+https://www.youtube.com/watch?v=o-gXx7r7Rz4 [Configuration management in Kubernetes for beginners]
 Mongo express deployment
 Expose mongodbexpress as external service
 
@@ -203,8 +228,14 @@ One will be master
 One will be worker
 
 
-Learn kubernetes the hard way
+Learn kubernetes the hard way [ Create your own k8s cluster ]
+
+- https://www.youtube.com/watch?v=E3h8_MJmkVU [Kubernetes Cluster Setup with Kubeadm in RHEL7 |CENTOS7 for beginner --2021]
+- https://www.youtube.com/watch?v=XJufs3ZZBVY [ How to Setup a 3 Node Kubernetes Cluster for CKA Step by Step ]
+
+
 Create control node components on master node
+
 Install any other container runtime other than docker
 Run the same workload that was run on minikube
 
@@ -327,7 +358,9 @@ Explore Kubernetes Serverless:
 
 
 Openshift:
-https://developer.ibm.com/videos/openshift-vs-kubernetes-for-developers/
+- https://developer.ibm.com/videos/openshift-vs-kubernetes-for-developers/
+
+
 
 - Admission controllers/webhooks https://www.youtube.com/watch?v=1mNYSn2KMZk
 - Kubernetes Operator
@@ -336,10 +369,12 @@ https://developer.ibm.com/videos/openshift-vs-kubernetes-for-developers/
 -- Try new tools and features:
 	https://github.com/grafana/tanka
 
-https://ymmt2005.hatenablog.com/entry/k8s-things [47 Things To Become a Kubernetes Expert]
-https://github.com/walidshaari/Kubernetes-Certified-Administrator
-https://github.com/walidshaari/Certified-Kubernetes-Security-Specialist
-https://github.com/ibrahimjelliti/CKSS-Certified-Kubernetes-Security-Specialist
+
+- https://ymmt2005.hatenablog.com/entry/k8s-things [47 Things To Become a Kubernetes Expert]
+- https://github.com/dgkanatsios/CKAD-exercises
+- https://github.com/walidshaari/Kubernetes-Certified-Administrator
+- https://github.com/walidshaari/Certified-Kubernetes-Security-Specialist
+- https://github.com/ibrahimjelliti/CKSS-Certified-Kubernetes-Security-Specialist
 
 
 
