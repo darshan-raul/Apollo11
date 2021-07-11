@@ -1,32 +1,104 @@
-# Apollo-11
 
-11 stage plan to know end-to-end of k8s/cloudnative ecosystem
-
-```
 First do it
 Then do it right
 Then do it better
-```
+
+`Apollo 11`
+
+11 stage plan to know end-to-end of k8s/cloudnative ecosystem
+
+We will be creating a simple rest api in Golang and then extending it with a frontend and backend.
+Along the way we will explore all the services and features in the k8s ecosystem to get a handson on how to create a Complete app architecture
+
+
 
 --------------------------------
-Stage 1: Basics + Local setup [ 1 week ]
+Pre-requisites
 --------------------------------
 
-Go Lang basics
-https://www.youtube.com/watch?v=jpKysZwllVw&t=488s
+[You need to be NASA before you can be in the apollo program ;) ]
 
-Kubernetes basics
-https://www.youtube.com/watch?v=X48VuDVv0do&t=6088s
-https://kubernetes.io/docs/tutorials/kubernetes-basics/
+Some basics have to be in place:
 
-Install minikube & understand the basics:
-https://kubernetes.io/docs/tutorials/hello-minikube/
+- Linux : 
+	https://linuxjourney.com/
+	https://developer.ibm.com/tutorials/linux-basics-and-commands/
 
-Install and Get overview of kubectl
-https://kubernetes.io/docs/reference/kubectl/overview/
+- Vim: (Coz there will not always be ide) https://www.youtube.com/watch?v=ggSyF1SVFr4
+- Yaml: ( k8s is all yaml) 
+	https://www.youtube.com/watch?v=1uFVr15xDGg
+	https://developer.ibm.com/tutorials/yaml-basics-and-usage-in-kubernetes/
+
+
+Optional:
+- 
+
+--------------------------------
+Stage 1: Basics + Local setup [ 2 weeks ]
+--------------------------------
+
+1. Go Lang basics
+
+	https://www.youtube.com/watch?v=jpKysZwllVw&t=488s
+
+	> Note: Go lang for rest api is optional. Python can work too.
+
+2. Docker Basics:
+	
+	Because
+
+
+	https://developer.ibm.com/blogs/what-are-containers-and-why-do-you-need-them/
+	https://developer.ibm.com/tutorials/building-docker-images-locally-and-in-cloud/
+	http://docker-saigon.github.io/post/Docker-Internals/
+
+
+Optional:
+	- https://developer.ibm.com/articles/true-benefits-of-moving-to-containers-1/
+	- https://developer.ibm.com/articles/true-benefits-of-moving-to-containers-2/
+
+3. Kubernetes basics
+	
+	Watch this video completely. Take notes.
+
+	https://www.youtube.com/watch?v=X48VuDVv0do&t=6088s
+
+	Get your hands dirty. This tutorial will give a good bootstrap on k8s operations
+
+	https://kubernetes.io/docs/tutorials/kubernetes-basics/
+
+	Brisk through https://kubernetes.io/docs/concepts.
+	(Coz reading the documentation for 15 mins is better than spending 2 hours on stackoverflow) :D
+	> The previous two tasks will make it pretty easy for you to understand the core concepts from the documentation. This will be just to consolidate those core concepts and collect more dots of k8s knowledge. In the later stages you will be able to connect those extra dots as well.
+	[ ETA 2-3 days ]
+	
+
+	Optional:
+	- https://developer.ibm.com/videos/learn-the-history-and-fundamentals-of-kubernetes/
+
+
+4. Install minikube & understand the basics:
+	https://kubernetes.io/docs/tutorials/hello-minikube/
+
+	> Note: Minikube is the simplest way to start a local k8s cluster. There are many other ways like kind,k3s,microk8s amongst others.https://developer.ibm.com/blogs/options-to-run-kubernetes-locally/
+
+
+5. Install and Get overview of kubectl
+
+
+	https://kubernetes.io/docs/reference/kubectl/overview/
+
+
+
+-- Actual project
 
 Create namespace "application"
 Create everything using configuration yaml
+
+
+Extra reads:
+- Check all the terms and glossary https://kubernetes.io/docs/reference/glossary/?all=true
+
 
 Goal> good enough knowledge of k8s and golang to get started
 
@@ -124,6 +196,7 @@ Stage 5: Helm packaging
 
 - helm packages building
 
+katakoda
 
 --------------------------------
 Stage 6: Service Mesh
@@ -133,7 +206,7 @@ Stage 6: Service Mesh
 A service mesh, like the open source project Istio, is a way to control how different parts of an application share data with one another. Unlike other systems for managing this communication, a service mesh is a dedicated infrastructure layer built right into an app. This visible infrastructure layer can document how well (or not) different parts of an app interact, so it becomes easier to optimize communication and avoid downtime as an app grows.
 
 --------------------------------
-Stage 7: Monitoring + Tracing
+Stage 7: Monitoring + Observability + Tracing
 --------------------------------
 
 - K8s monitoring
@@ -144,7 +217,7 @@ Stage 7: Monitoring + Tracing
 
 
 --------------------------------
-Stage 8: Deployment/Gitops
+Stage 8: Deployment/Gitops + Autoscaling
 --------------------------------
 
 - K8s Deployment strategy
@@ -210,3 +283,4 @@ References:
 
 	- https://github.com/tomhuang12/awesome-k8s-resources
 	https://labs.play-with-k8s.com/#
+	https://developer.ibm.com/components/kubernetes/series/kubernetes-learning-path/
