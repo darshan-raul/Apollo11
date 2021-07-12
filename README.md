@@ -57,12 +57,15 @@ Some basics have to be in place:
 	- https://developer.ibm.com/tutorials/yaml-basics-and-usage-in-kubernetes/
 
 
-- Optional:
-	- 
+
+https://github.com/arialdomartini/Back-End-Developer-Interview-Questions
+
 
 --------------------------------
 Stage 1: Basics + Local setup [ 2 weeks ]
 --------------------------------
+
+> Goal: Good enough knowledge of k8s and golang to get started
 
 1. **Go Lang basics**
 
@@ -74,7 +77,7 @@ Stage 1: Basics + Local setup [ 2 weeks ]
 	Optional:
 
 	- https://www.youtube.com/watch?v=YS4e4q9oBaU [Learn Go Programming - Golang Tutorial for Beginners]
-
+	- https://medium.com/geekculture/top-golang-use-cases-266b4ee5a37d
 
 2. **Docker/Container Basics:**
 	
@@ -85,20 +88,25 @@ Stage 1: Basics + Local setup [ 2 weeks ]
 	- https://www.youtube.com/watch?v=3c-iBn73dDE [Docker Tutorial for Beginners [FULL COURSE in 3 Hours]
 	- https://developer.ibm.com/blogs/what-are-containers-and-why-do-you-need-them/
 	- https://developer.ibm.com/tutorials/building-docker-images-locally-and-in-cloud/
-	
-
+	- Run your app in production from https://docs.docker.com/get-started/overview/
+	- https://dev.to/aurelievache/series/8105
 	Optional:
-	
+
 	- http://docker-saigon.github.io/post/Docker-Internals/
 	- https://developer.ibm.com/articles/true-benefits-of-moving-to-containers-1/
 	- https://developer.ibm.com/articles/true-benefits-of-moving-to-containers-2/
 	- https://developer.ibm.com/videos/dev-diaries-app-modernization-containers/
+	- https://gist.github.com/StevenACoffman/41fee08e8782b411a4a26b9700ad7af5 [best practices]
+
+
+https://www.youtube.com/watch?v=RfL_CjXfQds [Dockerless: Build and Run Containers with Podman and Systemd]
 
 
 3. **Kubernetes basics**
 	
 	- Take an overview of K8s:
 
+		https://www.youtube.com/watch?v=PziYflu8cB8 [Kubernetes Explained in 100 Seconds]
 		https://www.youtube.com/watch?v=7bA0gTroJjw [you need to learn Kubernetes RIGHT NOW!!]
 	
 	- Watch this video completely. Take notes:
@@ -118,7 +126,7 @@ Stage 1: Basics + Local setup [ 2 weeks ]
 	
 
 	Optional:
-	
+	- https://betterprogramming.pub/k8s-a-closer-look-at-kube-proxy-372c4e8b090	
 	- https://developer.ibm.com/videos/learn-the-history-and-fundamentals-of-kubernetes/
 	- https://medium.com/containermind/a-beginners-guide-to-kubernetes-7e8ca56420b6 [2018 article but covers lot of topics]
 	- https://developer.ibm.com/articles/kubernetes-networking-what-you-need-to-know/
@@ -137,6 +145,12 @@ Stage 1: Basics + Local setup [ 2 weeks ]
 
 	https://kubernetes.io/docs/reference/kubectl/overview/
 
+6. **K8s yaml syntax:**
+
+https://www.mirantis.com/blog/introduction-to-yaml-creating-a-kubernetes-deployment/
+
+https://www.youtube.com/watch?v=1rwCkFTjikw [YAML Tips for Kubernetes]
+https://www.youtube.com/watch?v=5gsHYdiD6v8 [Simplify Kubernetes YAML with Kustomize]
 
 
 **Optional**:
@@ -144,11 +158,11 @@ Stage 1: Basics + Local setup [ 2 weeks ]
 - Check all the terms and glossary https://kubernetes.io/docs/reference/glossary/?all=true
 
 
-> Goal: Good enough knowledge of k8s and golang to get started
-
 --------------------------------
 Stage 2: Rest api + backend in local k8s cluster [ 2 weeks ]
 --------------------------------
+
+> Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
 
 1. Create namespace "application"
@@ -157,6 +171,10 @@ Stage 2: Rest api + backend in local k8s cluster [ 2 weeks ]
 
 
 2. Create a simple go rest API [or in python]
+
+	https://www.youtube.com/watch?v=MKkokYpGyTU [ Introduction to HTTP with Go : Our first microservice]
+
+https://www.youtube.com/playlist?list=PLmD8u-IFdreyh6EUfevBcbiuCKzFk0EW_
 
 3. Build docker image with it
 
@@ -196,11 +214,12 @@ Create it as deployment and load env variables from a config map
 Expose it as external service
 
 
-Goal> Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
-
 --------------------------------
 Stage 3: Routing using ingress controller [ 1 week ]
 --------------------------------
+
+
+> Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
 Create ingress rules for sample url ---> gobuydoge.com
 /Frontend will take to frontend external service
@@ -223,6 +242,9 @@ Extra:
 Stage 4: Move on from Minikube/Docker
 --------------------------------
 
+
+> Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API.
+
 Move to creating two virtual machines(vagrant)
 One will be master
 One will be worker
@@ -237,6 +259,8 @@ Learn kubernetes the hard way [ Create your own k8s cluster ]
 Create control node components on master node
 
 Install any other container runtime other than docker
+- https://www.youtube.com/watch?v=bV5RcNiHlfw [Kubernetes cluster with CRI-O container runtime | Step by step tutorial]
+
 Run the same workload that was run on minikube
 
 Run the above setup in either of a cloud k8s platform (manually for now):
@@ -255,6 +279,9 @@ Extra:
 Stage 5: Helm packaging
 --------------------------------
 
+
+> Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
+
 https://developer.ibm.com/tutorials/helm-101-labs/
 
 - helm packages building
@@ -266,6 +293,10 @@ https://developer.ibm.com/tutorials/helm-101-labs/
 --------------------------------
 Stage 6: Service Mesh
 --------------------------------
+
+
+> Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
+
 - Service mesh ISTIO
 
 A service mesh, like the open source project Istio, is a way to control how different parts of an application share data with one another. Unlike other systems for managing this communication, a service mesh is a dedicated infrastructure layer built right into an app. This visible infrastructure layer can document how well (or not) different parts of an app interact, so it becomes easier to optimize communication and avoid downtime as an app grows.
@@ -273,12 +304,14 @@ A service mesh, like the open source project Istio, is a way to control how diff
 
 Istio Service Mesh Explained https://www.youtube.com/watch?v=6zDrLvpfCK4
 
-
+https://piotrminkowski.com/2021/07/12/multicluster-traffic-mirroring-with-istio-and-kind/
 
 --------------------------------
 Stage 7: Monitoring + Observability + Tracing
 --------------------------------
 
+
+> Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
 - K8s logging
 	- https://developer.ibm.com/tutorials/debug-and-log-your-kubernetes-app/
@@ -295,6 +328,9 @@ Stage 7: Monitoring + Observability + Tracing
 Stage 8: Deployment/Gitops + Autoscaling
 --------------------------------
 
+
+> Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
+
 - K8s Deployment strategy
 	- CICD using github actions
 	- DevSecops
@@ -308,6 +344,8 @@ Stage 8: Deployment/Gitops + Autoscaling
 Stage 9: Event driven architecture
 --------------------------------
 
+> Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
+
 - Introduce a event bus or stream eg. Apache FLink and operate using same
 
 
@@ -315,12 +353,19 @@ Stage 9: Event driven architecture
 Stage 10: Testing + Chaos Engineering + Backup and Restore
 -------------------------------- 
 
+
+> Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
+
+
 - DevSecOps
 - inject failure into your Kubernetes clusters
 
 --------------------------------
 Stage 11: Security and Compliance + threat detection 
 --------------------------------
+
+
+> Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
 https://kubernetes.io/docs/concepts/security/
 
@@ -342,6 +387,9 @@ https://www.stackrox.com/post/2020/05/kubernetes-security-101/
 
 Apollo program continues: Go deeper in this space!
 --------------------------------
+
+
+> Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
 Explore Kubernetes Serverless:
 	
@@ -405,5 +453,23 @@ References:
 Reading lists:
 --------------------------------
 
+- Kubernetes
+	- https://kubernetes.io/case-studies/
+
 - Docker:
 	- https://developer.ibm.com/articles/containerization-of-legacy-applications/
+
+
+--------------------------------
+Youtube Channels :
+--------------------------------
+
+- [ That DevOps Guy] https://www.youtube.com/channel/UCFe9-V_rN9nLqVNiI8Yof3w	
+- 
+
+
+--------------------------------
+Blogs :
+--------------------------------
+
+https://kubernetes.io/blog/
