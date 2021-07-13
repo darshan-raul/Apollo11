@@ -73,10 +73,13 @@ Stage 1: Basics + Local setup [ 2 weeks ]
 
 
 	> Note: Go lang for rest api is optional. Python can work too.
-
+	https://tutorialedge.net/golang/basic-rest-api-go-fiber/
 	Optional:
-
+https://www.youtube.com/watch?v=79NeEFURq_U
 	- https://www.youtube.com/watch?v=YS4e4q9oBaU [Learn Go Programming - Golang Tutorial for Beginners]
+	- https://www.youtube.com/watch?v=1NF2LtWbA1g&t=1024s [Go / Golang Full Course for Beginners | 2021] --> 1.75x speed 2 hours
+	- https://www.youtube.com/playlist?list=PLzMcBGfZo4-mtY_SE3HuzQJzuj4VlUG0q [Golang Tutorials - Tech by Tim] --> 1.75x speed 3 hours
+
 	- https://medium.com/geekculture/top-golang-use-cases-266b4ee5a37d
 
 2. **Docker/Container Basics:**
@@ -108,7 +111,7 @@ https://www.youtube.com/watch?v=RfL_CjXfQds [Dockerless: Build and Run Container
 
 		https://www.youtube.com/watch?v=PziYflu8cB8 [Kubernetes Explained in 100 Seconds]
 		https://www.youtube.com/watch?v=7bA0gTroJjw [you need to learn Kubernetes RIGHT NOW!!]
-	
+	https://www.youtube.com/watch?v=8C_SCDbUJTg
 	- Watch this video completely. Take notes:
 
 		https://www.youtube.com/watch?v=X48VuDVv0do&t=6088s
@@ -123,8 +126,12 @@ https://www.youtube.com/watch?v=RfL_CjXfQds [Dockerless: Build and Run Container
 		The previous two tasks will make it pretty easy for you to understand the core concepts from the documentation. This will be just to consolidate those core concepts and collect more dots of k8s knowledge. In the later stages you will be able to connect those extra dots as well.
 		
 		[ ETA 2-3 days ]
-	
 
+	// Networking
+	https://rtfm.co.ua/en/kubernetes-clusterip-vs-nodeport-vs-loadbalancer-services-and-ingress-an-overview-with-examples/
+
+	Kubernetes Essential Tools: 2021 https://itnext.io/kubernetes-essential-tools-2021-def12e84c572
+	https://itnext.io/kubernetes-explained-deep-enough-1ea2c6821501
 	Optional:
 	- https://betterprogramming.pub/k8s-a-closer-look-at-kube-proxy-372c4e8b090	
 	- https://developer.ibm.com/videos/learn-the-history-and-fundamentals-of-kubernetes/
@@ -182,7 +189,7 @@ https://www.youtube.com/playlist?list=PLmD8u-IFdreyh6EUfevBcbiuCKzFk0EW_
 
 
 > Create everything below using configuration yaml
-
+https://blog.usejournal.com/useful-tools-for-better-kubernetes-development-87820c2b9435?gi=7295c99c2a0c
 Create a deployment and expose as external service
 Should be able to access it from browser as <externalip>.port
 
@@ -254,7 +261,7 @@ Learn kubernetes the hard way [ Create your own k8s cluster ]
 
 - https://www.youtube.com/watch?v=E3h8_MJmkVU [Kubernetes Cluster Setup with Kubeadm in RHEL7 |CENTOS7 for beginner --2021]
 - https://www.youtube.com/watch?v=XJufs3ZZBVY [ How to Setup a 3 Node Kubernetes Cluster for CKA Step by Step ]
-
+https://gabrieltanner.org/blog/ha-kubernetes-cluster-using-k3s
 
 Create control node components on master node
 
@@ -301,7 +308,7 @@ Stage 6: Service Mesh
 
 A service mesh, like the open source project Istio, is a way to control how different parts of an application share data with one another. Unlike other systems for managing this communication, a service mesh is a dedicated infrastructure layer built right into an app. This visible infrastructure layer can document how well (or not) different parts of an app interact, so it becomes easier to optimize communication and avoid downtime as an app grows.
 
-
+https://www.youtube.com/watch?v=hkR1M6qwpnw [Istio in 5 minutes]
 Istio Service Mesh Explained https://www.youtube.com/watch?v=6zDrLvpfCK4
 
 https://piotrminkowski.com/2021/07/12/multicluster-traffic-mirroring-with-istio-and-kind/
@@ -325,9 +332,13 @@ Stage 7: Monitoring + Observability + Tracing
 
 
 --------------------------------
-Stage 8: Deployment/Gitops + Autoscaling
+Stage 8: Testing + Deployment/Gitops + Autoscaling
 --------------------------------
 
+https://tutorialedge.net/golang/intro-testing-in-go/
+
+https://itnext.io/kubernetes-deployment-strategies-types-and-argo-rollouts-9d5f98e8b24e
+https://blog.container-solutions.com/kubernetes-deployment-strategies
 
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
@@ -388,6 +399,8 @@ https://www.stackrox.com/post/2020/05/kubernetes-security-101/
 Apollo program continues: Go deeper in this space!
 --------------------------------
 
+Write your own Kubernetes controller in Rust from scratch
+https://blog.frankel.ch/start-rust/6/
 
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 

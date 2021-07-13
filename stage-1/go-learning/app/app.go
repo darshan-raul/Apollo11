@@ -332,6 +332,7 @@ func main() {
 
 //############# stage 7 -- if and switch statements
 
+/*
 
 package main
 
@@ -390,5 +391,96 @@ func main() {
 
 		fmt.Println(" i is less than j ")
 	}
+
+	// switch statements
+	switch i := 1+1; i {
+		case 1:
+			fmt.Println("This is 1")
+		case 2:
+			fmt.Println("This is 2") //this will be printed
+			fallthrogh // next case will also be executed
+		case 3:
+			fmt.Println("This is 3")
+		default:
+			fmt.Println("This is default")	
+	}
+
+}
+
+*/
+
+//############# stage 8 -- looping
+
+/*
+package main
+
+import 
+(
+	"fmt"
+
+)
+
+func main() {
+
+	for i :=0 ;i < 5 ; i++ {
+
+		fmt.Println(i)
+
+	}
+
+
+	for i,j :=0,0 ; i < 5 ; i,j = i+1, j+1 {
+
+		fmt.Println( i, j)
+
+	}
+
+	i := 0
+	
+	// sort of like while- break 
+	for i < 5 {
+
+		fmt.Println(i)
+		
+		//break 
+		if i == 3 {
+			break
+			//continue // skip this iteration and continue loop
+		}
+
+		i++
+	}
+
+	// like while true
+	for {
+
+		fmt.Println(i)
+		
+		
+	}
+	
+	// nested for loop is also there
+
+
+}
+*/
+
+//############# stage 9 -- Defer Panic Recover
+package main
+
+import 
+(
+	"fmt"
+
+)
+
+func main() {
+	//defer
+
+	fmt.Println(1)
+	defer fmt.Println(2) // this will be printed after everything is printed
+					     // basically its similar to handler in ansible		
+	fmt.Println(3)
+	fmt.Println(4)
 
 }
