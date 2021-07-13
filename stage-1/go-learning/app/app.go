@@ -211,6 +211,7 @@ func main() {
 
 //############# stage 6 -- maps
 
+/*
 package main
 
 import 
@@ -240,8 +241,154 @@ func main() {
 		"Mouse": 100,
 		"Laptop": 100,
 	}
-	*/
-
 	
+
+
+
+}
+*/
+
+//############# stage 7 -- structs
+
+/*
+package main
+
+import 
+(
+	"fmt"
+
+)
+
+// define struct
+type Student struct {
+	name string
+	rollno int
+	subjects []string
+
+
+}
+
+func main() {
+
+	//create object of struct
+
+	student1 := Student{
+		name: "Darshan",
+		rollno: 5,
+		subjects: []string{
+			"maths",
+			"ophys",
+			"chemistry"	,
+
+		},
+	}
+	
+	//This way will also work but not recommended as you will HAVE to match with how the Srtuct has been defined
+	
+	// student1 := Student{
+	// 	"Darshan",
+	// 	 5,
+	// 	[]string{
+	// 		"maths",
+	// 		"ophys",
+	// 		"chemistry"	,
+
+	// 	},
+	// }
+
+
+	fmt.Println(student1)
+
+	// getting specific values from struct
+	fmt.Println(student1.name)
+	fmt.Println(student1.subjects)
+
+	// updating struct
+	student1.name = "raul"
+	fmt.Println(student1)
+
+
+	student2 := student1
+
+	student2.name = "darsh"
+	fmt.Println(student1)
+	fmt.Println(student2) 
+
+	//embedding
+	// no `is a` relationship, `has a` relationship
+	// Composition is there but no Inheritance
+
+
+
+
+
+
+}
+
+
+
+*/
+
+
+//############# stage 7 -- if and switch statements
+
+
+package main
+
+import 
+(
+	"fmt"
+
+)
+
+func main() {
+
+	if true {
+
+		fmt.Println("this is true")
+	}
+
+
+	if i := 2 ; i == 2 {
+
+		fmt.Println("this statment will be printed")
+	}
+	if i := 2 ; i == 3 {
+
+		fmt.Println("this statment will not be printed")
+	}
+
+
+	// if else
+	// Note:  } else { is needed, else ide throws syntax issue
+	if i := 2 ; i == 3 {
+		fmt.Println("this statment will not be printed")
+	} else {
+		fmt.Println("this statment will be printed")
+
+	}
+
+
+	// if elseif else
+	if i := 2 ; i == 3 {
+
+		fmt.Println("this statment will not be printed")
+
+	} else if  i==2 {
+
+		fmt.Println("this statment will be printed")
+
+	} else {
+		fmt.Println("this statment is default")
+
+	}
+
+	i := 10
+	j := 20
+
+	if i < j {
+
+		fmt.Println(" i is less than j ")
+	}
 
 }
