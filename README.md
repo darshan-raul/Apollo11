@@ -5,6 +5,8 @@
 
 `First do it -> Then do it right -> Then do it better`
 
+![DOIT](images/51mXr8x14bL.jpg)
+
 **Stages**:
 
 - Stage 1: Basics + Local setup
@@ -79,7 +81,7 @@ follow this tour from go anf then the cheatsheet to get an general overview:
 You will also find my go learning scripts in `stage-1/go-learning`
 
 **Optional**:
-
+https://www.youtube.com/watch?v=N0fIANJkwic&t=425s
 - <https://www.youtube.com/watch?v=79NeEFURq_U>
 - <https://www.youtube.com/watch?v=YS4e4q9oBaU> [Learn Go Programming - Golang Tutorial for Beginners]
 - <https://www.youtube.com/playlist?list=PLzMcBGfZo4-mtY_SE3HuzQJzuj4VlUG0q> [Golang Tutorials - Tech by Tim] 
@@ -121,7 +123,7 @@ You will also find my go learning scripts in `stage-1/go-learning`
 - Get your hands dirty. This tutorial will give a good bootstrap on k8s operations
 
   <https://kubernetes.io/docs/tutorials/kubernetes-basics/>
-
+https://github.com/knrt10/kubernetes-basicLearning
   Brisk through <https://kubernetes.io/docs/concepts>.
   (Coz reading the documentation for 15 mins is better than spending 2 hours on stackoverflow) :D
   
@@ -148,7 +150,7 @@ You will also find my go learning scripts in `stage-1/go-learning`
 
  > Note: Minikube is the simplest way to start a local k8s cluster. There are many other ways like kind(Kubernetes in Docker) ,k3s,microk8s amongst others.<https://developer.ibm.com/blogs/options-to-run-kubernetes-locally/>
 
-5. **Install and Get overview of kubectl**
+ > Note: Minikube is the simplest way to start a local k8s cluster. There are many other ways like kind(Kubernetes in Docker) ,k3s,microk8s amongst others.<https://developer.ibm.com/blogs/options-to-run-kubernetes-locally/>
 
  <https://kubernetes.io/docs/reference/kubectl/overview/>
 
@@ -319,8 +321,8 @@ Stage 7: Monitoring + Observability + Tracing
 --------------------------------
 
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
+https://12factor.net/ -- 12 factor app
 
-- K8s logging
   - <https://developer.ibm.com/tutorials/debug-and-log-your-kubernetes-app/>
   - EFK Logging
 
