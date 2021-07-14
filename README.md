@@ -56,38 +56,39 @@ Some basics have to be in place:
 
 <https://github.com/arialdomartini/Back-End-Developer-Interview-Questions>
 
---------------------------------
+# Stage 1: Basics + Local setup [ 2 weeks ]
 
-Stage 1: Basics + Local setup [ 2 weeks ]
---------------------------------
 
 > Goal: Good enough knowledge of k8s and golang to get started
 
-1. **Go Lang basics**
+## 1. Go Lang basics
 
-**Note**: Go lang is optional. You can create the rest api's in Python or any other language as well.
+**Note**: Go lang is **optional**. You can create the rest api's in Python or any other language as well.
 
 Recommended videos to watch and follow along:
 
-- <https://www.youtube.com/watch?v=1NF2LtWbA1g&t=1024s> [Go / Golang Full Course for Beginners | 2021] 
-- <https://www.youtube.com/watch?v=jpKysZwllVw&t=488s> [Introduction to Go Programming for beginners]
+- [Go / Golang Full Course for Beginners | 2021](https://www.youtube.com/watch?v=1NF2LtWbA1g&t=1024s)
+- [Introduction to Go Programming for beginners](https://www.youtube.com/watch?v=jpKysZwllVw&t=488s )
  
-Once you have afair amount of handson following the above two tutorials, 
-follow this tour from go anf then the cheatsheet to get an general overview:
+Once you have a fair amount of handson following the above two tutorials, 
+follow this tour from go and then the cheatsheet to get an general overview:
 
 - http://tour.golang.org/
 - https://github.com/a8m/golang-cheat-sheet
 
 You will also find my go learning scripts in `stage-1/go-learning`
 
-**Optional**:
-https://www.youtube.com/watch?v=N0fIANJkwic&t=425s
-- <https://www.youtube.com/watch?v=79NeEFURq_U>
-- <https://www.youtube.com/watch?v=YS4e4q9oBaU> [Learn Go Programming - Golang Tutorial for Beginners]
-- <https://www.youtube.com/playlist?list=PLzMcBGfZo4-mtY_SE3HuzQJzuj4VlUG0q> [Golang Tutorials - Tech by Tim] 
-- <https://medium.com/geekculture/top-golang-use-cases-266b4ee5a37d>
+**Bro Tip**: You commits pushed from laptop wont be visible in the github contributions. Yes we love green dots :D Follow this to setup GPG verified commits https://www.youtube.com/watch?v=4166ExAnxmo
 
-1. **Docker/Container Basics:**
+**Other Sources**:
+
+- https://www.youtube.com/watch?v=N0fIANJkwic&t=425s
+- https://www.youtube.com/watch?v=79NeEFURq_U
+- [Learn Go Programming - Golang Tutorial for Beginners](https://www.youtube.com/watch?v=YS4e4q9oBaU)
+-  [Golang Tutorials - Tech by Tim](https://www.youtube.com/playlist?list=PLzMcBGfZo4-mtY_SE3HuzQJzuj4VlUG0q) 
+- [Go lang top usecases ](https://medium.com/geekculture/top-golang-use-cases-266b4ee5a37d)
+
+## 2. Docker/Container Basics:
 
  Because even though docker is no more the only container runtime in town. Its still the best place to get to know about containers and explore them
 
@@ -108,12 +109,12 @@ https://www.youtube.com/watch?v=N0fIANJkwic&t=425s
 
 <https://www.youtube.com/watch?v=RfL_CjXfQds> [Dockerless: Build and Run Containers with Podman and Systemd]
 
-3. **Kubernetes basics**
+## 3.Kubernetes basics
 
 - Take an overview of K8s:
 
-  <https://www.youtube.com/watch?v=PziYflu8cB8> [Kubernetes Explained in 100 Seconds]
-  <https://www.youtube.com/watch?v=7bA0gTroJjw> [you need to learn Kubernetes RIGHT NOW!!]
+  - [Kubernetes Explained in 100 Seconds](https://www.youtube.com/watch?v=PziYflu8cB8)
+  - [you need to learn Kubernetes RIGHT NOW!!](https://www.youtube.com/watch?v=7bA0gTroJjw)
  <https://www.youtube.com/watch?v=8C_SCDbUJTg>
 
 - Watch this video completely. Take notes:
@@ -122,20 +123,25 @@ https://www.youtube.com/watch?v=N0fIANJkwic&t=425s
 
 - Get your hands dirty. This tutorial will give a good bootstrap on k8s operations
 
-  <https://kubernetes.io/docs/tutorials/kubernetes-basics/>
-https://github.com/knrt10/kubernetes-basicLearning
-  Brisk through <https://kubernetes.io/docs/concepts>.
+  - <https://kubernetes.io/docs/tutorials/kubernetes-basics/>
+
+  - https://github.com/knrt10/kubernetes-basicLearning
+  
+  - Brisk through <https://kubernetes.io/docs/concepts>.
   (Coz reading the documentation for 15 mins is better than spending 2 hours on stackoverflow) :D
   
-  The previous two tasks will make it pretty easy for you to understand the core concepts from the documentation. This will be just to consolidate those core concepts and collect more dots of k8s knowledge. In the later stages you will be able to connect those extra dots as well.
+  The two tasks will make it pretty easy for you to understand the core concepts from the documentation. This will be just to consolidate those core concepts and collect more dots of k8s knowledge. In the later stages you will be able to connect those extra dots as well.
   
-  [ ETA 2-3 days ]
+  
 
- // Networking
- <https://rtfm.co.ua/en/kubernetes-clusterip-vs-nodeport-vs-loadbalancer-services-and-ingress-an-overview-with-examples/>
+Networking
+
+<https://rtfm.co.ua/en/kubernetes-clusterip-vs-nodeport-vs-loadbalancer-services-and-ingress-an-overview-with-examples/>
 
  Kubernetes Essential Tools: 2021 <https://itnext.io/kubernetes-essential-tools-2021-def12e84c572>
  <https://itnext.io/kubernetes-explained-deep-enough-1ea2c6821501>
+ 
+ 
  Optional:
 
 - <https://betterprogramming.pub/k8s-a-closer-look-at-kube-proxy-372c4e8b090>
@@ -145,31 +151,30 @@ https://github.com/knrt10/kubernetes-basicLearning
 - Complete all scenarios here: <https://www.katacoda.com/loodse/courses/kubernetes>
 - <https://www.youtube.com/watch?v=XJufs3ZZBVY> [How to Setup a 3 Node Kubernetes Cluster for CKA Step by Step]
 
-4. **Install minikube & understand the basics**:
+## Install minikube & understand the basics:
  <https://kubernetes.io/docs/tutorials/hello-minikube/>
-
- > Note: Minikube is the simplest way to start a local k8s cluster. There are many other ways like kind(Kubernetes in Docker) ,k3s,microk8s amongst others.<https://developer.ibm.com/blogs/options-to-run-kubernetes-locally/>
 
  > Note: Minikube is the simplest way to start a local k8s cluster. There are many other ways like kind(Kubernetes in Docker) ,k3s,microk8s amongst others.<https://developer.ibm.com/blogs/options-to-run-kubernetes-locally/>
 
  <https://kubernetes.io/docs/reference/kubectl/overview/>
 
-6. **K8s yaml syntax:**
+## K8s yaml syntax:
 
-<https://www.mirantis.com/blog/introduction-to-yaml-creating-a-kubernetes-deployment/>
+Its all yaml!!
 
-<https://www.youtube.com/watch?v=1rwCkFTjikw> [YAML Tips for Kubernetes]
-<https://www.youtube.com/watch?v=5gsHYdiD6v8> [Simplify Kubernetes YAML with Kustomize]
-https://boxunix.com/2020/05/15/a-better-way-of-organizing-your-kubernetes-manifest-files/
+- https://www.mirantis.com/blog/introduction-to-yaml-creating-a-kubernetes-deployment/>
 
-**Optional**:
+- https://www.youtube.com/watch?v=1rwCkFTjikw> [YAML Tips for Kubernetes]
+- https://www.youtube.com/watch?v=5gsHYdiD6v8> [Simplify Kubernetes YAML with Kustomize]
+- https://boxunix.com/2020/05/15/a-better-way-of-organizing-your-kubernetes-manifest-files/
+
+## Optional
 
 - Check all the terms and glossary <https://kubernetes.io/docs/reference/glossary/?all=true>
 
---------------------------------
 
-Stage 2: Rest api + backend in local k8s cluster [ 2 weeks ]
---------------------------------
+# Stage 2: Rest api + backend in local k8s cluster [ 2 weeks ]
+
 
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
