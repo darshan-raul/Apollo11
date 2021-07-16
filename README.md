@@ -81,7 +81,7 @@ You will also find my go learning scripts in `stage-1/go-learning`
 **Bro Tip**: You commits pushed from laptop wont be visible in the github contributions. Yes we love green dots :D Follow this to setup GPG verified commits https://www.youtube.com/watch?v=4166ExAnxmo
 
 **Other Sources**:
-
+- [Why Golang is DevOps' Top Programming Language in 2021](https://www.youtube.com/watch?v=7pLqIIAqZD4)
 - https://www.youtube.com/watch?v=N0fIANJkwic&t=425s
 - https://www.youtube.com/watch?v=79NeEFURq_U
 - [Learn Go Programming - Golang Tutorial for Beginners](https://www.youtube.com/watch?v=YS4e4q9oBaU)
@@ -92,22 +92,28 @@ You will also find my go learning scripts in `stage-1/go-learning`
 
  Because even though docker is no more the only container runtime in town. Its still the best place to get to know about containers and explore them
 
-- <https://www.youtube.com/watch?v=gAkwW2tuIqE> [Learn Docker in 7 Easy Steps - Full Beginner's Tutorial]
-- <https://www.youtube.com/watch?v=eGz9DS-aIeY> [you need to learn Docker RIGHT NOW!! // Docker Containers 101]
-- <https://www.youtube.com/watch?v=3c-iBn73dDE> [Docker Tutorial for Beginners [FULL COURSE in 3 Hours]
-- <https://developer.ibm.com/blogs/what-are-containers-and-why-do-you-need-them/>
-- <https://developer.ibm.com/tutorials/building-docker-images-locally-and-in-cloud/>
-- Run your app in production from <https://docs.docker.com/get-started/overview/>
-- <https://dev.to/aurelievache/series/8105>
- Optional:
+- [Learn Docker in 7 Easy Steps - Full Beginner's Tutorial](https://www.youtube.com/watch?v=gAkwW2tuIqE)
+- [you need to learn Docker RIGHT NOW!! // Docker Containers 101](https://www.youtube.com/watch?v=eGz9DS-aIeY)
+- Do one of these full courses: 
+  - [Docker Tutorial for Beginners FULL COURSE in 3 Hours](https://www.youtube.com/watch?v=3c-iBn73dDE)
+  - [Docker for Beginners: Full Free Course!- KodeKloud ](https://www.youtube.com/watch?v=zJ6WbK9zFpI&t=3637s)
+- Cover remaining gaps with these cheatsheets and articles:
+  - https://github.com/wsargent/docker-cheat-sheet
+  - https://developer.ibm.com/blogs/what-are-containers-and-why-do-you-need-them/
+  - https://developer.ibm.com/tutorials/building-docker-images-locally-and-in-cloud/
+  - `Run your app in production` section from <https://docs.docker.com/get-started/overview/>
+  - [Docker explained in Sketches](https://dev.to/aurelievache/series/8105)
+
+ Deep-dive:
 
 - <http://docker-saigon.github.io/post/Docker-Internals/>
+- [Docker Container Lifecycle and Commands | K21 Academy](https://www.youtube.com/watch?v=wqKRmbBeS24&list=WL&index=6)
 - <https://developer.ibm.com/articles/true-benefits-of-moving-to-containers-1/>
 - <https://developer.ibm.com/articles/true-benefits-of-moving-to-containers-2/>
 - <https://developer.ibm.com/videos/dev-diaries-app-modernization-containers/>
 - <https://gist.github.com/StevenACoffman/41fee08e8782b411a4a26b9700ad7af5> [best practices]
 
-<https://www.youtube.com/watch?v=RfL_CjXfQds> [Dockerless: Build and Run Containers with Podman and Systemd]
+- <https://www.youtube.com/watch?v=RfL_CjXfQds> [Dockerless: Build and Run Containers with Podman and Systemd]
 
 ## 3.Kubernetes basics
 
@@ -192,11 +198,14 @@ Its all yaml!!
 
 3. Build docker image with it
 
- > Figure how to link local image repo in minikube.<https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube>
+ > [Figure how to link local image repo in minikube](https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube)
 
 > Create everything below using configuration yaml
+
 <https://blog.usejournal.com/useful-tools-for-better-kubernetes-development-87820c2b9435?gi=7295c99c2a0c>
+
 Create a deployment and expose as external service
+
 Should be able to access it from browser as <externalip>.port
 
 Create namespace "nosql"
@@ -271,6 +280,8 @@ Learn kubernetes the hard way [ Create your own k8s cluster ]
 Create control node components on master node
 
 Install any other container runtime other than docker
+
+- [Docker is no longer supported](https://blog.datacamp.engineering/understanding-the-kubernetes-docker-deprecation-notice-by-dummies-for-dummies-c9f2685486e0)
 
 - <https://www.youtube.com/watch?v=bV5RcNiHlfw> [Kubernetes cluster with CRI-O container runtime | Step by step tutorial]
 
@@ -484,3 +495,10 @@ Blogs
 --------------------------------
 
 <https://kubernetes.io/blog/>
+
+
+--------------------------
+Inspiring Articles for long term learning
+--------------------------
+
+https://typesense.org/blog/the-unreasonable-effectiveness-of-just-showing-up-everyday/
