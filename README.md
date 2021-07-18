@@ -272,7 +272,7 @@ One will be master
 One will be worker
 
 Learn kubernetes the hard way [ Create your own k8s cluster ]
-
+- [Setup Kubernetes Cluster using Kubeadm on Ubuntu 20.04](https://www.youtube.com/watch?v=mMmxMoprxiY&list=WL&index=1)
 - <https://www.youtube.com/watch?v=E3h8_MJmkVU> [Kubernetes Cluster Setup with Kubeadm in RHEL7 |CENTOS7 for beginner --2021]
 - <https://www.youtube.com/watch?v=XJufs3ZZBVY> [ How to Setup a 3 Node Kubernetes Cluster for CKA Step by Step ]
 <https://gabrieltanner.org/blog/ha-kubernetes-cluster-using-k3s>
