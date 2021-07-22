@@ -48,7 +48,8 @@ Some basics have to be in place:
   - <https://developer.ibm.com/tutorials/linux-basics-and-commands/>
 
 - Vim: (Coz there will not always be ide)
-  - <https://www.youtube.com/watch?v=ggSyF1SVFr4>
+  - [Vim Basics in 8 Minutes](https://www.youtube.com/watch?v=ggSyF1SVFr4)
+  - [Vim Crash Course | How to edit files quickly in CKAD / CKA exam](https://www.youtube.com/watch?v=knyJt8d6C_8)
 
 - Yaml: ( k8s is all yaml)
   - <https://www.youtube.com/watch?v=1uFVr15xDGg>
@@ -112,6 +113,7 @@ You will also find my go learning scripts in `stage-1/go-learning`
 - <https://developer.ibm.com/articles/true-benefits-of-moving-to-containers-2/>
 - <https://developer.ibm.com/videos/dev-diaries-app-modernization-containers/>
 - <https://gist.github.com/StevenACoffman/41fee08e8782b411a4a26b9700ad7af5> [best practices]
+- [Docker Networking Deep Dive](https://www.youtube.com/watch?v=T0U_eP73jF0&list=WL&index=5&t=2323s)
 
 - <https://www.youtube.com/watch?v=RfL_CjXfQds> [Dockerless: Build and Run Containers with Podman and Systemd]
 
@@ -195,6 +197,8 @@ Its all yaml!!
 <https://tutorialedge.net/golang/basic-rest-api-go-fiber/>
 
 <https://www.youtube.com/playlist?list=PLmD8u-IFdreyh6EUfevBcbiuCKzFk0EW_>
+
+For python there is: https://fastapi.tiangolo.com/tutorial/
 
 3. Build docker image with it
 
