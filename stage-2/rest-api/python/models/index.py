@@ -1,3 +1,3 @@
-from models.user import users
+from models.users import users
 
 
