@@ -1,1 +1,1 @@
-from schemas.user import User
+from schemas.crypto import Crypto

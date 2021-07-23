@@ -1,3 +1,3 @@
-from models.users import users
+from models.cryptos import cryptos
 
 
