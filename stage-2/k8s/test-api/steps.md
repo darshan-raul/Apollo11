@@ -1,0 +1,1 @@
+https://www.kdnuggets.com/2021/02/deploy-flask-api-kubernetes-connect-micro-services.html

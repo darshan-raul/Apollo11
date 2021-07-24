@@ -6,15 +6,15 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
     ports:
-      - 3306:3306
+      - 3306:3306 # use custom port if already have mysql running on your machine
     volumes:
       - mysql_db_data_container:/var/lib/mysql
-  adminer_container:
-    image: adminer:latest
-    environment:
-      ADMINER_DEFAULT_SERVER: mysql_db_container
-    ports:
-      - 8080:8080
+  # adminer_container: ## not needed if using any local gui tool eg. vscode,
+  #   image: adminer:latest
+  #   environment:
+  #     ADMINER_DEFAULT_SERVER: mysql_db_container
+  #   ports:
+  #     - 8080:8080
   app:
     container_name: app
     build: .
