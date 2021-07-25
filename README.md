@@ -297,7 +297,7 @@ Run the above setup in either of a cloud k8s platform (manually for now):
 - AKS
 - GKE
 - Linode
-
+https://snyk.io/blog/hardening-amazon-eks-security/
 Extra:
 
 - Use buildah to build container images instead of
