@@ -206,7 +206,13 @@ For python there is: https://fastapi.tiangolo.com/tutorial/
 
 > Create everything below using configuration yaml
 
+
 <https://blog.usejournal.com/useful-tools-for-better-kubernetes-development-87820c2b9435?gi=7295c99c2a0c>
+
+Complete these two tutorials:
+https://github.com/knrt10/kubernetes-basicLearning
+https://redhat-scholars.github.io/kubernetes-tutorial/kubernetes-tutorial/index.html
+
 
 Create a deployment and expose as external service
 
@@ -238,13 +244,14 @@ Create local image
 Create it as deployment and load env variables from a config map
 Expose it as external service
 
---------------------------------
 
-Stage 3: Routing using ingress controller [ 1 week ]
---------------------------------
+
+# Stage 3: Routing using ingress controller [ 1 week ]
+
 
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
+https://kubernetes.io/docs/tasks/access-application-cluster/ingress-minikube/
 https://betterprogramming.pub/do-faster-development-and-testing-on-kubernetes-apps-with-telepresence-b7eac604dca4
 
 https://github.com/cdk8s-team/cdk8s
@@ -308,6 +315,8 @@ Extra:
 
 Stage 5: Helm packaging
 --------------------------------
+
+https://www.youtube.com/playlist?list=PLTCrU9sGyburBw9wNOHebv9SjlE4Elv5a
 
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
