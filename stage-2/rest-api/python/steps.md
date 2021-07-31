@@ -1,6 +1,6 @@
 pip install fastapi[all]
 
-uvicorn main:app --reload
+uvicorn index:app --reload
 pip install peewee
 
 Notes:
