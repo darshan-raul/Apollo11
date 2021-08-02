@@ -183,6 +183,7 @@ Its all yaml!!
 
 # Stage 2: Rest api + backend in local k8s cluster [ 2 weeks ]
 
+https://www.kdnuggets.com/2021/02/deploy-flask-api-kubernetes-connect-micro-services.html
 
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
@@ -315,7 +316,7 @@ Extra:
 
 Stage 5: Helm packaging
 --------------------------------
-
+https://www.youtube.com/watch?v=ZMFYSm0ldQ0
 https://www.youtube.com/playlist?list=PLTCrU9sGyburBw9wNOHebv9SjlE4Elv5a
 
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API

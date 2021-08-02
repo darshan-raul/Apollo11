@@ -8,7 +8,8 @@ crypto = APIRouter()
 
 @crypto.get("/")
 async def read_data():
-    return conn.execute(cryptos.select()).fetchall()
+    crypto_data =conn.execute(cryptos.select()).fetchall()
+    return crypto_data
 
 
 @crypto.get("/{name}")
