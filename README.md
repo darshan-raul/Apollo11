@@ -277,6 +277,8 @@ Extra:
 Stage 4: Move on from Minikube/Docker
 --------------------------------
 
+https://blog.3sky.dev/article/eks-with-speed/
+
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API.
 
 Move to creating two virtual machines(vagrant)
@@ -366,6 +368,9 @@ https://12factor.net/ -- 12 factor app
 
 Stage 8: Testing + Deployment/Gitops + Autoscaling
 --------------------------------
+
+https://training.linuxfoundation.org/training/introduction-to-gitops-lfs169/
+
 https://github.com/devtron-labs/devtron
 <https://tutorialedge.net/golang/intro-testing-in-go/>
 
@@ -388,6 +393,8 @@ https://github.com/devtron-labs/devtron
 Stage 9: Event driven architecture
 --------------------------------
 
+https://www.stackrox.com/post/2020/01/kubernetes-networking-demystified/
+
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
 - Introduce a event bus or stream eg. Apache FLink and operate using same
@@ -406,7 +413,7 @@ Stage 10: Testing + Chaos Engineering + Backup and Restore
 
 Stage 11: Security and Compliance + threat detection
 --------------------------------
-
+https://www.nsa.gov/News-Features/Feature-Stories/Article-View/Article/2716980/nsa-cisa-release-kubernetes-hardening-guidance/
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
 <https://kubernetes.io/docs/concepts/security/>
