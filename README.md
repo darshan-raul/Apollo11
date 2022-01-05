@@ -149,6 +149,9 @@ Networking
  Kubernetes Essential Tools: 2021 <https://itnext.io/kubernetes-essential-tools-2021-def12e84c572>
  <https://itnext.io/kubernetes-explained-deep-enough-1ea2c6821501>
  
+ https://dustinspecker.com/posts/how-do-kubernetes-and-docker-create-ip-addresses/
+ https://dustinspecker.com/posts/iptables-how-docker-publishes-ports/
+ https://dustinspecker.com/posts/iptables-how-kubernetes-services-direct-traffic-to-pods/
  
  Optional:
 
