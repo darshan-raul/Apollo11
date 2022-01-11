@@ -7,6 +7,22 @@
 
 ![DOIT](images/51mXr8x14bL.jpg)
 
+
+## Final project
+
+![](images/apollo11.png)
+
+- frontend: React
+- backend api: go
+- data analytics: python
+- Event bus: Kafka
+- CICD: Tekton
+- Logging: EFK
+- Monitoring: Prometheus+Grafana +Komodor
+- Service Mesh: Istio
+- Packaging: Helm
+- Gitops: ArgoCD
+
 **Stages**:
 
 - Stage 1: Basics + Local setup
