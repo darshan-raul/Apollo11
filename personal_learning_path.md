@@ -17,6 +17,13 @@ REACT:
 
 - [React Course - Beginner's Tutorial for React JavaScript Library [2022]](https://www.youtube.com/watch?v=bMknfKXIFA8)
 
+KAFKA:
+
+[What is Kafka | Tutorial | Beginners Guide](https://www.youtube.com/watch?v=heR3I3Wxgro)
+
+[Apache Kafka Explained (Comprehensive Overview)](https://www.youtube.com/watch?v=JalUUBKdcA0)
+[Confluent kafka playlist](https://www.youtube.com/playlist?list=PLa7VYi0yPIH0KbnJQcMv5N9iW8HkZHztH)
+
 
 
 Monitoring stack:
