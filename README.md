@@ -407,6 +407,14 @@ https://github.com/devtron-labs/devtron
 - Various deployment patterns in K8s
 - gitops with flux v2
 
+
+Tekton:
+https://www.youtube.com/playlist?list=PLzpeuWUENMK3ITxCCJRtGGSb3Pf58W80r
+
+https://www.youtube.com/watch?v=qJZQwd34yMI
+https://www.youtube.com/watch?v=rGHeAez-k5I&list=PLEV9ul4qfGOYLooAW9hnekIOyCMtI7zaZ&index=2
+
+
 --------------------------------
 
 Stage 9: Event driven architecture
@@ -432,6 +440,17 @@ Stage 10: Testing + Chaos Engineering + Backup and Restore
 
 Stage 11: Security and Compliance + threat detection
 --------------------------------
+
+Certmanager:
+
+https://www.youtube.com/watch?v=deLW2h1RGz0
+
+https://www.youtube.com/watch?v=7m4_kZOObzw
+
+https://www.youtube.com/watch?v=juVPuWBi29s
+https://getbetterdevops.io/k8s-ingress-with-letsencrypt/
+
+
 https://www.nsa.gov/News-Features/Feature-Stories/Article-View/Article/2716980/nsa-cisa-release-kubernetes-hardening-guidance/
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
@@ -509,6 +528,7 @@ References
  <https://labs.play-with-k8s.com/>#
  <https://developer.ibm.com/components/kubernetes/series/kubernetes-learning-path/>
 
+[Top Kubernetes Interview Questions Answers (From Container Specialist)](https://www.youtube.com/watch?v=lHC7xpFack8)
 --------------------------------
 
 Reading lists
