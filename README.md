@@ -5,9 +5,6 @@
 
 `First do it -> Then do it right -> Then do it better`
 
-![DOIT](images/51mXr8x14bL.jpg)
-
-
 ## Final project
 
 ![](images/apollo11.png)
@@ -49,6 +46,8 @@
 
 We will be creating a simple rest api in Golang and then extending it with a frontend and backend.
 Along the way we will explore all the services and features in the k8s ecosystem to get a handson on how to create a Complete app architecture
+
+follow the principles in this image when you are embarking on this journey : images/principle.jpg
 
 --------------------------------
 
