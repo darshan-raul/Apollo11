@@ -1,6 +1,8 @@
 
 # Apollo 11
 
+![logo](./images/apollo11-project-logo.png)
+
 11 stage plan to know end-to-end of k8s/cloudnative ecosystem
 
 `First do it -> Then do it right -> Then do it better`
@@ -413,6 +415,14 @@ https://www.youtube.com/playlist?list=PLzpeuWUENMK3ITxCCJRtGGSb3Pf58W80r
 https://www.youtube.com/watch?v=qJZQwd34yMI
 https://www.youtube.com/watch?v=rGHeAez-k5I&list=PLEV9ul4qfGOYLooAW9hnekIOyCMtI7zaZ&index=2
 
+ArgoCd:
+
+https://www.youtube.com/watch?v=c4v7wGqKcEY
+https://www.youtube.com/watch?v=QrLwFEXvxbo
+https://www.youtube.com/watch?v=cCYnIQZnlRg
+
+
+https://rtfm.co.ua/en/github-github-actions-overview-and-argocd-deployment-example/
 
 --------------------------------
 
