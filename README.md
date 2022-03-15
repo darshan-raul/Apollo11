@@ -74,6 +74,11 @@ Some basics have to be in place:
 
 <https://github.com/arialdomartini/Back-End-Developer-Interview-Questions>
 
+cloudnative basics:
+- https://github.com/cncf/landscape/blob/master/README.md#trail-map
+- https://cloudnative101.dev/concepts/cloud-native/
+- https://landscape.cncf.io/guide
+
 # Stage 1: Basics + Local setup [ 2 weeks ]
 
 
