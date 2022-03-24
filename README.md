@@ -576,3 +576,13 @@ Inspiring Articles for long term learning
 --------------------------
 
 https://typesense.org/blog/the-unreasonable-effectiveness-of-just-showing-up-everyday/
+
+
+-- Reading list:
+
+- https://codefresh.io/about-gitops/gitops-for-infrastructure-and-applications/
+- https://medium.com/paypal-tech/scaling-kubernetes-to-over-4k-nodes-and-200k-pods-29988fad6ed
+- https://learnk8s.io/troubleshooting-deployments?utm_content=buffer20927&utm_medium=organic-twitter&utm_source=twitter&utm_campaign=civo-buffer
+- https://www.cncf.io/wp-content/uploads/2022/02/CNCF-Annual-Survey-2021.pdf
+- https://cloudnative101.dev/concepts/cloud-native/
+- https://blog.kubecost.com/blog/kubernetes-kops/
