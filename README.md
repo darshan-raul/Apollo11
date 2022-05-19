@@ -21,6 +21,8 @@
 - Service Mesh: Istio
 - Packaging: Helm
 - Gitops: ArgoCD
+- Local development: skaffold + telepresence
+- Backup and restore: Velero
 
 **Stages**:
 
