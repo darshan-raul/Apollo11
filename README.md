@@ -81,6 +81,13 @@ cloudnative basics:
 - https://cloudnative101.dev/concepts/cloud-native/
 - https://landscape.cncf.io/guide
 
+
+# Whats Cloud Native:
+
+https://cloudnative101.dev/concepts/cloud-native/
+https://iximiuz.com/en/posts/making-sense-out-of-cloud-native-buzz/
+
+
 # Stage 1: Basics + Local setup [ 2 weeks ]
 
 
@@ -441,6 +448,9 @@ https://www.stackrox.com/post/2020/01/kubernetes-networking-demystified/
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
 - Introduce a event bus or stream eg. Apache FLink and operate using same
+
+Asynchronous Event Handling Using Microservices and Kafka
+https://www.youtube.com/watch?v=AwJItZbCAv4
 
 --------------------------------
 
