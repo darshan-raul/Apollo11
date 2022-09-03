@@ -3,17 +3,46 @@
 
 ![logo](./images/apollo11-project-logo.png)
 
-11 stage plan to know end-to-end of k8s/cloudnative ecosystem
+11 stage plan to know end-to-end of a k8s/cloudnative ecosystem
+
+Theres a lot to explore, this journey may take a weeks to achieve. 
+
+Just remember this principle before you begin:
 
 `First do it -> Then do it right -> Then do it better`
 
 ## Final project
 
-![](images/apollo11.png)
+Heres how our final project will look like, you can choose between two flavours of architecture:
+
+1. A simple todo app : React front end , Golang backend
+  - This is good enough to complete this learning path with a simple 2 microservice system with no databases involved
+    - A golang REST api
+    - A react typescript frontend
+  - The focus will be on building the whole cloudnative lifecycle around this simple codebase. 
+    ( you can even choose to not look at the code of the services, just follow the steps given)
+
+
+2. A full fledged Baking store app
+  - This will include 3-4 microservices and will include:
+    - multiple communication mechanisms : REST, graphql, gRPC
+    - Databases - both sql and no-sql
+    - authentication/authorization of users
+    - storage orchestration
+    - secret management
+    - chaos engineering
+    - data analytics
+    - cluster autoscaling
+
+
+### Here's the architecture for both the architecture flavors
+
+
+#### Flavor 1 Architecture
+![apolloflavor1](images/apollo11-flavor1.png)
 
 - frontend: React
-- backend api: go
-- data analytics: python
+- backend api: goLang
 - Event bus: Kafka
 - CICD: Tekton
 - Logging: EFK
@@ -23,8 +52,30 @@
 - Gitops: ArgoCD
 - Local development: skaffold + telepresence
 - Backup and restore: Velero
+- Load Testing: Kube-monkey
 
-**Stages**:
+#### Flavor 2 Architecture
+
+![apolloflavor2](images/apollo11-flavor2.png)
+
+- frontend: React/Nextjs
+- backend api: goLang
+- Event bus: Kafka
+- CICD: Tekton
+- Logging: EFK
+- Monitoring: Prometheus+Grafana
+- Compliance monitoring: kubebench
+- Policy enginer: OPA
+- Service Mesh: Istio
+- Packaging: Helm
+- Gitops: ArgoCD
+- Local development: skaffold + telepresence
+- Backup and restore: Velero
+- Load Testing: Kube-monkey
+- data analytics: python
+
+
+## Stages:
 
 - Stage 1: Basics + Local setup
 
@@ -44,21 +95,25 @@
 
 - Stage 9: Event driven architecture
 
-- Stage 10: Testing + Chaos Engineering + Backup and Restore
+- Stage 10: Load Testing + Chaos Engineering + Backup and Restore
 
 - Stage 11: Security and Compliance
 
 We will be creating a simple rest api in Golang and then extending it with a frontend and backend.
 Along the way we will explore all the services and features in the k8s ecosystem to get a handson on how to create a Complete app architecture
 
-follow the principles in this image when you are embarking on this journey : images/principle.jpg
+
+
+# follow the principles in this image when you are embarking on this journey : 
+
+![apolloflavor2](images/principle.jpg)
 
 --------------------------------
 
-Pre-requisites
+# Pre-requisites
 --------------------------------
 
-[You need to be NASA before you can be in the apollo program ;) ]
+> You need to be NASA before you can be in the apollo program ;) 
 
 Some basics have to be in place:
 
@@ -84,8 +139,14 @@ cloudnative basics:
 
 # Whats Cloud Native:
 
-https://cloudnative101.dev/concepts/cloud-native/
-https://iximiuz.com/en/posts/making-sense-out-of-cloud-native-buzz/
+Also before we start, have a brief idea about what cloudnative is
+
+
+These are some good references if you need to dive deeper:
+
+- https://cloudnative101.dev/concepts/cloud-native/
+- https://iximiuz.com/en/posts/making-sense-out-of-cloud-native-buzz/
+- https://www.aquasec.com/cloud-native-academy
 
 
 # Stage 1: Basics + Local setup [ 2 weeks ]
@@ -400,7 +461,7 @@ https://12factor.net/ -- 12 factor app
 
 --------------------------------
 
-Stage 8: Testing + Deployment/Gitops + Autoscaling
+Stage 8: App Testing + Deployment/Gitops + Autoscaling
 --------------------------------
 
 https://training.linuxfoundation.org/training/introduction-to-gitops-lfs169/
@@ -454,13 +515,15 @@ https://www.youtube.com/watch?v=AwJItZbCAv4
 
 --------------------------------
 
-Stage 10: Testing + Chaos Engineering + Backup and Restore
+Stage 10: Load Testing + Chaos Engineering + Backup and Restore
 --------------------------------
 
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
 - DevSecOps
 - inject failure into your Kubernetes clusters
+
+For load testing: https://www.containiq.com/post/kubernetes-load-testing
 
 --------------------------------
 
