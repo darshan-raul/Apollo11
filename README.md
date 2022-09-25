@@ -65,7 +65,7 @@ Heres how our final project will look like, you can choose between two flavours 
 - Logging: EFK
 - Monitoring: Prometheus+Grafana
 - Compliance monitoring: kubebench
-- Policy enginer: OPA
+- Policy enginer: OPA/ Kyverno
 - Service Mesh: Istio
 - Packaging: Helm
 - Gitops: ArgoCD
@@ -73,7 +73,7 @@ Heres how our final project will look like, you can choose between two flavours 
 - Backup and restore: Velero
 - Load Testing: Kube-monkey
 - data analytics: python
-
+- Serverless : OpenFaas
 
 ## Stages:
 
