@@ -2,7 +2,7 @@ alembic==1.6.5
 appdirs==1.4.4
 asgiref==3.3.4
 black==21.6b0
-certifi==2021.5.30
+certifi==2023.7.22
 click==8.0.1
 colorama==0.4.4
 distlib==0.3.2
@@ -24,7 +24,7 @@ python-editor==1.0.4
 regex==2021.4.4
 six==1.16.0
 SQLAlchemy==1.4.19
-starlette==0.14.2
+starlette==0.25.0
 toml==0.10.2
 typing-extensions==3.10.0.0
 uvicorn==0.14.0
