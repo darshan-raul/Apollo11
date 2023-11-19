@@ -13,17 +13,9 @@ Just remember this principle before you begin:
 
 ## Final project
 
-Heres how our final project will look like, you can choose between two flavours of architecture:
+Heres how our final project will look like:
 
-1. A simple todo app : React front end , Golang backend
-  - This is good enough to complete this learning path with a simple 2 microservice system with no databases involved
-    - A golang REST api
-    - A react typescript frontend
-  - The focus will be on building the whole cloudnative lifecycle around this simple codebase. 
-    ( you can even choose to not look at the code of the services, just follow the steps given)
-
-
-2. A full fledged Baking store app
+A full fledged Baking store app
   - This will include 3-4 microservices and will include:
     - multiple communication mechanisms : REST, graphql, gRPC
     - Databases - both sql and no-sql
@@ -38,44 +30,45 @@ Heres how our final project will look like, you can choose between two flavours 
 ### Here's the architecture for both the architecture flavors
 
 
-#### Flavor 1 Architecture
-![apolloflavor1](images/apollo11-flavor1.png)
-
-- frontend: React
-- backend api: goLang
-- Event bus: Kafka
-- CICD: Tekton
-- Logging: EFK
-- Monitoring: Prometheus+Grafana +Komodor
-- Service Mesh: Istio
-- Packaging: Helm
-- Gitops: ArgoCD
-- Local development: skaffold + telepresence
-- Backup and restore: Velero
-- Load Testing: Kube-monkey
-
-#### Flavor 2 Architecture
-
 ![apolloflavor2](images/apollo11-flavor2.png)
 
-- frontend: React/Nextjs
 - backend api: goLang
-- Event bus: Kafka
-- CICD: Tekton
-- Logging: EFK
+- Database: 
+  - Postgres [for sql operations ]
+  - Mongodb [ for nosql operations ]
+
+Tools:
+- Local development: skaffold + telepresence/Tilt
+- Cluster provisioning: Kubespray [optional, can use any tool but kubespray is the best for learning]
+- CI: Argo Workflows
+- Gitops: ArgoCD
+- Progressive Deployment: Argo Events & Argo Rollouts
+- Secret Store: Vault
+- Ingress Controller: Apisix
+- Packaging: Helm
+- Patching: Kustomize
+- Logging: 
+  - Agent: Fluentd
+  - Backend: Loki
+- Service Mesh: Istio
 - Monitoring: Prometheus+Grafana
 - Compliance monitoring: kubebench
 - Policy enginer: OPA/ Kyverno
-- Service Mesh: Istio
-- Packaging: Helm
-- Gitops: ArgoCD
-- Local development: skaffold + telepresence
+- Policy Checker: Kubescape
 - Backup and restore: Velero
 - Load Testing: Kube-monkey
 - data analytics: python
 - Serverless : OpenFaas
 
+
+Extra:
+
+- Dapr
+- Dagger
+
 ## Stages:
+
+- Stage 0: Pre-requisites
 
 - Stage 1: Basics + Local setup
 
@@ -85,21 +78,20 @@ Heres how our final project will look like, you can choose between two flavours 
 
 - Stage 4: Move on from Minikube/Docker
 
-- Stage 5: Helm packaging
+- Stage 5: Helm packaging and Kustomize Patching
 
-- Stage 6: Service Mesh
+- Stage 6: Deployment/Gitops
 
 - Stage 7: Monitoring + Observability + Tracing
 
-- Stage 8: Deployment/Gitops + Autoscaling
+- Stage 8: Service Mesh
 
-- Stage 9: Event driven architecture
+- Stage 9: AutoScaling and Load testing
 
-- Stage 10: Load Testing + Chaos Engineering + Backup and Restore
+- Stage 10: Chaos Engineering + Backup and Restore
 
 - Stage 11: Security and Compliance
 
-We will be creating a simple rest api in Golang and then extending it with a frontend and backend.
 Along the way we will explore all the services and features in the k8s ecosystem to get a handson on how to create a Complete app architecture
 
 
@@ -115,26 +107,29 @@ Along the way we will explore all the services and features in the k8s ecosystem
 
 > You need to be NASA before you can be in the apollo program ;) 
 
-Some basics have to be in place:
+> Note: If you are not a beginner, feel free to move to stage 1 else you can treat this as a refresher and do it anyways :D 
 
-- Linux :
+I recommend that you spend a good 2-3 weeks in these before even starting the journey. Will make the journey a breeze:
+
+- **Linux** :
   - <https://linuxjourney.com/>
   - <https://developer.ibm.com/tutorials/linux-basics-and-commands/>
 
-- Vim: (Coz there will not always be ide)
+- **Vim**: (Coz there will not always be ide)
   - [Vim Basics in 8 Minutes](https://www.youtube.com/watch?v=ggSyF1SVFr4)
   - [Vim Crash Course | How to edit files quickly in CKAD / CKA exam](https://www.youtube.com/watch?v=knyJt8d6C_8)
 
-- Yaml: ( k8s is all yaml)
+- **Yaml**: ( k8s is all yaml)
   - <https://www.youtube.com/watch?v=1uFVr15xDGg>
   - <https://developer.ibm.com/tutorials/yaml-basics-and-usage-in-kubernetes/>
 
 <https://github.com/arialdomartini/Back-End-Developer-Interview-Questions>
 
-cloudnative basics:
-- https://github.com/cncf/landscape/blob/master/README.md#trail-map
-- https://cloudnative101.dev/concepts/cloud-native/
-- https://landscape.cncf.io/guide
+- **Ansible**: (Iam using it and also its the best tool for automation)
+  - https://docs.ansible.com/ansible/latest/getting_started/index.html
+  - https://docs.ansible.com/ansible/latest/getting_started/basic_concepts.html
+
+
 
 
 # Whats Cloud Native:
@@ -147,6 +142,12 @@ These are some good references if you need to dive deeper:
 - https://cloudnative101.dev/concepts/cloud-native/
 - https://iximiuz.com/en/posts/making-sense-out-of-cloud-native-buzz/
 - https://www.aquasec.com/cloud-native-academy
+
+- **cloudnative basics:**
+
+  - https://landscape.cncf.io
+  - https://cloudnative101.dev/concepts/cloud-native/
+  - https://landscape.cncf.io/guide
 
 
 # Stage 1: Basics + Local setup [ 2 weeks ]
@@ -372,21 +373,14 @@ Extra:
 Stage 4: Move on from Minikube/Docker
 --------------------------------
 
-https://blog.3sky.dev/article/eks-with-speed/
+> Goal: Now that we have a good handson, lets move to building a prod grade cluster **the hard way**
 
-> Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API.
+- This is ofcourse an inspriration from the legendary Kelsey Hightowers: https://github.com/kelseyhightower/kubernetes-the-hard-way
 
-Move to creating two virtual machines(vagrant)
-One will be master
-One will be worker
+We will be building a end to end cluster in gcp using kubespray.
 
-Learn kubernetes the hard way [ Create your own k8s cluster ]
-- [Setup Kubernetes Cluster using Kubeadm on Ubuntu 20.04](https://www.youtube.com/watch?v=mMmxMoprxiY&list=WL&index=1)
-- <https://www.youtube.com/watch?v=E3h8_MJmkVU> [Kubernetes Cluster Setup with Kubeadm in RHEL7 |CENTOS7 for beginner --2021]
-- <https://www.youtube.com/watch?v=XJufs3ZZBVY> [ How to Setup a 3 Node Kubernetes Cluster for CKA Step by Step ]
-<https://gabrieltanner.org/blog/ha-kubernetes-cluster-using-k3s>
+Follow this guide for detailed steps: [stage 4 notes](stages/stage4/README.md)
 
-Create control node components on master node
 
 Install any other container runtime other than docker
 
@@ -394,20 +388,24 @@ Install any other container runtime other than docker
 
 - <https://www.youtube.com/watch?v=bV5RcNiHlfw> [Kubernetes cluster with CRI-O container runtime | Step by step tutorial]
 
-Run the same workload that was run on minikube
+- Run the same workload that was run on minikube
 
-Run the above setup in either of a cloud k8s platform (manually for now):
+- Run the above setup in either of a cloud k8s platform (manually for now):
 
-- EKS
-- AKS
-- GKE
-- Linode
-https://snyk.io/blog/hardening-amazon-eks-security/
+  - EKS
+  - AKS
+  - GKE
+  - Linode
+  https://snyk.io/blog/hardening-amazon-eks-security/
+
 Extra:
 
 - Use buildah to build container images instead of
 - Try different local k8s platforms: k3s,kind,microk8s.
 - Aws eks infra building with CDK
+
+
+https://blog.3sky.dev/article/eks-with-speed/
 
 --------------------------------
 
