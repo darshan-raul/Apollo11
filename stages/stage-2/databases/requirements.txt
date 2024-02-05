@@ -6,7 +6,7 @@ certifi==2023.7.22
 click==8.0.1
 colorama==0.4.4
 distlib==0.3.2
-fastapi==0.65.2
+fastapi==0.109.1
 FastAPI-SQLAlchemy==0.2.1
 filelock==3.0.12
 greenlet==1.1.0
