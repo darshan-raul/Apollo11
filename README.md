@@ -15,7 +15,7 @@ Just remember this principle before you begin:
 
 Heres how our final project will look like:
 
-A full fledged Baking store app
+A full fledged Cloud native platform app
   - This will include 3-4 microservices and will include:
     - multiple communication mechanisms : REST, graphql, gRPC
     - Databases - both sql and no-sql
@@ -157,7 +157,7 @@ These are some good references if you need to dive deeper:
 
 ## 1. Go Lang basics
 
-**Note**: Go lang is **optional**. You can create the rest api's in Python or any other language as well.
+**Note**: Go lang is **optional**. You can create the rest api's in Python or any other language as well [I encourage it as trying the same concepts on a diff language will be a good learning experience.] The examples provided here are in golang.
 
 Recommended videos to watch and follow along:
 
@@ -165,6 +165,7 @@ Recommended videos to watch and follow along:
 - [Introduction to Go Programming for beginners](https://www.youtube.com/watch?v=jpKysZwllVw&t=488s )
  
 Once you have a fair amount of handson following the above two tutorials, 
+
 follow this tour from go and then the cheatsheet to get an general overview:
 
 - http://tour.golang.org/
@@ -279,9 +280,7 @@ Its all yaml!!
 
 # Stage 2: Rest api + backend in local k8s cluster [ 2 weeks ]
 
-https://www.kdnuggets.com/2021/02/deploy-flask-api-kubernetes-connect-micro-services.html
-
-> Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
+> Goal: Have a very basic rest api with a basic html based ui frontend deployed on a local k8s cluster
 
 1. Create namespace "application"
 
