@@ -3,9 +3,8 @@
 
 ![logo](./images/apollo11-project-logo.png)
 
-11 stage plan to know end-to-end of a k8s/cloudnative ecosystem
+11 stage plan to enable you to become very good with the whole k8s based cloud native ecosystem and comfortable with all the components involved for almost every requirement that may come up to build a robust architecture.
 
-Theres a lot to explore, this journey may take a weeks to achieve. 
 
 Just remember this principle before you begin:
 
@@ -13,53 +12,39 @@ Just remember this principle before you begin:
 
 ## Final project
 
-Heres how our final project will look like:
-
-A full fledged Cloud native platform app
-  - This will include 3-4 microservices and will include:
-    - multiple communication mechanisms : REST, graphql, gRPC
-    - Databases - both sql and no-sql
-    - authentication/authorization of users
-    - storage orchestration
-    - secret management
-    - chaos engineering
-    - data analytics
-    - cluster autoscaling
 
 
-### Here's the architecture for both the architecture flavors
+### Here's the architecture of what you will build at the end of this journey
 
 
 ![apolloflavor2](images/apollo11-flavor2.png)
 
-- backend api: goLang
-- Database: 
-  - Postgres [for sql operations ]
-  - Mongodb [ for nosql operations ]
-
-Tools:
-- Local development: skaffold + telepresence/Tilt
-- Cluster provisioning: Kubespray [optional, can use any tool but kubespray is the best for learning]
-- CI: Argo Workflows
-- Gitops: ArgoCD
-- Progressive Deployment: Argo Events & Argo Rollouts
-- Secret Store: Vault
-- Ingress Controller: Apisix
-- Packaging: Helm
-- Patching: Kustomize
-- Logging: 
-  - Agent: Fluentd
-  - Backend: Loki
-- Service Mesh: Istio
-- Monitoring: Prometheus+Grafana
-- Compliance monitoring: kubebench
-- Policy enginer: OPA/ Kyverno
-- Policy Checker: Kubescape
-- Backup and restore: Velero
-- Load Testing: Kube-monkey
-- data analytics: python
-- Serverless : OpenFaas
-
+| Category | Tools |
+|---|---|
+| Backend API |  Golang,Python |
+| Sql Database| Postgres |
+| Nosql Database | MongoDB | 
+| Local Development | skaffold, telepresence/Tilt |
+| Container Management | Docker, Podman |
+| Cluster Provisioning | Kubespray (optional) |
+| Container Builds | Buildah |
+| CI | Argo Workflows |
+| GitOps | ArgoCD |
+| Progressive Deployment | Argo Events, Argo Rollouts |
+| Secret Store | Vault |
+| Ingress Controller | Apisix |
+| Packaging | Helm |
+| Patching | Kustomize |
+| Logging | Fluentd (agent), Loki (backend) |
+| Service Mesh | Istio |
+| Monitoring | Prometheus, Grafana |
+| Compliance Monitoring | kubebench |
+| Policy Engine | OPA/Kyverno |
+| Policy Checker | Kubescape |
+| Backup and Restore | Velero |
+| Load Testing | Kube-monkey |
+| Data Analytics | Python |
+| Serverless | OpenFaas |
 
 Extra:
 
@@ -68,35 +53,39 @@ Extra:
 
 ## Stages:
 
-- Stage 0: Pre-requisites
+- Stage 0: Basics and Local Setup
 
-- Stage 1: Basics + Local setup
+- Stage 1: Run basic api in local k8s cluster
 
-- Stage 2: Rest api + backend in local k8s cluster
+- Stage 2: Routing using ingress controller
 
-- Stage 3: Routing using ingress controller
+- Stage 3: Move on from Local k8s cluster
 
-- Stage 4: Move on from Minikube/Docker
+- Stage 4: Helm packaging and Kustomize Patching
 
-- Stage 5: Helm packaging and Kustomize Patching
+- Stage 5: Deployment/Gitops
 
-- Stage 6: Deployment/Gitops
+- Stage 6: Monitoring + Observability + Tracing
 
-- Stage 7: Monitoring + Observability + Tracing
+- Stage 7: Service Mesh
 
-- Stage 8: Service Mesh
+- Stage 8: AutoScaling and Load testing
 
-- Stage 9: AutoScaling and Load testing
+- Stage 9: Chaos Engineering + Backup and Restore
 
-- Stage 10: Chaos Engineering + Backup and Restore
+- Stage 10: Security and Compliance
 
-- Stage 11: Security and Compliance
+- Stage 11: Progressive Deployment
 
 Along the way we will explore all the services and features in the k8s ecosystem to get a handson on how to create a Complete app architecture
 
 
+> **Bro Tip**: I encourage that you either fork this repo or create your own repo as you follow these stages. Your commits pushed from your laptop mostly wont be visible in the github contributions until you follow this to setup GPG verified commits https://www.youtube.com/watch?v=4166ExAnxmo
 
-# follow the principles in this image when you are embarking on this journey : 
+> You can use github codespaces as you can skip this hassle altogether :D 
+
+
+# Seems too much? : 
 
 ![apolloflavor2](images/principle.jpg)
 
@@ -105,83 +94,41 @@ Along the way we will explore all the services and features in the k8s ecosystem
 # Pre-requisites
 --------------------------------
 
-> You need to be NASA before you can be in the apollo program ;) 
-
-> Note: If you are not a beginner, feel free to move to stage 1 else you can treat this as a refresher and do it anyways :D 
-
-I recommend that you spend a good 2-3 weeks in these before even starting the journey. Will make the journey a breeze:
-
 - **Linux** :
   - <https://linuxjourney.com/>
   - <https://developer.ibm.com/tutorials/linux-basics-and-commands/>
 
-- **Vim**: (Coz there will not always be ide)
+- **Vim**: ( Its very good even if you dont reach the neovim nerd level :P )
   - [Vim Basics in 8 Minutes](https://www.youtube.com/watch?v=ggSyF1SVFr4)
   - [Vim Crash Course | How to edit files quickly in CKAD / CKA exam](https://www.youtube.com/watch?v=knyJt8d6C_8)
 
-- **Yaml**: ( k8s is all yaml)
+- **Yaml**: ( Everything is yaml in the cloud native world [its changing though ])
   - <https://www.youtube.com/watch?v=1uFVr15xDGg>
   - <https://developer.ibm.com/tutorials/yaml-basics-and-usage-in-kubernetes/>
 
 <https://github.com/arialdomartini/Back-End-Developer-Interview-Questions>
 
-- **Ansible**: (Iam using it and also its the best tool for automation)
-  - https://docs.ansible.com/ansible/latest/getting_started/index.html
-  - https://docs.ansible.com/ansible/latest/getting_started/basic_concepts.html
 
 
+# Stage 1: Basics + Local setup
 
-
-# Whats Cloud Native:
-
-Also before we start, have a brief idea about what cloudnative is
-
-
-These are some good references if you need to dive deeper:
-
-- https://cloudnative101.dev/concepts/cloud-native/
-- https://iximiuz.com/en/posts/making-sense-out-of-cloud-native-buzz/
-- https://www.aquasec.com/cloud-native-academy
-
-- **cloudnative basics:**
-
-  - https://landscape.cncf.io
-  - https://cloudnative101.dev/concepts/cloud-native/
-  - https://landscape.cncf.io/guide
-
-
-# Stage 1: Basics + Local setup [ 2 weeks ]
-
-
-> Goal: Good enough knowledge of k8s and golang to get started
+> Goal: We get our applications running in a simple docker-compose setup just to understand the basic functional working.
 
 ## 1. Go Lang basics
 
-**Note**: Go lang is **optional**. You can create the rest api's in Python or any other language as well [I encourage it as trying the same concepts on a diff language will be a good learning experience.] The examples provided here are in golang.
 
 Recommended videos to watch and follow along:
 
 - [Go / Golang Full Course for Beginners | 2021](https://www.youtube.com/watch?v=1NF2LtWbA1g&t=1024s)
 - [Introduction to Go Programming for beginners](https://www.youtube.com/watch?v=jpKysZwllVw&t=488s )
- 
-Once you have a fair amount of handson following the above two tutorials, 
 
-follow this tour from go and then the cheatsheet to get an general overview:
 
 - http://tour.golang.org/
 - https://github.com/a8m/golang-cheat-sheet
 
-You will also find my go learning scripts in `stage-1/go-learning`
-
-**Bro Tip**: You commits pushed from laptop wont be visible in the github contributions. Yes we love green dots :D Follow this to setup GPG verified commits https://www.youtube.com/watch?v=4166ExAnxmo
 
 **Other Sources**:
-- [Why Golang is DevOps' Top Programming Language in 2021](https://www.youtube.com/watch?v=7pLqIIAqZD4)
-- https://www.youtube.com/watch?v=N0fIANJkwic&t=425s
-- https://www.youtube.com/watch?v=79NeEFURq_U
-- [Learn Go Programming - Golang Tutorial for Beginners](https://www.youtube.com/watch?v=YS4e4q9oBaU)
--  [Golang Tutorials - Tech by Tim](https://www.youtube.com/playlist?list=PLzMcBGfZo4-mtY_SE3HuzQJzuj4VlUG0q) 
-- [Go lang top usecases ](https://medium.com/geekculture/top-golang-use-cases-266b4ee5a37d)
+
 
 ## 2. Docker/Container Basics:
 
