@@ -286,6 +286,44 @@ go run main.go
 
 ```
 
+## Error Handling
+
+
+```
+vim main.go
+>>>>>>
+package main
+
+
+import (
+    "fmt"
+    "os"
+)
+
+func openFile(filename string) error {
+    file, err := os.Open(filename)
+    if err != nil {
+        return fmt.Println(err) 
+    }
+    defer file.Close()  
+
+    // Process the file here
+    return nil
+}
+
+func main() {
+    err := openFile("nonexistent.txt")  
+    if err != nil {
+        fmt.Println("Error:", err)
+    } 
+}
+
+<<<<<<
+go run main.go
+
+```
+
+
 ## Switch
 
 
@@ -423,3 +461,249 @@ func main() {
 go run main.go
 
 ```
+
+## Map
+
+
+```
+vim main.go
+>>>>>>
+package main
+
+import 
+(
+	"fmt"
+
+)
+
+func main() {
+
+	shoppingCart := map[string]int{
+
+			"Keyboard": 100,
+			"Mouse": 100,
+			"Laptop": 100,
+	}
+
+	fmt.Println(shoppingCart)
+
+	// other way to create map
+
+	/*
+	shoppingCart = make(map[string]int)
+	shoppingCart = map[string]int{
+
+		"Keyboard": 100,
+		"Mouse": 100,
+		"Laptop": 100,
+	}
+	
+
+
+
+}
+<<<<<<
+go run main.go
+
+```
+
+
+## For looping
+
+```
+	**1. Classic Three-Component For Loop**
+
+	```go
+	// Sum numbers from 1 to 10
+	sum := 0
+	for i := 1; i <= 10; i++ {
+		sum += i
+	}
+	fmt.Println("Sum:", sum) 
+	```
+
+	* **Initialization:** `i := 1` initializes the loop variable.
+	* **Condition:** `i <= 10`  is evaluated before each iteration.
+	* **Post-Iteration:**  `i++` increments the loop variable after each iteration.
+
+	**2. While-Loop Behavior**
+
+	```go
+	// Print powers of 2 less than 100
+	n := 1
+	for n < 100 {
+	fmt.Println(n)
+	n *= 2
+	}
+	```
+
+	* Omits the initialization and post-iteration parts; behaves like a while loop.  
+
+	**3. Infinite Loop**
+
+	```go
+	for {
+		// Do something repeatedly until a 'break' statement is encountered
+		// similar to do while true in python
+	}
+	```
+
+	* Omits all components for an infinite loop; use with caution and include a way to terminate (`break`).
+
+	**4. Range over Arrays, Slices, Maps, Strings**
+
+	```go
+	numbers := []int{2, 4, 6, 8}
+	for i, num := range numbers {
+		fmt.Println("Index:", i, "Value:", num)
+	}
+
+	for key, value := range map[string]int{"one": 1, "two": 2} {
+		fmt.Println(key, ":", value)
+	}
+
+	for _, char := range "Hello, World!" {
+		fmt.Printf("%c\n", char) 
+		// _ above means, we donot need the index and hence skipping it
+	}
+	```
+
+	* **range** iterates over elements and provides key/value (maps) or index/value (arrays, slices, strings).
+
+	**5. Skipping Iterations with `continue`**
+
+	```go
+	for i := 0; i < 10; i++ {
+		if i % 2 == 0 {
+			continue // Skip even numbers
+		}
+		fmt.Println(i)
+	}
+	```
+
+	**6. Breaking Out of the Loop with `break`**
+
+	```go
+	for i := 0; i < 10; i++ {
+		if i == 5 {
+		break // Exit the loop
+		}
+		fmt.Println(i)
+	}
+	```
+
+	**Important Notes**
+
+	* **The Blank Identifier (`_`)**: Use `_` to ignore an index or value returned by `range`. For example:
+
+	```go
+	for _, value := range someArray { 
+			// Only care about the value
+	} 
+	```
+
+	* **Scope:** Loop variables declared in the initialization statement are only visible within the loop.
+
+```
+
+
+## Functions
+
+
+```
+vim main.go
+>>>>>>
+package main
+
+import 
+(
+	"fmt"
+
+)
+
+func greet(name string) {
+    fmt.Println("Hello,", name)
+}
+
+func calculateArea(length, width float64) float64 {
+    return length * width
+}
+
+func calculateSumAndAverage(x, y int) (int, float64) {
+    sum := x + y
+    average := float64(sum) / 2
+    return sum, average
+}
+
+func printValues(prefix string, values ...int) {
+    fmt.Println(prefix)
+    for _, value := range values {
+        fmt.Println(value)
+    }
+}
+
+func main() {
+    greet("Golang Enthusiast")
+	
+	area := calculateArea(5, 3)
+    fmt.Println("Area of rectangle:", area)
+
+    sum, average := calculateSumAndAverage(10, 20)
+    fmt.Println("Sum:", sum)
+    fmt.Println("Average:", average)
+
+	// variadic functions, any number of arguments
+	printValues("Numbers:", 1, 2, 3)
+    printValues("More Numbers:", 4, 5, 6, 7)
+}
+
+
+<<<<<<
+go run main.go
+
+```
+
+## Defer
+
+
+```
+vim main.go
+>>>>>>
+package main
+
+import 
+(
+	"fmt"
+
+)
+
+func demo() {
+    fmt.Println("Starting...")
+
+	// used when you want to ensure a command gets
+	// executed but at the end very end of the
+	// function 
+    defer fmt.Println("Middle")  // Executed second
+    defer fmt.Println("First")  // Executed last
+
+    fmt.Println("Ending...")
+}
+
+func main() {
+    demo()
+} 
+
+
+<<<<<<
+go run main.go
+
+
+Output:
+
+Starting...
+Ending...
+Middle
+First
+
+```
+
