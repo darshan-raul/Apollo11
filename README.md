@@ -177,31 +177,16 @@ Recommended videos to watch and follow along:
   - https://github.com/knrt10/kubernetes-basicLearning
   
   - Brisk through <https://kubernetes.io/docs/concepts>.
-  (Coz reading the documentation for 15 mins is better than spending 2 hours on stackoverflow) :D
+
   
   The two tasks will make it pretty easy for you to understand the core concepts from the documentation. This will be just to consolidate those core concepts and collect more dots of k8s knowledge. In the later stages you will be able to connect those extra dots as well.
-  
-  
 
-Networking
-
-<https://rtfm.co.ua/en/kubernetes-clusterip-vs-nodeport-vs-loadbalancer-services-and-ingress-an-overview-with-examples/>
-
- Kubernetes Essential Tools: 2021 <https://itnext.io/kubernetes-essential-tools-2021-def12e84c572>
- <https://itnext.io/kubernetes-explained-deep-enough-1ea2c6821501>
- 
- https://dustinspecker.com/posts/how-do-kubernetes-and-docker-create-ip-addresses/
- https://dustinspecker.com/posts/iptables-how-docker-publishes-ports/
- https://dustinspecker.com/posts/iptables-how-kubernetes-services-direct-traffic-to-pods/
  
  Optional:
 
-- <https://betterprogramming.pub/k8s-a-closer-look-at-kube-proxy-372c4e8b090>
-- <https://developer.ibm.com/videos/learn-the-history-and-fundamentals-of-kubernetes/>
-- <https://medium.com/containermind/a-beginners-guide-to-kubernetes-7e8ca56420b6> [2018 article but covers lot of topics]
-- <https://developer.ibm.com/articles/kubernetes-networking-what-you-need-to-know/>
+
 - Complete all scenarios here: <https://www.katacoda.com/loodse/courses/kubernetes>
-- <https://www.youtube.com/watch?v=XJufs3ZZBVY> [How to Setup a 3 Node Kubernetes Cluster for CKA Step by Step]
+
 
 ## Install minikube & understand the basics:
  <https://kubernetes.io/docs/tutorials/hello-minikube/>
@@ -233,27 +218,11 @@ Its all yaml!!
 
  `kubectl create namespace mynamespace`
 
-2. Create a simple go rest API [or in python]
-
- <https://www.youtube.com/watch?v=MKkokYpGyTU> [ Introduction to HTTP with Go : Our first microservice]
-
-<https://tutorialedge.net/golang/basic-rest-api-go-fiber/>
-
-<https://www.youtube.com/playlist?list=PLmD8u-IFdreyh6EUfevBcbiuCKzFk0EW_>
-
-For python there is: https://fastapi.tiangolo.com/tutorial/
+2. Create a simple go rest API 
 
 3. Build docker image with it
 
- > [Figure how to link local image repo in minikube](https://stackoverflow.com/questions/42564058/how-to-use-local-docker-images-with-minikube)
 
-> Create everything below using configuration yaml
-
-
-<https://blog.usejournal.com/useful-tools-for-better-kubernetes-development-87820c2b9435?gi=7295c99c2a0c>
-
-Complete these two tutorials:
-https://github.com/knrt10/kubernetes-basicLearning
 https://redhat-scholars.github.io/kubernetes-tutorial/kubernetes-tutorial/index.html
 
 
@@ -271,7 +240,7 @@ Then referenced from mongoexpress deployment
 Learn peristent volumes and stateful sets and change mongodb to that instead of deployment
 
 Create a config map of non sensitive values if needed
-<https://www.youtube.com/watch?v=o-gXx7r7Rz4> [Configuration management in Kubernetes for beginners]
+
 Mongo express deployment
 Expose mongodbexpress as external service
 
@@ -294,11 +263,6 @@ Expose it as external service
 
 > Goal: Rest api to interact with mongodb. mongoexpress to interact with mongodb. Frontend to interact with API
 
-https://kubernetes.io/docs/tasks/access-application-cluster/ingress-minikube/
-https://betterprogramming.pub/do-faster-development-and-testing-on-kubernetes-apps-with-telepresence-b7eac604dca4
-
-https://github.com/cdk8s-team/cdk8s
-
 Create ingress rules for sample url ---> gobuydoge.com
 /Frontend will take to frontend external service
 /Backend will take to backeelnd external service
@@ -312,7 +276,7 @@ Gobuydoge.com/backend should show backend
 Extra:
 
 - Have a look at various other ingress controllers: <https://docs.google.com/spreadsheets/d/191WWNpjJ2za6-nbG4ZoUMXMpUK8KlCIosvQB0f-oq3k/htmlview?pru=AAABdXUHlbs*g6XkyoZXhanlhRazst77Xw>
-- Try Traefik v2 ingress controller
+
 
 --------------------------------
 
@@ -334,8 +298,6 @@ Install any other container runtime other than docker
 
 - <https://www.youtube.com/watch?v=bV5RcNiHlfw> [Kubernetes cluster with CRI-O container runtime | Step by step tutorial]
 
-- Run the same workload that was run on minikube
-
 - Run the above setup in either of a cloud k8s platform (manually for now):
 
   - EKS
@@ -349,9 +311,6 @@ Extra:
 - Use buildah to build container images instead of
 - Try different local k8s platforms: k3s,kind,microk8s.
 - Aws eks infra building with CDK
-
-
-https://blog.3sky.dev/article/eks-with-speed/
 
 --------------------------------
 
