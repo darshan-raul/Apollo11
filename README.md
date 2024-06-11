@@ -106,108 +106,54 @@ Along the way we will explore all the services and features in the k8s ecosystem
   - <https://www.youtube.com/watch?v=1uFVr15xDGg>
   - <https://developer.ibm.com/tutorials/yaml-basics-and-usage-in-kubernetes/>
 
-<https://github.com/arialdomartini/Back-End-Developer-Interview-Questions>
+- **Go Lang basics**:
+  
+  - http://tour.golang.org/
+  - https://gobyexample.com
+  - https://www.practical-go-lessons.com
+  - https://quii.gitbook.io/learn-go-with-tests
 
+- **Docker/Container Basics**
+
+   Because even though docker is no more the only container runtime in town [nor is it technically supported without a external shim in k8s]. Its still the best place to get to know about containers and explore them
+   
+    - https://docs.docker.com/get-started/overview
+    - [Docker explained in Sketches](https://dev.to/aurelievache/series/8105)
+  
+   Deep-dive:
+  
+  - <http://docker-saigon.github.io/post/Docker-Internals/>
+  - <https://gist.github.com/StevenACoffman/41fee08e8782b411a4a26b9700ad7af5> [best practices]
 
 
 # Stage 1: Basics + Local setup
 
 > Goal: We get our applications running in a simple docker-compose setup just to understand the basic functional working.
 
-## 1. Go Lang basics
-
-
-Recommended videos to watch and follow along:
-
-- [Go / Golang Full Course for Beginners | 2021](https://www.youtube.com/watch?v=1NF2LtWbA1g&t=1024s)
-- [Introduction to Go Programming for beginners](https://www.youtube.com/watch?v=jpKysZwllVw&t=488s )
-
-
-- http://tour.golang.org/
-- https://github.com/a8m/golang-cheat-sheet
-
-
-**Other Sources**:
-
-
-## 2. Docker/Container Basics:
-
- Because even though docker is no more the only container runtime in town. Its still the best place to get to know about containers and explore them
-
-- [Learn Docker in 7 Easy Steps - Full Beginner's Tutorial](https://www.youtube.com/watch?v=gAkwW2tuIqE)
-- [you need to learn Docker RIGHT NOW!! // Docker Containers 101](https://www.youtube.com/watch?v=eGz9DS-aIeY)
-- Do one of these full courses: 
-  - [Docker Tutorial for Beginners FULL COURSE in 3 Hours](https://www.youtube.com/watch?v=3c-iBn73dDE)
-  - [Docker for Beginners: Full Free Course!- KodeKloud ](https://www.youtube.com/watch?v=zJ6WbK9zFpI&t=3637s)
-- Cover remaining gaps with these cheatsheets and articles:
-  - https://github.com/wsargent/docker-cheat-sheet
-  - https://developer.ibm.com/blogs/what-are-containers-and-why-do-you-need-them/
-  - https://developer.ibm.com/tutorials/building-docker-images-locally-and-in-cloud/
-  - `Run your app in production` section from <https://docs.docker.com/get-started/overview/>
-  - [Docker explained in Sketches](https://dev.to/aurelievache/series/8105)
-
- Deep-dive:
-
-- <http://docker-saigon.github.io/post/Docker-Internals/>
-- [Docker Container Lifecycle and Commands | K21 Academy](https://www.youtube.com/watch?v=wqKRmbBeS24&list=WL&index=6)
-- <https://developer.ibm.com/articles/true-benefits-of-moving-to-containers-1/>
-- <https://developer.ibm.com/articles/true-benefits-of-moving-to-containers-2/>
-- <https://developer.ibm.com/videos/dev-diaries-app-modernization-containers/>
-- <https://gist.github.com/StevenACoffman/41fee08e8782b411a4a26b9700ad7af5> [best practices]
-- [Docker Networking Deep Dive](https://www.youtube.com/watch?v=T0U_eP73jF0&list=WL&index=5&t=2323s)
-
-- <https://www.youtube.com/watch?v=RfL_CjXfQds> [Dockerless: Build and Run Containers with Podman and Systemd]
 
 ## 3.Kubernetes basics
 
-- Take an overview of K8s:
-
-  - [Kubernetes Explained in 100 Seconds](https://www.youtube.com/watch?v=PziYflu8cB8)
-  - [you need to learn Kubernetes RIGHT NOW!!](https://www.youtube.com/watch?v=7bA0gTroJjw)
- <https://www.youtube.com/watch?v=8C_SCDbUJTg>
-
-- Watch this video completely. Take notes:
-
-  <https://www.youtube.com/watch?v=X48VuDVv0do&t=6088s>
 
 - Get your hands dirty. This tutorial will give a good bootstrap on k8s operations
 
   - <https://kubernetes.io/docs/tutorials/kubernetes-basics/>
 
-  - https://github.com/knrt10/kubernetes-basicLearning
-  
   - Brisk through <https://kubernetes.io/docs/concepts>.
+
+  - Check all the terms and glossary <https://kubernetes.io/docs/reference/glossary/?all=true>
 
   
   The two tasks will make it pretty easy for you to understand the core concepts from the documentation. This will be just to consolidate those core concepts and collect more dots of k8s knowledge. In the later stages you will be able to connect those extra dots as well.
 
- 
- Optional:
-
-
-- Complete all scenarios here: <https://www.katacoda.com/loodse/courses/kubernetes>
 
 
 ## Install minikube & understand the basics:
  <https://kubernetes.io/docs/tutorials/hello-minikube/>
 
- > Note: Minikube is the simplest way to start a local k8s cluster. There are many other ways like kind(Kubernetes in Docker) ,k3s,microk8s amongst others.<https://developer.ibm.com/blogs/options-to-run-kubernetes-locally/>
+ > Note: Minikube is the simplest way to start a local k8s cluster. There are many other ways like kind(Kubernetes in Docker) ,k3s,microk8s amongst others. <https://developer.ibm.com/blogs/options-to-run-kubernetes-locally/>
 
  <https://kubernetes.io/docs/reference/kubectl/overview/>
 
-## K8s yaml syntax:
-
-Its all yaml!!
-
-- https://www.mirantis.com/blog/introduction-to-yaml-creating-a-kubernetes-deployment/>
-
-- https://www.youtube.com/watch?v=1rwCkFTjikw> [YAML Tips for Kubernetes]
-- https://www.youtube.com/watch?v=5gsHYdiD6v8> [Simplify Kubernetes YAML with Kustomize]
-- https://boxunix.com/2020/05/15/a-better-way-of-organizing-your-kubernetes-manifest-files/
-
-## Optional
-
-- Check all the terms and glossary <https://kubernetes.io/docs/reference/glossary/?all=true>
 
 
 # Stage 2: Rest api + backend in local k8s cluster [ 2 weeks ]
@@ -529,8 +475,13 @@ Reading lists
 - Kubernetes
   - <https://kubernetes.io/case-studies/>
 
+  - https://boxunix.com/2020/05/15/a-better-way-of-organizing-your-kubernetes-manifest-files/
+
+
 - Docker:
   - <https://developer.ibm.com/articles/containerization-of-legacy-applications/>
+
+- <https://github.com/arialdomartini/Back-End-Developer-Interview-Questions>
 
 --------------------------------
 
