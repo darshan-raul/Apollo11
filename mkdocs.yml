@@ -1,0 +1,14 @@
+site_name: My site
+site_url: https://mydomain.org/mysite
+theme:
+  name: material
+nav:
+  - home: index.md
+  - readme: accio/readme.md
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format

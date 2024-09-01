@@ -1,7 +1,16 @@
 
 # Apollo 11
 
-![logo](./images/apollo11-project-logo.png)
+![logo](../images/apollo11-project-logo.png)
+
+``` mermaid
+graph LR
+  A[Start] --> B{Error?};
+  B -->|Yes| C[Hmm...];
+  C --> D[Debug];
+  D --> B;
+  B ---->|No| E[Yay!];
+```
 
 11 stage plan to enable you to become very good with the whole k8s based cloud native ecosystem and comfortable with all the components involved for almost every requirement that may come up to build a robust architecture.
 
