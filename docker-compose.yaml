@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres
+    restart: always
+    environment: &psqlenv # these will be reused below [compose fragment concept]
+      POSTGRES_PASSWORD: tothemoon
+      POSTGRES_USER: apollo
+      POSTGRES_DB: apollo11
+    volumes:
+      - type: volume
+        source: db-data
+        target: /var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    networks:
+      - backend
+volumes:
+  db-data:
+    name: "postgres"
+networks:
+  backend:

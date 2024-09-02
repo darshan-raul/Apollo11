@@ -1,10 +1,23 @@
-site_name: My site
+site_name: Apollo 11
 site_url: https://mydomain.org/mysite
 theme:
   name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.path
+    - navigation.expand
+    - toc.follow
+    - navigation.top
+
+
 nav:
-  - home: index.md
+  - Home: index.md
   - readme: accio/readme.md
+  - Blog:
+      - blog/index.md
+plugins:
+  - blog
 
 markdown_extensions:
   - pymdownx.superfences:
