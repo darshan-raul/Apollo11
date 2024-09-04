@@ -36,6 +36,26 @@ Extra:
 - Dapr
 - Dagger
 
+``` mermaid
+sequenceDiagram
+  participant Customer
+  participant App
+  participant Movie
+  participant Theatre
+  participant Booking
+  autonumber
+  App->>Movie: Get movie list
+  Movie->>App: Send back movie list
+  Customer->>App: Select movie
+  App->>Theatre: Send selected movie to theatre
+  Theatre->>Theatre: check all theatres hosting the movie
+  Theatre->>App: theatre list where movie is screening
+  Customer->>App: Selects theatre where they have to watch show
+  App->>Theatre: Check if seat available in that theatre
+  Theatre->>App: Respond back if seat available
+  App->>Booking: Book ticket for the show
+  Booking->>App: Seat booked, enjoy!
+```
 ## Stages:
 
 - Stage 0: Basics and Local Setup
