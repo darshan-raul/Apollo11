@@ -14,9 +14,21 @@ services:
       - 5432:5432
     networks:
       - backend
+  mongo:
+    image: mongodb/mongodb-community-server
+    restart: always
+    volumes:
+      - type: volume
+        source: mongo-data
+        target: /data/db
+    ports:
+      - 27017:27017
+    networks:
+      - backend
 volumes:
   db-data:
     name: "postgres"
+  mongo-data:
+    name: "mongodb"
 networks:
   backend:
-
