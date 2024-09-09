@@ -1,5 +1,12 @@
 services:
-  db:
+  movie:
+    image: movie
+    restart: always
+    ports:
+      - 8000:8000
+    networks:
+      - backend
+  bookingdb:
     image: postgres
     restart: always
     environment: &psqlenv # these will be reused below [compose fragment concept]
@@ -8,27 +15,46 @@ services:
       POSTGRES_DB: apollo11
     volumes:
       - type: volume
-        source: db-data
+        source: booking-db-data
         target: /var/lib/postgresql/data
     ports:
       - 5432:5432
     networks:
       - backend
-  mongo:
-    image: mongodb/mongodb-community-server
+  theatremongo:
+    image: mongo
     restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: user
+      MONGO_INITDB_ROOT_PASSWORD: pass
     volumes:
       - type: volume
-        source: mongo-data
+        source: theatre-mongo-data
         target: /data/db
     ports:
       - 27017:27017
     networks:
       - backend
+  moviemongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: user
+      MONGO_INITDB_ROOT_PASSWORD: pass
+    volumes:
+      - type: volume
+        source: movie-mongo-data
+        target: /data/db
+    ports:
+      - 27018:27017
+    networks:
+      - backend
 volumes:
-  db-data:
-    name: "postgres"
-  mongo-data:
-    name: "mongodb"
+  booking-db-data:
+    name: "bookingpostgres"
+  theatre-mongo-data:
+    name: "theatremongodb"
+  movie-mongo-data:
+    name: "moviemongodb"
 networks:
   backend:
