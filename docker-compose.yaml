@@ -1,9 +1,90 @@
 services:
-  movie:
-    image: movie
+  dashboard:
+    build: ./code/dashboard
+    develop:
+      watch: 
+        - path: ./code/dashboard #rebuild this image whenever any changes occur in this folder
+          action: rebuild
     restart: always
     ports:
+      - 8080:8080
+    networks:
+      - backend
+  movie:
+    build: ./code/movie
+    develop:
+      watch: 
+        - path: ./code/movie/app #rebuild this image whenever any changes occur in this folder
+          action: rebuild
+    restart: always
+    environment:
+      MONGO_USER: "user"
+      MONGO_PASSWORD: "pass"
+      MONGO_URL: "moviemongo:27017"
+    ports:
       - 8000:8000
+    networks:
+      - backend
+  payment:
+    build: ./code/payment
+    develop:
+      watch: 
+        - path: ./code/payment/app #rebuild this image whenever any changes occur in this folder
+          action: rebuild
+    restart: always
+    environment:
+      DATABASE_URL: "mysql+pymysql://apollo:tothemoon@paymentdb:3306/apollo11"
+    ports:
+      - 9000:8000
+    networks:
+      - backend
+  theatre:
+    build: ./code/theatre
+    develop:
+      watch: 
+        - path: ./code/theatre #rebuild this image whenever any changes occur in this folder
+          action: rebuild
+    environment:
+      MONGO_USER: "user"
+      MONGO_PASSWORD: "pass"
+      MONGO_AUTH_DB: "admin"
+      MONGO_URL: "theatremongo:27017"
+    restart: always
+    ports:
+      - 7000:7000
+    networks:
+      - backend
+  booking:
+    build: ./code/booking
+    develop:
+      watch: 
+        - path: ./code/booking #rebuild this image whenever any changes occur in this folder
+          action: rebuild
+    restart: always
+    environment:
+      PSQL_HOST: "bookingdb"
+      PSQL_PORT: "5432"
+      PSQL_USER: "apollo"
+      PSQL_PASSWORD: "tothemoon"
+      PSQL_DB: "apollo11"
+    ports:
+      - 3000:3000
+    networks:
+      - backend
+  paymentdb:
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_PASSWORD: tothemoon
+      MYSQL_USER: apollo
+      MYSQL_DATABASE: apollo11
+      MYSQL_RANDOM_ROOT_PASSWORD: "root"
+    volumes:
+      - type: volume
+        source: payment-db-data
+        target: /var/lib/mysql
+    ports:
+      - 3306:3306
     networks:
       - backend
   bookingdb:
@@ -17,8 +98,34 @@ services:
       - type: volume
         source: booking-db-data
         target: /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username $$POSTGRES_USER --dbname=$$POSTGRES_DB"]
+      interval: 10s
+      retries: 5
+      timeout: 10s
     ports:
       - 5432:5432
+    networks:
+      - backend
+  bookingdbdb-init:
+    image: postgres
+    container_name: bookingdbdb-init
+    depends_on:
+      bookingdb:
+        condition: service_healthy #only start this when the booking db is healthy
+    environment:
+      POSTGRES_PASSWORD: tothemoon
+      POSTGRES_USER: apollo
+      POSTGRES_DB: apollo11
+    entrypoint: [ "bash", "-c" ]
+    command: >
+      "
+      sleep 10;
+      PGPASSWORD=$$POSTGRES_PASSWORD psql -h bookingdb -p 5432 -U $$POSTGRES_USER -d $$POSTGRES_DB -f /scripts/create.sql;
+      echo 'Tables created!'
+      "
+    volumes:
+      - ./code/booking/scripts:/scripts
     networks:
       - backend
   theatremongo:
@@ -52,6 +159,8 @@ services:
 volumes:
   booking-db-data:
     name: "bookingpostgres"
+  payment-db-data:
+    name: "paymentmysql"
   theatre-mongo-data:
     name: "theatremongodb"
   movie-mongo-data:

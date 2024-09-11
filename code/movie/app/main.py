@@ -1,13 +1,16 @@
 from fastapi import FastAPI
 from pymongo import MongoClient
 from pydantic import BaseModel
-
+import os
 
 class Movie(BaseModel):
     name: str
     genre: str | None = None
     stars: str
 
+mongoUser = os.environ['MONGO_USER']
+mongoPassword = os.environ['MONGO_PASSWORD']
+mongoUrl = os.environ['MONGO_URL']
 
 app = FastAPI()
 
@@ -15,7 +18,7 @@ app = FastAPI()
 def get_database():
  
    # Provide the mongodb atlas url to connect python to mongodb using pymongo
-   CONNECTION_STRING = "mongodb://user:pass@moviemongo:27017"
+   CONNECTION_STRING = f"mongodb://{mongoUser}:{mongoPassword}@{mongoUrl}"
  
    # Create a connection using MongoClient. You can import MongoClient or use pymongo.MongoClient
    client = MongoClient(CONNECTION_STRING)
@@ -25,7 +28,7 @@ db = get_database()
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "pong"}
 
 @app.get("/movies")
 async def movies():

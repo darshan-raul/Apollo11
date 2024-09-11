@@ -1,9 +1,10 @@
 package main
 
 import (
-	"net/http"
-	"github.com/gin-gonic/gin"
 	"fmt"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Movie struct {
@@ -13,7 +14,7 @@ type Movie struct {
 }
 
 type Theatre struct {
-	Name  string
+	Name     string
 	Location string
 }
 
@@ -60,7 +61,7 @@ func main() {
 		for _, movie := range movies {
 			if movie.Title == movieTitle {
 				c.HTML(http.StatusOK, "theatres.html", gin.H{
-					"theatres": movie.Theatres,
+					"theatres":   movie.Theatres,
 					"movietitle": movie.Title,
 				})
 				return

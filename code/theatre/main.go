@@ -3,13 +3,17 @@ package main
 import (
 	"context"
 	//"errors"
+
+	"fmt"
+	"log"
+	"os"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
-	"time"
 )
 
 var collection *mongo.Collection
@@ -30,13 +34,20 @@ type TheatreRequest struct {
 }
 
 func init() {
-	credential := options.Credential{
-		Username:   "user",
-		Password:   "pass",
-		AuthSource: "admin",
-	}
 
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017/").
+	mongouser := os.Getenv("MONGO_USER")
+	mongopass := os.Getenv("MONGO_PASSWORD")
+	mongoauthdb := os.Getenv("MONGO_AUTH_DB")
+	mongourl := os.Getenv("MONGO_URL")
+	// mongoport := os.Getenv("MONGO_PORT")
+	credential := options.Credential{
+		Username:   mongouser,
+		Password:   mongopass,
+		AuthSource: mongoauthdb,
+	}
+	mongouri := fmt.Sprintf("mongodb://%s/", mongourl)
+
+	clientOptions := options.Client().ApplyURI(mongouri).
 		SetAuth(credential)
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
