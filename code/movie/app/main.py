@@ -1,12 +1,14 @@
 from fastapi import FastAPI
 from pymongo import MongoClient
 from pydantic import BaseModel
+import httpx
 import os
 
 class Movie(BaseModel):
     name: str
     genre: str | None = None
     stars: str
+    theatres: list | None = None # aan be empty
 
 mongoUser = os.environ['MONGO_USER']
 mongoPassword = os.environ['MONGO_PASSWORD']
@@ -36,11 +38,13 @@ async def movies():
     result = collection_name.find()
     movies = []
     for doc in result:
-        print(doc)
         doc['_id'] = str(doc['_id'])
-        movies.append(doc)
-
-    return {"message": movies}
+        movie = {}
+        movie["title"] = doc["name"]
+        movie["theatres"] = doc["theatres"]
+        movie["genre"] = doc["genre"]
+        movies.append(movie)
+    return movies
 
 @app.get("/movies/{movie}")
 async def getmovie(movie):
@@ -52,10 +56,20 @@ async def getmovie(movie):
 @app.post("/movies")
 async def create_movie(movie: Movie):
     collection_name = db["user_1_items"]
+   
+    theatresrequest = httpx.get('http://theatre:7000/theatres')
+    theatreslist = theatresrequest.json()
+
+    theatres = []
+    for theatre in theatreslist:
+        theatreentry = {"name": theatre["Name"], "location": theatre["Location"]}
+        theatres.append(theatreentry)
+    print(theatres)
     moviejson = {
     "name" : movie.name,
     "genre" : movie.genre,
     "stars" : movie.stars,
+    "theatres": theatres
     }
     collection_name.insert_one(moviejson)
     return {"message": movie}

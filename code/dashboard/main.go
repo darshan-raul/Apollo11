@@ -1,16 +1,18 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Movie struct {
-	Title    string
-	Genre    string
-	Theatres []Theatre
+	Title    string    `json:"title"`
+	Genre    string    `json:"genre"`
+	Theatres []Theatre `json:"theatres"`
 }
 
 type Theatre struct {
@@ -23,34 +25,49 @@ func main() {
 	r.LoadHTMLGlob("templates/*")
 	r.Static("/static", "./static")
 
-	movies := []Movie{
-		{
-			Title: "Inception",
-			Genre: "Sci-Fi",
-			Theatres: []Theatre{
-				{Name: "Cineplex", Location: "Downtown"},
-				{Name: "AMC", Location: "Uptown"},
-			},
-		},
-		{
-			Title: "The Godfather",
-			Genre: "Crime",
-			Theatres: []Theatre{
-				{Name: "Regal", Location: "Suburb"},
-				{Name: "Cineplex", Location: "Downtown"},
-			},
-		},
-		{
-			Title: "Pulp Fiction",
-			Genre: "Crime",
-			Theatres: []Theatre{
-				{Name: "AMC", Location: "Uptown"},
-				{Name: "Regal", Location: "Suburb"},
-			},
-		},
-	}
+	// movies := []Movie{
+	// 	{
+	// 		Title: "Inception",
+	// 		Genre: "Sci-Fi",
+	// 		Theatres: []Theatre{
+	// 			{Name: "Cineplex", Location: "Downtown"},
+	// 			{Name: "AMC", Location: "Uptown"},
+	// 		},
+	// 	},
+	// 	{
+	// 		Title: "The Godfather",
+	// 		Genre: "Crime",
+	// 		Theatres: []Theatre{
+	// 			{Name: "Regal", Location: "Suburb"},
+	// 			{Name: "Cineplex", Location: "Downtown"},
+	// 		},
+	// 	},
+	// 	{
+	// 		Title: "Pulp Fiction",
+	// 		Genre: "Crime",
+	// 		Theatres: []Theatre{
+	// 			{Name: "AMC", Location: "Uptown"},
+	// 			{Name: "Regal", Location: "Suburb"},
+	// 		},
+	// 	},
+	// }
 
 	r.GET("/", func(c *gin.Context) {
+		resp, err := http.Get("http://movie:8000/movies")
+		if err != nil {
+			fmt.Println("No response from request")
+		}
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println("No response from request")
+		}
+		var movies []Movie
+		if err := json.Unmarshal(body, &movies); err != nil {
+			fmt.Println("Can not unmarshal JSON")
+		}
+		fmt.Println(movies)
+
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"movies": movies,
 		})
@@ -58,6 +75,20 @@ func main() {
 
 	r.GET("/theatres/:movie", func(c *gin.Context) {
 		movieTitle := c.Param("movie")
+		resp, err := http.Get("http://movie:8000/movies")
+		if err != nil {
+			fmt.Println("No response from request")
+		}
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println("No response from request")
+		}
+		var movies []Movie
+		if err := json.Unmarshal(body, &movies); err != nil {
+			fmt.Println("Can not unmarshal JSON")
+		}
+		fmt.Println(movies)
 		for _, movie := range movies {
 			if movie.Title == movieTitle {
 				c.HTML(http.StatusOK, "theatres.html", gin.H{
