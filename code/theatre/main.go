@@ -32,6 +32,10 @@ type TheatreRequest struct {
 	Location string `json:"location"`
 	Seats    int    `json:"seats"`
 }
+type TheatreResponse struct {
+	Name     string `json:"name"`
+	Location string `json:"location"`
+}
 
 func init() {
 
@@ -93,7 +97,18 @@ func main() {
 		if err != nil {
 			log.Panic(err)
 		}
-		return c.JSON(theatres)
+
+		var theatreList []any
+
+		for _, theatre := range theatres {
+			var m TheatreResponse
+			m.Name = theatre.Name
+			m.Location = theatre.Location
+
+			theatreList = append(theatreList, m)
+		}
+
+		return c.JSON(theatreList)
 	})
 	// create one
 	app.Post("/theatre", func(c *fiber.Ctx) error {

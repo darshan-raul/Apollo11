@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,6 +19,14 @@ type Movie struct {
 type Theatre struct {
 	Name     string
 	Location string
+}
+type BookingRequest struct {
+	Movie   string `json:"movie_name"`
+	Theatre string `json:"theatre_name"`
+	Price   int    `json:"price"`
+}
+type BookingResult struct {
+	Id int `json:"id"`
 }
 
 func main() {
@@ -106,9 +115,49 @@ func main() {
 		theatre := c.PostForm("theatre")
 		fmt.Println("Movie:", movie)
 		fmt.Println("Theatre:", theatre)
+		// HTTP endpoint
+		posturl := "http://booking:3000/api/bookings"
+
+		data := BookingRequest{
+			Movie:   movie,
+			Theatre: theatre,
+			Price:   50,
+		}
+
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			fmt.Println("Error marshaling data:", err)
+			return
+		}
+
+		r, err := http.NewRequest("POST", posturl, bytes.NewBuffer(jsonData))
+		if err != nil {
+			panic(err)
+		}
+		r.Header.Add("Content-Type", "application/json")
+		client := &http.Client{}
+		res, err := client.Do(r)
+		if err != nil {
+			fmt.Println("Error sending request:", err)
+			panic(err)
+		}
+
+		defer res.Body.Close()
+
+		booking_res := &BookingResult{}
+
+		derr := json.NewDecoder(res.Body).Decode(booking_res)
+		if derr != nil {
+			panic(derr)
+		}
+		if res.StatusCode != http.StatusOK {
+			panic(res.Status)
+		}
+		fmt.Println("Id:", booking_res.Id)
 		c.HTML(http.StatusOK, "booking.html", gin.H{
 			"movie":   movie,
 			"theatre": theatre,
+			"id":      booking_res.Id,
 		})
 	})
 

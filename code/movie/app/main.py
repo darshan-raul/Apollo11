@@ -62,7 +62,7 @@ async def create_movie(movie: Movie):
 
     theatres = []
     for theatre in theatreslist:
-        theatreentry = {"name": theatre["Name"], "location": theatre["Location"]}
+        theatreentry = {"name": theatre["name"], "location": theatre["location"]}
         theatres.append(theatreentry)
     print(theatres)
     moviejson = {

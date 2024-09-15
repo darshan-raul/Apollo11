@@ -2,8 +2,11 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 
@@ -22,7 +25,16 @@ var (
 type Booking struct {
 	MovieName   string `json:"movie_name"`
 	TheatreName string `json:"theatre_name"`
-	Price       string `json:"price"`
+	Price       int    `json:"price"`
+}
+type Movie struct {
+	Title    string    `json:"title"`
+	Genre    string    `json:"genre"`
+	Theatres []Theatre `json:"theatres"`
+}
+type Theatre struct {
+	Name     string
+	Location string
 }
 
 var db *sql.DB
@@ -57,15 +69,77 @@ func createBooking(c *fiber.Ctx) error {
 		return err
 	}
 
-	sqlStatement := `
-	INSERT INTO bookings (movie_name, theatre_name, price)
-	VALUES ($1, $2, $3)`
-	_, err := db.Exec(sqlStatement, b.MovieName, b.TheatreName, b.Price)
+	// check if movie exists
+	resp, err := http.Get("http://movie:8000/movies")
 	if err != nil {
-		return err
+		fmt.Println("No response from request")
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("No response from request")
+	}
+	var movies []Movie
+	if err := json.Unmarshal(body, &movies); err != nil {
+		fmt.Println("Can not unmarshal JSON")
+	}
+	fmt.Println(movies)
+	var movie_match bool = false
+	var theatre_match bool = false
+	for _, movie := range movies {
+		if movie.Title == b.MovieName {
+			fmt.Println("movie name matches")
+			movie_match = true
+		}
+		for _, theatre := range movie.Theatres {
+
+			resp, err := http.Get("http://theatre:7000/theatres")
+			if err != nil {
+				fmt.Println("No response from request")
+			}
+			defer resp.Body.Close()
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				fmt.Println("No response from request")
+			}
+			var theatres []Theatre
+			if err := json.Unmarshal(body, &theatres); err != nil {
+				fmt.Println("Can not unmarshal JSON")
+			}
+			fmt.Println(theatres)
+			if theatre.Name == b.TheatreName {
+				fmt.Println("theatre name matches")
+				theatre_match = true
+			}
+		}
+	}
+	if !movie_match {
+		return c.Status(409).JSON(&fiber.Map{
+			"success": false,
+			"error":   "There is no such movie!",
+		})
+	}
+	if !theatre_match {
+		return c.Status(409).JSON(&fiber.Map{
+			"success": false,
+			"error":   "There is no such theatre!",
+		})
 	}
 
-	return nil
+	sqlStatement := `
+	INSERT INTO bookings (movie_name, theatre_name, price)
+	VALUES ($1, $2, $3)
+	RETURNING id`
+	id := 0
+	qerr := db.QueryRow(sqlStatement, b.MovieName, b.TheatreName, b.Price).Scan(&id)
+	if qerr != nil {
+		return err
+	}
+	fmt.Println("New record ID is:", id)
+	m := make(map[string]int)
+
+	m["id"] = id
+	return c.JSON(m)
 }
 
 func getAllBookings(c *fiber.Ctx) error {
