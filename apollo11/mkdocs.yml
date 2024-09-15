@@ -2,22 +2,36 @@ site_name: Apollo 11
 site_url: https://darshanraul.io/apollo11
 theme:
   name: material
+  font:
+    text: Roboto
+    code: Roboto Mono
+  palette: 
+    - primary: deep orange
+    # Palette toggle for light mode
+    - scheme: black
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to light mode
   features:
     - navigation.tabs
     - navigation.sections
     - navigation.path
     - navigation.expand
+    - navigation.indexes
     - toc.follow
     - navigation.top
 
 
 nav:
   - Home: index.md
+  - Liftoff: stages/liftoff/liftoff.md
   - readme: accio/readme.md
-  - Blog:
-      - blog/index.md
-plugins:
-  - blog
 
 markdown_extensions:
   - pymdownx.superfences:
