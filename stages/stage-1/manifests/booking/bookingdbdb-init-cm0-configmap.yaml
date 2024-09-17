@@ -1,0 +1,14 @@
+apiVersion: v1
+data:
+  create.sql: |-
+    CREATE TABLE IF NOT EXISTS bookings (
+      id SERIAL PRIMARY KEY,
+      movie_name TEXT,
+      theatre_name TEXT,
+      price TEXT
+    );
+kind: ConfigMap
+metadata:
+  labels:
+    io.kompose.service: bookingdbdb-init
+  name: bookingdbdb-init-cm0

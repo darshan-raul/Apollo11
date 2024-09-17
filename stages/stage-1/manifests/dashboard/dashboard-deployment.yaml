@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.service: dashboard
+  name: dashboard
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      io.kompose.service: dashboard
+  strategy:  # Add a rolling update strategy to ensure smooth updates
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%  # Allows 25% additional pods during updates
+      maxUnavailable: 25%  # Ensures that at least 75% of the pods are running
+  template:
+    metadata:
+      labels:
+        io.kompose.service: dashboard
+    spec:
+      containers:
+        - image: dashboard # Specify the image version or use a digest for better control
+          name: dashboard
+          readinessProbe:  # Add readinessProbe to detect when the container is ready to receive traffic
+            httpGet:
+              path: /healthz  # Adjust the path to your app's health check
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:  # Add livenessProbe to ensure the container is healthy
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:  # Limit the container's resource usage
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          env:  # Define environment variables here
+            - name: ENV
+              value: "production"  # Hardcoded value
+            - name: APP_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: dashboard-config
+                  key: APP_MODE  # From ConfigMap
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: dashboard-config
+                  key: LOG_LEVEL  # From ConfigMap
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-secrets
+                  key: DB_USER  # From Secret
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-secrets
+                  key: DB_PASSWORD  # From Secret
+          securityContext:  # Add security context for container security
+            runAsNonRoot: true  # Ensure the container runs as a non-root user
+            capabilities:
+              drop:
+                - ALL  # Drop all Linux capabilities unless needed
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+      restartPolicy: Always
+      nodeSelector:  # Assign pods to specific nodes if necessary
+        disktype: ssd  # Example node selector label
+      affinity:  # Use node affinity/anti-affinity for better control over pod placement
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - dashboard
+              topologyKey: "kubernetes.io/hostname"
+      tolerations:  # Handle taints on nodes for specific tolerations
+        - key: "node.kubernetes.io/memory-pressure"
+          operator: "Exists"
+          effect: "NoSchedule"
