@@ -15,11 +15,15 @@ import (
 )
 
 var (
-	host     = os.Getenv("PSQL_HOST")
-	port     = os.Getenv("PSQL_PORT")
-	user     = os.Getenv("PSQL_USER")
-	password = os.Getenv("PSQL_PASSWORD")
-	dbname   = os.Getenv("PSQL_DB")
+	host         = os.Getenv("PSQL_HOST")
+	port         = os.Getenv("PSQL_PORT")
+	user         = os.Getenv("PSQL_USER")
+	password     = os.Getenv("PSQL_PASSWORD")
+	dbname       = os.Getenv("PSQL_DB")
+	movie_host   = os.Getenv("MOVIE_HOST")
+	movie_port   = os.Getenv("MOVIE_PORT")
+	theatre_host = os.Getenv("THEATRE_HOST")
+	theatre_port = os.Getenv("THEATRE_PORT")
 )
 
 type Booking struct {
@@ -70,7 +74,8 @@ func createBooking(c *fiber.Ctx) error {
 	}
 
 	// check if movie exists
-	resp, err := http.Get("http://movie:8000/movies")
+	movie_url := fmt.Sprintf("http://%s:%s/movies",movie_host,movie_port)
+	resp, err := http.Get(movie_url)
 	if err != nil {
 		fmt.Println("No response from request")
 	}
@@ -92,8 +97,8 @@ func createBooking(c *fiber.Ctx) error {
 			movie_match = true
 		}
 		for _, theatre := range movie.Theatres {
-
-			resp, err := http.Get("http://theatre:7000/theatres")
+			theatre_url := fmt.Sprintf("http://%s:%s/theatres",theatre_host,theatre_port)
+			resp, err := http.Get(theatre_url)
 			if err != nil {
 				fmt.Println("No response from request")
 			}

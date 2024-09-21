@@ -14,6 +14,14 @@ def on_startup():
     init_db()
 
 
+@app.get("/started")
+async def pong():
+    return {"yesihave": "started"}
+
+@app.get("/ready")
+async def pong():
+    return {"yesiam": "ready!"}
+
 @app.get("/ping")
 async def pong():
     return {"ping": "pong!"}

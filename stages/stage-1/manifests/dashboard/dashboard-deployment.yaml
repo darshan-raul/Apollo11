@@ -64,28 +64,7 @@ spec:
                 secretKeyRef:
                   name: dashboard-secrets
                   key: DB_PASSWORD  # From Secret
-          securityContext:  # Add security context for container security
-            runAsNonRoot: true  # Ensure the container runs as a non-root user
-            capabilities:
-              drop:
-                - ALL  # Drop all Linux capabilities unless needed
           ports:
             - containerPort: 8080
               protocol: TCP
       restartPolicy: Always
-      nodeSelector:  # Assign pods to specific nodes if necessary
-        disktype: ssd  # Example node selector label
-      affinity:  # Use node affinity/anti-affinity for better control over pod placement
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchExpressions:
-                  - key: app
-                    operator: In
-                    values:
-                      - dashboard
-              topologyKey: "kubernetes.io/hostname"
-      tolerations:  # Handle taints on nodes for specific tolerations
-        - key: "node.kubernetes.io/memory-pressure"
-          operator: "Exists"
-          effect: "NoSchedule"

@@ -40,10 +40,15 @@ Extra:
 # Stages:
 
 - Stage 0: Basics and Local Setup
+    - using docker compose to run all the components locally and ensure they run
 
-- Stage 1: Run basic api in local k8s cluster
+- Stage 1: Run on local k8s cluster
+    - create a kind cluster with multiple worker nodes
+    - create all the manifests and confirm its working
 
 - Stage 2: Move on from Local k8s cluster
+    - github actions to push image to gcr/private repo
+    - use image pull secrets to pull image
 
 - Stage 3: Routing using ingress controller
 
@@ -51,7 +56,8 @@ Extra:
 
 - Stage 5: Deployment/Gitops [cover nodeselector, labels, muliple env deployment also]
 
-- Stage 6: Monitoring + Observability + Tracing
+- Stage 6: Monitoring + Observability + Tracing + troubleshooting
+    - ephemeral containers
 
 - Stage 7: Service Mesh
 
@@ -60,5 +66,12 @@ Extra:
 - Stage 9: Chaos Engineering + Backup and Restore
 
 - Stage 10: Security and Compliance
+    - https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+    - Enable or configure RBAC rules
 
 - Stage 11: Progressive Deployment
+
+
+# Prerequisite
+
+This course assumes that you come with bare basic knowledge about k8s concepts. 

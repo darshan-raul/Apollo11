@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
+  name: paymentdb
   labels:
-    io.kompose.service: payment-db-data
-  name: payment-db-data
+    app: paymentdb
 spec:
   accessModes:
     - ReadWriteOnce

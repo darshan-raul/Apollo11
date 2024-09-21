@@ -33,7 +33,11 @@ services:
           action: rebuild
     restart: always
     environment:
-      DATABASE_URL: "mysql+pymysql://apollo:tothemoon@paymentdb:3306/apollo11"
+      DATABASE_USER_NAME: "apollo"
+      DATABASE_USER_PWD: "tothemoon"
+      DATABASE_HOST: "paymentdb"
+      DATABASE_PORT: "3306"
+      DATABASE_NAME: "apollo11"
     ports:
       - 9000:8000
     networks:
@@ -67,6 +71,10 @@ services:
       PSQL_USER: "apollo"
       PSQL_PASSWORD: "tothemoon"
       PSQL_DB: "apollo11"
+      MOVIE_HOST: "movie"
+      MOVIE_PORT: "8000"
+      THEATRE_HOST: "theatre"
+      THEATRE_PORT: "7000"
     ports:
       - 3000:3000
     networks:

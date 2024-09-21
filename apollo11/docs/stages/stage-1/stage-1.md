@@ -131,6 +131,81 @@ Open a different terminal and try accessing the site:
 `curl http://localhost:8000`
 ![alt text](image-6.png)
 
+
+Delete the pod using `kubectl delete pod/nginx`
+
+## Creating namespace
+
+- `cd /stages/stage-1/manifests/namespace`
+- `kubectl apply -f namespace.yaml`
+
+![ubne](image-7.png)
+
+- `kubectl get namespaces`
+
+![alt text](image-8.png)
+
+- To get more info on namespaces refer: [namespaces](https://darshan-raul.gitbook.io/cloudnativeguide/kubernetes/concepts/namespaces)
+
+### Putting resource quotas
+
+## Load all the images inside kind cluster
+
+`kind load docker-image apollo11-payment:latest --name apollo`
+`kind load docker-image apollo11-movie:latest --name apollo`
+`kind load docker-image apollo11-booking:latest --name apollo`
+`kind load docker-image apollo11-theatre:latest --name apollo`
+`kind load docker-image apollo11-dashboard:latest --name apollo`
+
+> Note: because this will be local images, we need to ensure that we keep imagepullpolicy=never when running in the local cluster to avoid any image pull business
+
+## Creating payment service
+
+
+
+## Best practices when creating a deployment
+
+### Using specific image tags instead of latest
+
+### Adding resource limits
+
+
+```
+resources:  # Limit the container's resource usage
+    requests:
+        memory: "64Mi"
+        cpu: "250m"
+    limits:
+        memory: "128Mi"
+        cpu: "500m"
+```
+
+### Putting Liveness,startup and readiness probe
+
+```
+readinessProbe:  # Add readinessProbe to detect when the container is ready to receive traffic
+    httpGet:
+        path: /healthz  # Adjust the path to your app's health check
+        port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    livenessProbe:  # Add livenessProbe to ensure the container is healthy
+    httpGet:
+        path: /healthz
+        port: 8080
+    initialDelaySeconds: 15
+    periodSeconds: 20
+```
+
+
+
+## Tools
+
+### K9s
+### Kubens
+### Kubectx
+### jsonpath parsing
+
 ## Extra
 
 ### Kompose
@@ -142,3 +217,9 @@ Open a different terminal and try accessing the site:
 > Note: in my observations, you will have to tweak quite a bit to make the manifests work if you have some complex usecases but for simpler applications this will work like a charm
 
 - Just install kompose by following their guide and run `kompose convert` and you get your k8s manifests! Give it a try
+
+## Useful kubectl commands
+
+- `kubectl explain <resourcename>`
+- `kubectl explain <resourcename> --recursive`
+- `kubectl <syntax> --dry-run=client -o yaml`
