@@ -43,13 +43,13 @@ Extra:
 
 - Stage 1: Run basic api in local k8s cluster
 
-- Stage 2: Routing using ingress controller
+- Stage 2: Move on from Local k8s cluster
 
-- Stage 3: Move on from Local k8s cluster
+- Stage 3: Routing using ingress controller
 
 - Stage 4: Helm packaging and Kustomize Patching
 
-- Stage 5: Deployment/Gitops
+- Stage 5: Deployment/Gitops [cover nodeselector, labels, muliple env deployment also]
 
 - Stage 6: Monitoring + Observability + Tracing
 
