@@ -15,6 +15,7 @@ spec:
       labels:
         app: booking
     spec:
+    #TODO: add more init containers to check if theatre and booking services are reachable
       initContainers:
         - image: postgres
           name: bookingdbdb-init
@@ -24,8 +25,6 @@ spec:
             - bash
             - -c
           env:
-            - name: PGPASSFILE
-              value: /.pgpass
             - name: PSQL_PORT
               valueFrom:
                 secretKeyRef:
@@ -58,6 +57,60 @@ spec:
               mountPath: /.pgpass
               subPath: .pgpass
               readOnly: true
+        - name: wait-for-theatre-service
+          image: curlimages/curl:7.85.0
+          env:
+          - name: THEATRE_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: booking
+                key: THEATRE_HOST
+          - name: THEATRE_PING_PATH
+            valueFrom:
+              configMapKeyRef:
+                name: booking
+                key: THEATRE_PING_PATH
+          - name: THEATRE_PORT
+            valueFrom:
+              secretKeyRef:
+                name: booking
+                key: THEATRE_PORT
+          command:
+            - "sh"
+            - "-c"
+            - |
+              until curl -sf http://$THEATRE_HOST:$THEATRE_PORT$THEATRE_PING_PATH; do
+                echo "Waiting for $THEATRE_HOST:$THEATRE_PORT$THEATRE_PING_PATH to be reachable"
+                sleep 2
+              done
+              echo "theatre service is up"
+        - name: wait-for-movie-service
+          image: curlimages/curl:7.85.0
+          env:
+          - name: MOVIE_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: booking
+                key: MOVIE_HOST
+          - name: MOVIE_PING_PATH
+            valueFrom:
+              configMapKeyRef:
+                name: booking
+                key: MOVIE_PING_PATH
+          - name: MOVIE_PORT
+            valueFrom:
+              secretKeyRef:
+                name: booking
+                key: MOVIE_PORT
+          command:
+            - "sh"
+            - "-c"
+            - |
+              until curl -sf http://$MOVIE_HOST:$MOVIE_PORT$MOVIE_PING_PATH; do
+                echo "Waiting for $MOVIE_HOST:$MOVIE_PORT$MOVIE_PING_PATH to be reachable"
+                sleep 2
+              done
+              echo "movie service is up"
       containers:
         - image: apollo11-booking:latest
           name: booking

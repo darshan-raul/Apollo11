@@ -1,69 +1,136 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: apollo11
   labels:
-    io.kompose.service: dashboard
+    app: dashboard
   name: dashboard
 spec:
   replicas: 2
   selector:
     matchLabels:
-      io.kompose.service: dashboard
-  strategy:  # Add a rolling update strategy to ensure smooth updates
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 25%  # Allows 25% additional pods during updates
-      maxUnavailable: 25%  # Ensures that at least 75% of the pods are running
+      app: dashboard
   template:
     metadata:
       labels:
-        io.kompose.service: dashboard
+        app: dashboard
     spec:
+      initContainers:
+      - name: wait-for-booking-service
+        image: curlimages/curl:7.85.0
+        env:
+        - name: BOOKING_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: dashboard
+              key: BOOKING_HOST
+        - name: BOOKING_PING_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: dashboard
+              key: BOOKING_PING_PATH
+        - name: BOOKING_PORT
+          valueFrom:
+            secretKeyRef:
+              name: dashboard
+              key: BOOKING_PORT
+        command:
+          - "sh"
+          - "-c"
+          - |
+            until curl -sf http://$BOOKING_HOST:$BOOKING_PORT$BOOKING_PING_PATH; do
+              echo "Waiting for $BOOKING_HOST:$BOOKING_PORT$BOOKING_PING_PATH to be reachable"
+              sleep 2
+            done
+            echo "booking service is up"
+      - name: wait-for-movie-service
+        image: curlimages/curl:7.85.0
+        env:
+        - name: MOVIE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: dashboard
+              key: MOVIE_HOST
+        - name: MOVIE_PING_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: dashboard
+              key: MOVIE_PING_PATH
+        - name: MOVIE_PORT
+          valueFrom:
+            secretKeyRef:
+              name: dashboard
+              key: MOVIE_PORT
+        command:
+          - "sh"
+          - "-c"
+          - |
+            until curl -sf http://$MOVIE_HOST:$MOVIE_PORT$MOVIE_PING_PATH; do
+              echo "Waiting for $MOVIE_HOST:$MOVIE_PORT$MOVIE_PING_PATH to be reachable"
+              sleep 2
+            done
+            echo "movie service is up"
       containers:
-        - image: dashboard # Specify the image version or use a digest for better control
+        - image: apollo11-dashboard:latest
           name: dashboard
-          readinessProbe:  # Add readinessProbe to detect when the container is ready to receive traffic
+          imagePullPolicy: Never
+          startupProbe:
             httpGet:
-              path: /healthz  # Adjust the path to your app's health check
+              path: /started
               port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          livenessProbe:  # Add livenessProbe to ensure the container is healthy
+            initialDelaySeconds: 30
+            terminationGracePeriodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+            periodSeconds: 2
+            timeoutSeconds: 5
+          readinessProbe:
             httpGet:
-              path: /healthz
+              path: /ready
               port: 8080
-            initialDelaySeconds: 15
+            initialDelaySeconds: 30
+            successThreshold: 5
+            failureThreshold: 3
             periodSeconds: 20
-          resources:  # Limit the container's resource usage
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 8080
+            initialDelaySeconds: 30
+            terminationGracePeriodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
             requests:
-              memory: "64Mi"
+              memory: "128Mi"
               cpu: "250m"
             limits:
-              memory: "128Mi"
+              memory: "256Mi"
               cpu: "500m"
-          env:  # Define environment variables here
-            - name: ENV
-              value: "production"  # Hardcoded value
-            - name: APP_MODE
+          env:
+            - name: MOVIE_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: dashboard-config
-                  key: APP_MODE  # From ConfigMap
-            - name: LOG_LEVEL
+                  name: dashboard
+                  key: MOVIE_HOST
+            - name: MOVIE_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard
+                  key: MOVIE_PORT
+            - name: BOOKING_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: dashboard-config
-                  key: LOG_LEVEL  # From ConfigMap
-            - name: DB_USER
+                  name: dashboard
+                  key: BOOKING_HOST
+            - name: BOOKING_PORT
               valueFrom:
                 secretKeyRef:
-                  name: dashboard-secrets
-                  key: DB_USER  # From Secret
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: dashboard-secrets
-                  key: DB_PASSWORD  # From Secret
+                  name: dashboard
+                  key: BOOKING_PORT
           ports:
             - containerPort: 8080
               protocol: TCP

@@ -166,6 +166,15 @@ Delete the pod using `kubectl delete pod/nginx`
 
 `echo -n "7000" | base64`
 
+### Adding movies
+
+```
+http POST localhost:8000/movies name=chichore genre=comedy stars=4
+http POST localhost:8000/movies name=rhtdm genre=romance stars=4
+http POST localhost:8000/movies name=tumbad genre=horror stars=4
+http POST localhost:8000/movies name=dilse genre=thriller stars=4
+http POST localhost:8000/movies name=cki genre=sports stars=4
+```
 ## Best practices when creating a deployment
 
 ### Using specific image tags instead of latest

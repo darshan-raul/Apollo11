@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
+	"os"
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,40 +29,44 @@ type BookingResult struct {
 	Id int `json:"id"`
 }
 
+var moviehost string
+var movieport string
+var bookinghost string
+var bookingport string
+
+func init(){
+	moviehost = os.Getenv("MOVIE_HOST")
+	movieport = os.Getenv("MOVIE_PORT")
+	bookingport = os.Getenv("BOOKING_PORT")
+	bookinghost = os.Getenv("BOOKING_HOST")
+}
+
 func main() {
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
 	r.Static("/static", "./static")
+	
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+		  "message": "pong",
+		})
+	  })
 
-	// movies := []Movie{
-	// 	{
-	// 		Title: "Inception",
-	// 		Genre: "Sci-Fi",
-	// 		Theatres: []Theatre{
-	// 			{Name: "Cineplex", Location: "Downtown"},
-	// 			{Name: "AMC", Location: "Uptown"},
-	// 		},
-	// 	},
-	// 	{
-	// 		Title: "The Godfather",
-	// 		Genre: "Crime",
-	// 		Theatres: []Theatre{
-	// 			{Name: "Regal", Location: "Suburb"},
-	// 			{Name: "Cineplex", Location: "Downtown"},
-	// 		},
-	// 	},
-	// 	{
-	// 		Title: "Pulp Fiction",
-	// 		Genre: "Crime",
-	// 		Theatres: []Theatre{
-	// 			{Name: "AMC", Location: "Uptown"},
-	// 			{Name: "Regal", Location: "Suburb"},
-	// 		},
-	// 	},
-	// }
+	r.GET("/ready", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "ready",
+		})
+	})
+
+	r.GET("/started", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "started",
+		})
+	})
 
 	r.GET("/", func(c *gin.Context) {
-		resp, err := http.Get("http://movie:8000/movies")
+		movieUrl := fmt.Sprintf("http://%s:%s/movies", moviehost, movieport)
+		resp, err := http.Get(movieUrl)
 		if err != nil {
 			fmt.Println("No response from request")
 		}
@@ -84,7 +88,8 @@ func main() {
 
 	r.GET("/theatres/:movie", func(c *gin.Context) {
 		movieTitle := c.Param("movie")
-		resp, err := http.Get("http://movie:8000/movies")
+		movieUrl := fmt.Sprintf("http://%s:%s/movies", moviehost, movieport)
+		resp, err := http.Get(movieUrl)
 		if err != nil {
 			fmt.Println("No response from request")
 		}
@@ -116,7 +121,7 @@ func main() {
 		fmt.Println("Movie:", movie)
 		fmt.Println("Theatre:", theatre)
 		// HTTP endpoint
-		posturl := "http://booking:3000/api/bookings"
+		posturl := fmt.Sprintf("http://%s:%s/api/bookings", bookinghost, bookingport)
 
 		data := BookingRequest{
 			Movie:   movie,

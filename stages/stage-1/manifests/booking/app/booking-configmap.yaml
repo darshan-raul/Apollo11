@@ -9,3 +9,5 @@ data:
   PSQL_HOST: "bookingdb-0.bookingdb.apollo11.svc.cluster.local"
   MOVIE_HOST: "movie.apollo11.svc.cluster.local"
   THEATRE_HOST: "theatre.apollo11.svc.cluster.local"
+  MOVIE_PING_PATH: "/ping"
+  THEATRE_PING_PATH: "/ping"

@@ -6,6 +6,11 @@ services:
         - path: ./code/dashboard #rebuild this image whenever any changes occur in this folder
           action: rebuild
     restart: always
+    environment:
+      MOVIE_HOST: "movie"
+      MOVIE_PORT: "8000"
+      BOOKING_HOST: "booking"
+      BOOKING_PORT: "3000"
     ports:
       - 8080:8080
     networks:
