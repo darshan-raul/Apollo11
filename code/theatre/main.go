@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	//"errors"
-
 	"fmt"
 	"log"
 	"os"
@@ -43,13 +41,13 @@ func init() {
 	mongopass := os.Getenv("MONGO_PASSWORD")
 	mongoauthdb := os.Getenv("MONGO_AUTH_DB")
 	mongourl := os.Getenv("MONGO_URL")
-	// mongoport := os.Getenv("MONGO_PORT")
+	mongoport := os.Getenv("MONGO_PORT")
 	credential := options.Credential{
 		Username:   mongouser,
 		Password:   mongopass,
 		AuthSource: mongoauthdb,
 	}
-	mongouri := fmt.Sprintf("mongodb://%s/", mongourl)
+	mongouri := fmt.Sprintf("mongodb://%s:%s/", mongourl, mongoport)
 
 	clientOptions := options.Client().ApplyURI(mongouri).
 		SetAuth(credential)
@@ -74,9 +72,18 @@ func main() {
 
 	app := fiber.New()
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!")
+	app.Get("/ping", func(c *fiber.Ctx) error {
+		return c.SendString("pong")
 	})
+
+	app.Get("/ready", func(c *fiber.Ctx) error {
+		return c.SendString("iam ready")
+	})
+
+	app.Get("/started", func(c *fiber.Ctx) error {
+		return c.SendString("i have started")
+	})
+
 	// get particular
 	app.Get("/theatre/:theatrename", func(c *fiber.Ctx) error {
 
@@ -110,12 +117,12 @@ func main() {
 
 		return c.JSON(theatreList)
 	})
-	// create one
+
 	app.Post("/theatre", func(c *fiber.Ctx) error {
 		t := new(TheatreRequest)
 
 		if err := c.BodyParser(t); err != nil {
-			return err
+			return err		
 		}
 
 		log.Println(t.Name)
@@ -137,7 +144,7 @@ func main() {
 }
 
 func filterTheatres(filter interface{}) ([]*Theatre, error) {
-	// A slice of tasks for storing the decoded documents
+
 	var theatres []*Theatre
 
 	cur, err := collection.Find(ctx, filter)
@@ -159,7 +166,6 @@ func filterTheatres(filter interface{}) ([]*Theatre, error) {
 		return theatres, err
 	}
 
-	// once exhausted, close the cursor
 	cur.Close(ctx)
 
 	if len(theatres) == 0 {

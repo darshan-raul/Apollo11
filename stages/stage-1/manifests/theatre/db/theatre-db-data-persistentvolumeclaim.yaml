@@ -1,9 +1,10 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
+  namespace: apollo11
+  name: theatredb
   labels:
-    io.kompose.service: theatre-mongo-data
-  name: theatre-mongo-data
+    app: theatredb
 spec:
   accessModes:
     - ReadWriteOnce

@@ -48,11 +48,14 @@ services:
       watch: 
         - path: ./code/theatre #rebuild this image whenever any changes occur in this folder
           action: rebuild
+
+#kubectl create secret generic my-secret --from-literal=MONGO_USER=user --from-literal=MONGO_PASSWORD=pass --from-literal=MONGO_AUTH_DB=admin --from-literal=MONGO_PORT=27017 -n apollo11 --dry-run=client -o yaml          
     environment:
       MONGO_USER: "user"
       MONGO_PASSWORD: "pass"
       MONGO_AUTH_DB: "admin"
-      MONGO_URL: "theatremongo:27017"
+      MONGO_PORT: "27017"
+      MONGO_URL: "theatremongo"
     restart: always
     ports:
       - 7000:7000

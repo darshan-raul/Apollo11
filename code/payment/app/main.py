@@ -1,7 +1,7 @@
-from fastapi import Depends,FastAPI
+from fastapi import Depends,FastAPI,HTTPException
 from sqlmodel import select
 from sqlmodel import Session
-
+from sqlalchemy.exc import SQLAlchemyError
 from app.db import get_session, init_db
 
 from app.models import Payment,PaymentCreate
@@ -15,11 +15,17 @@ def on_startup():
 
 
 @app.get("/started")
-async def pong():
-    return {"yesihave": "started"}
+def check_db_readiness(session: Session = Depends(get_session)):
+    try:
+        # Perform a simple query
+        session.exec(select(Payment).limit(1)).first()
+        return {"status": "ready", "database": "up"}
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}")
+
 
 @app.get("/ready")
-async def pong():
+async def ready():
     return {"yesiam": "ready!"}
 
 @app.get("/ping")

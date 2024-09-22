@@ -20,6 +20,13 @@ spec:
       labels:
         io.kompose.service: booking
     spec:
+
+    # initcontainers:
+    # which will check if theatre service is up
+    # if movie service is up
+    
+    # another init container which will ensure required schema is created
+
       containers:
         - env:
             - name: PSQL_DB
