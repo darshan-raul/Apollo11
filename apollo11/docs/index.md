@@ -57,7 +57,7 @@ Extra:
 - Stage 5: Deployment/Gitops [cover nodeselector, labels, muliple env deployment also]
 
 - Stage 6: Monitoring + Observability + Tracing + troubleshooting
-    - ephemeral containers
+    - ephemeral containers/kubectl debug command
 
 - Stage 7: Service Mesh
 

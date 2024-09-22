@@ -162,6 +162,9 @@ Delete the pod using `kubectl delete pod/nginx`
 ## Creating payment service
 
 
+### Base64 encode
+
+`echo -n "7000" | base64`
 
 ## Best practices when creating a deployment
 

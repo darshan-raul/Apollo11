@@ -13,6 +13,9 @@ class Movie(BaseModel):
 mongoUser = os.environ['MONGO_USER']
 mongoPassword = os.environ['MONGO_PASSWORD']
 mongoUrl = os.environ['MONGO_URL']
+mongoPort = os.environ['MONGO_PORT']
+theatreUrl = os.environ['THEATRE_URL']
+theatrePort = os.environ['THEATRE_PORT']
 
 app = FastAPI()
 
@@ -20,7 +23,7 @@ app = FastAPI()
 def get_database():
  
    # Provide the mongodb atlas url to connect python to mongodb using pymongo
-   CONNECTION_STRING = f"mongodb://{mongoUser}:{mongoPassword}@{mongoUrl}"
+   CONNECTION_STRING = f"mongodb://{mongoUser}:{mongoPassword}@{mongoUrl}:{mongoPort}"
  
    # Create a connection using MongoClient. You can import MongoClient or use pymongo.MongoClient
    client = MongoClient(CONNECTION_STRING)
@@ -28,9 +31,17 @@ def get_database():
 
 db = get_database()
 
-@app.get("/")
+@app.get("/ping")
 async def root():
     return {"message": "pong"}
+
+@app.get("/ready")
+async def root():
+    return {"message": "ready"}
+
+@app.get("/started")
+async def root():
+    return {"message": "started"}
 
 @app.get("/movies")
 async def movies():
@@ -57,7 +68,7 @@ async def getmovie(movie):
 async def create_movie(movie: Movie):
     collection_name = db["user_1_items"]
    
-    theatresrequest = httpx.get('http://theatre:7000/theatres')
+    theatresrequest = httpx.get(f'http://{theatreUrl}:{theatrePort}/theatres')
     theatreslist = theatresrequest.json()
 
     theatres = []

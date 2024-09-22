@@ -20,7 +20,10 @@ services:
     environment:
       MONGO_USER: "user"
       MONGO_PASSWORD: "pass"
-      MONGO_URL: "moviemongo:27017"
+      MONGO_URL: "moviemongo"
+      MONGO_PORT: "27017"
+      THEATRE_URL: "theatre"
+      THEATRE_PORT: "7000"
     ports:
       - 8000:8000
     networks:
