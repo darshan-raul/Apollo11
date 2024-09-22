@@ -1,0 +1,158 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: apollo11
+  labels:
+    app: booking
+  name: booking
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: booking
+  template:
+    metadata:
+      labels:
+        app: booking
+    spec:
+      initContainers:
+        - image: postgres
+          name: bookingdbdb-init
+          args:
+            - "echo $(PSQL_HOST);echo $(PGPASSWORD); echo $(PGPASSFILE); echo $(PSQL_USER) ; psql -h $(PSQL_HOST) -p $(PSQL_PORT) -U $(PSQL_USER) -d $(PSQL_DB) -f /scripts/create.sql; echo ''Tables created!''"
+          command:
+            - bash
+            - -c
+          env:
+            - name: PGPASSFILE
+              value: /.pgpass
+            - name: PSQL_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: booking
+                  key: PSQL_PORT
+            - name: PGPASSWORD #https://www.postgresql.org/docs/current/libpq-envars.html
+              valueFrom:
+                secretKeyRef:
+                  name: booking
+                  key: PSQL_PASSWORD
+            - name: PSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: booking
+                  key: PSQL_USER
+            - name: PSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: booking
+                  key: PSQL_HOST
+            - name: PSQL_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: booking
+                  key: PSQL_DB
+          volumeMounts:
+            - mountPath: /scripts
+              name: bookinginit
+            - name: pgpass-volume
+              mountPath: /.pgpass
+              subPath: .pgpass
+              readOnly: true
+      containers:
+        - image: apollo11-booking:latest
+          name: booking
+          imagePullPolicy: Never
+          startupProbe:
+            httpGet:
+              path: /started
+              port: 3000
+            initialDelaySeconds: 30
+            terminationGracePeriodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+            periodSeconds: 2
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3000
+            initialDelaySeconds: 30
+            successThreshold: 5
+            failureThreshold: 3
+            periodSeconds: 20
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 3000
+            initialDelaySeconds: 30
+            terminationGracePeriodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          env:
+            - name: PSQL_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: booking
+                  key: PSQL_DB
+            - name: PSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: booking
+                  key: PSQL_HOST
+            - name: MOVIE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: booking
+                  key: MOVIE_HOST
+            - name: THEATRE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: booking
+                  key: THEATRE_HOST
+            - name: PSQL_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: booking
+                  key: PSQL_PORT
+            - name: PSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: booking
+                  key: PSQL_USER
+            - name: PSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: booking
+                  key: PSQL_PASSWORD
+            - name: MOVIE_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: booking
+                  key: MOVIE_PORT
+            - name: THEATRE_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: booking
+                  key: THEATRE_PORT
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+      restartPolicy: Always
+      volumes:
+        - name: bookinginit
+          configMap:
+            name: bookinginit
+        - name: pgpass-volume
+          secret:
+            secretName: bookinginit
+            defaultMode: 0600 # this file cant be world writable. this setting is 0644 default

@@ -57,8 +57,14 @@ func main() {
 	defer db.Close()
 	app := fiber.New()
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!")
+	app.Get("/ping", func(c *fiber.Ctx) error {
+		return c.SendString("pong")
+	})
+	app.Get("/started", func(c *fiber.Ctx) error {
+		return c.SendString("started")
+	})
+	app.Get("/ready", func(c *fiber.Ctx) error {
+		return c.SendString("ready")
 	})
 	app.Get("/api/bookings", getAllBookings)
 	app.Post("/api/bookings", createBooking)
@@ -74,7 +80,7 @@ func createBooking(c *fiber.Ctx) error {
 	}
 
 	// check if movie exists
-	movie_url := fmt.Sprintf("http://%s:%s/movies",movie_host,movie_port)
+	movie_url := fmt.Sprintf("http://%s:%s/movies", movie_host, movie_port)
 	resp, err := http.Get(movie_url)
 	if err != nil {
 		fmt.Println("No response from request")
@@ -97,7 +103,7 @@ func createBooking(c *fiber.Ctx) error {
 			movie_match = true
 		}
 		for _, theatre := range movie.Theatres {
-			theatre_url := fmt.Sprintf("http://%s:%s/theatres",theatre_host,theatre_port)
+			theatre_url := fmt.Sprintf("http://%s:%s/theatres", theatre_host, theatre_port)
 			resp, err := http.Get(theatre_url)
 			if err != nil {
 				fmt.Println("No response from request")
