@@ -53,10 +53,6 @@ spec:
           volumeMounts:
             - mountPath: /scripts
               name: bookinginit
-            - name: pgpass-volume
-              mountPath: /.pgpass
-              subPath: .pgpass
-              readOnly: true
         - name: wait-for-theatre-service
           image: curlimages/curl:7.85.0
           env:
@@ -205,7 +201,3 @@ spec:
         - name: bookinginit
           configMap:
             name: bookinginit
-        - name: pgpass-volume
-          secret:
-            secretName: bookinginit
-            defaultMode: 0600 # this file cant be world writable. this setting is 0644 default

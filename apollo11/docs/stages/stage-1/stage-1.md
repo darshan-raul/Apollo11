@@ -75,7 +75,7 @@ Follow this link to know more: https://kind.sigs.k8s.io/docs/user/quick-start#in
 
 - For linux, follow these steps:
 
-    ```
+    ```bash
     # For AMD64 / x86_64
     [ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.24.0/kind-linux-amd64
     # For ARM64 [use this if not using amd computes, mac,gravtion servers etc]
@@ -95,71 +95,128 @@ Follow this link to know more: https://kind.sigs.k8s.io/docs/user/quick-start#in
 
 > Optional: The reason I have gone with 3 workers is to get a feel of a real cluster 
 
-Lets create the kind cluster
+- Lets create the kind cluster
+    ```bash
+    cd stages/stage-1/kind-config
+    kind create cluster --name apollo --config kind-config.yaml
+    ```
 
-- `cd stages/stage-1/kind-config`
-- `kind create cluster --name apollo --config kind-config.yaml`
+    ![alt text](image-1.png)
 
-![alt text](image-1.png)
+- Next run this command to cehck if cluster is running correctly:  
+    ```bash
+    kubectl cluster-info --context kind-apollo`
+    ```
 
-Next run this command to cehck if cluster is running correctly:  
-- `kubectl cluster-info --context kind-apollo`
-
-![alt text](image-2.png)
+    ![alt text](image-2.png)
 
 - Confirm the nodes are correct `kubectl get nodes`
-![alt text](image-3.png)
+    ![alt text](image-3.png)
 
 - Can look at `cat ~/.kube/config` to confirm that cluster config is set correctly
 
 ### Creating a test pod
 
 - Lets try the default hello world of any k8s cluster, running the nginx image
-- `kubectl run nginx --image=nginx`
+   ```bash 
+   kubectl run nginx --image=nginx
+   ```
+
 - You should be seeing a `pod/nginx created` output
-- Confirm our pod has been created: `kubectl get pods`
 
-![alt text](image-4.png)
+- Confirm our pod has been created:
 
-run `kubectl port-forward pod/nginx 8000:80` in one terminal 
+    ```bash
+    kubectl get pods
+    ```
 
-This will make sure that the port 80 in the nginx pod will be exposed as port 8000 on your localhost
+    ![alt text](image-4.png)
 
-![alt text](image-5.png)
+- Lets port forward that pod and check if its accessible from the terminal 
+    ```bash
+    kubectl port-forward pod/nginx 8000:80
+    ```
 
-Open a different terminal and try accessing the site:
-`curl http://localhost:8000`
-![alt text](image-6.png)
+    This will make sure that the port 80 in the nginx pod will be exposed as port 8000 on your localhost
 
+    ![alt text](image-5.png)
 
-Delete the pod using `kubectl delete pod/nginx`
+- Open a different terminal and try accessing the site:
+
+    ```bash
+    curl http://localhost:8000
+    ```
+
+    ![alt text](image-6.png)
+
+- Lets cleanup the pod once we have tested
+- Delete the pod using `kubectl delete pod/nginx`
 
 ## Creating namespace
 
-- `cd /stages/stage-1/manifests/namespace`
-- `kubectl apply -f namespace.yaml`
+> To get more info on namespaces refer: [namespaces](https://darshan-raul.gitbook.io/cloudnativeguide/kubernetes/concepts/namespaces)
 
-![ubne](image-7.png)
 
-- `kubectl get namespaces`
+- Now lets start creating our actual architecture on this cluster
+- Lets create a namespace named `apollo11`
+- All of our resources will be created in that namespace [except any non namespaced resources]
 
-![alt text](image-8.png)
+    ```bash
+    cd /stages/stage-1/manifests/namespace
+    kubectl apply -f namespace.yaml
+    ```
 
-- To get more info on namespaces refer: [namespaces](https://darshan-raul.gitbook.io/cloudnativeguide/kubernetes/concepts/namespaces)
+    ![alt text](image-7.png)
 
-### Putting resource quotas
+- Now lets have a look if our namespace has been created. Run below command and ensure that the apollo11 namespace has been created
+
+    ```bash
+    kubectl get namespaces
+    ```
+    ![alt text](image-8.png)
+
 
 ## Load all the images inside kind cluster
 
-`kind load docker-image apollo11-payment:latest --name apollo`
-`kind load docker-image apollo11-movie:latest --name apollo`
-`kind load docker-image apollo11-booking:latest --name apollo`
-`kind load docker-image apollo11-theatre:latest --name apollo`
-`kind load docker-image apollo11-dashboard:latest --name apollo`
+- To run our pods inside kind, we will need to load our docker images inside kind cluster.
+> Note: There will be similar provisions in other local distributions as well. Also in the next stages we will be moving to private registries where these steps will be obsolete. But to start with simple setup, these are needed
+- Check if you have docker images for all the 5 services: payment,booking,theatre,movie and dashboard
+    ```bash
+    docker images
+    ```
+    ![alt text](image-9.png)
+- Once confirmed, lets load all the images into kind cluster. Kind will automatically load them to all the nodes in the cluster
+    ```bash
+    kind load docker-image apollo11-payment:latest --name apollo
+    kind load docker-image apollo11-movie:latest --name apollo
+    kind load docker-image apollo11-booking:latest --name apollo
+    kind load docker-image apollo11-theatre:latest --name apollo
+    kind load docker-image apollo11-dashboard:latest --name apollo
+    ```
+- We can confirm these are loaded by running this command on one of the node containers
+    ```bash
+    docker exec -it apollo-worker2 crictl images
+    ```
 
-> Note: because this will be local images, we need to ensure that we keep imagepullpolicy=never when running in the local cluster to avoid any image pull business
+!!! note
 
-## Creating payment service
+    because this will be local images, **we need to ensure that we keep imagePullPolicy=never** when running in the local cluster to avoid any image pull business
+
+## Creating Architecture
+
+- Although best practices have been followed that make sure that if you create all the infra at once, they will be created and will work seamlessly, for our learning we will deploy one service at a time. 
+- The sequence we will maintain is `payment->theatre->movie->booking->dashboard`
+
+- If you are not a newbie and want to get done with this stage at once:
+    ```bash
+    cd /stages/stage-1/manifests
+    kubectl apply -R -f .
+    ```
+!!! note
+    You will have to wait till all the probes and initcontainers finish for everything to be up
+
+### Creating payment service
+
 
 
 ### Base64 encode
@@ -168,13 +225,32 @@ Delete the pod using `kubectl delete pod/nginx`
 
 ### Adding movies
 
+```bash
+http POST localhost:7000/theatre name=inox location=mumbai seats:=50
+http POST localhost:7000/theatre name=pvr location=mumbai seats:=50
+http POST localhost:7000/theatre name=cinepolis location=mumbai seats:=50
+
+http POST localhost:9000/movies name=chichore genre=comedy stars=4
+http POST localhost:9000/movies name=rhtdm genre=romance stars=4
+http POST localhost:9000/movies name=tumbad genre=horror stars=4
+http POST localhost:9000/movies name=dilse genre=thriller stars=4
+http POST localhost:9000/movies name=cki genre=sports stars=4
 ```
-http POST localhost:8000/movies name=chichore genre=comedy stars=4
-http POST localhost:8000/movies name=rhtdm genre=romance stars=4
-http POST localhost:8000/movies name=tumbad genre=horror stars=4
-http POST localhost:8000/movies name=dilse genre=thriller stars=4
-http POST localhost:8000/movies name=cki genre=sports stars=4
+
+### Cleanup
+
+Lets cleanup all the resources
+
+```bash
+kubectl delete all --all
+kubectl delete secrets --all
+kubectl delete cm --all
+kubectl delete pvc --all
 ```
+
+## Just enough RBAC
+
+
 ## Best practices when creating a deployment
 
 ### Using specific image tags instead of latest
@@ -191,6 +267,10 @@ resources:  # Limit the container's resource usage
         memory: "128Mi"
         cpu: "500m"
 ```
+
+
+### Putting resource quotas
+
 
 ### Putting Liveness,startup and readiness probe
 
