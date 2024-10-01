@@ -1,0 +1,205 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: apollo11
+  labels:
+    app: booking
+  name: booking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking
+  template:
+    metadata:
+      labels:
+        app: booking
+    spec:
+      nodeSelector:
+        cloud.google.com/compute-class: Scale-Out
+        kubernetes.io/arch: arm64
+      # initContainers:
+      #   - image: postgres
+      #     name: bookingdbdb-init
+      #     args:
+      #       - "echo $(PSQL_HOST);echo $(PGPASSWORD); echo $(PGPASSFILE); echo $(PSQL_USER) ; psql -h $(PSQL_HOST) -p $(PSQL_PORT) -U $(PSQL_USER) -d $(PSQL_DB) -f /scripts/create.sql; echo ''Tables created!''"
+      #     command:
+      #       - bash
+      #       - -c
+      #     env:
+      #       - name: PSQL_PORT
+      #         valueFrom:
+      #           secretKeyRef:
+      #             name: booking
+      #             key: PSQL_PORT
+      #       - name: PGPASSWORD #https://www.postgresql.org/docs/current/libpq-envars.html
+      #         valueFrom:
+      #           secretKeyRef:
+      #             name: booking
+      #             key: PSQL_PASSWORD
+      #       - name: PSQL_USER
+      #         valueFrom:
+      #           secretKeyRef:
+      #             name: booking
+      #             key: PSQL_USER
+      #       - name: PSQL_HOST
+      #         valueFrom:
+      #           configMapKeyRef:
+      #             name: booking
+      #             key: PSQL_HOST
+      #       - name: PSQL_DB
+      #         valueFrom:
+      #           configMapKeyRef:
+      #             name: booking
+      #             key: PSQL_DB
+      #     volumeMounts:
+      #       - mountPath: /scripts
+      #         name: bookinginit
+      #   - name: wait-for-theatre-service
+      #     image: curlimages/curl:7.85.0
+      #     env:
+      #     - name: THEATRE_HOST
+      #       valueFrom:
+      #         configMapKeyRef:
+      #           name: booking
+      #           key: THEATRE_HOST
+      #     - name: THEATRE_PING_PATH
+      #       valueFrom:
+      #         configMapKeyRef:
+      #           name: booking
+      #           key: THEATRE_PING_PATH
+      #     - name: THEATRE_PORT
+      #       valueFrom:
+      #         secretKeyRef:
+      #           name: booking
+      #           key: THEATRE_PORT
+      #     command:
+      #       - "sh"
+      #       - "-c"
+      #       - |
+      #         until curl -sf http://$THEATRE_HOST:$THEATRE_PORT$THEATRE_PING_PATH; do
+      #           echo "Waiting for $THEATRE_HOST:$THEATRE_PORT$THEATRE_PING_PATH to be reachable"
+      #           sleep 2
+      #         done
+      #         echo "theatre service is up"
+      #   - name: wait-for-movie-service
+      #     image: curlimages/curl:7.85.0
+      #     env:
+      #     - name: MOVIE_HOST
+      #       valueFrom:
+      #         configMapKeyRef:
+      #           name: booking
+      #           key: MOVIE_HOST
+      #     - name: MOVIE_PING_PATH
+      #       valueFrom:
+      #         configMapKeyRef:
+      #           name: booking
+      #           key: MOVIE_PING_PATH
+      #     - name: MOVIE_PORT
+      #       valueFrom:
+      #         secretKeyRef:
+      #           name: booking
+      #           key: MOVIE_PORT
+      #     command:
+      #       - "sh"
+      #       - "-c"
+      #       - |
+      #         until curl -sf http://$MOVIE_HOST:$MOVIE_PORT$MOVIE_PING_PATH; do
+      #           echo "Waiting for $MOVIE_HOST:$MOVIE_PORT$MOVIE_PING_PATH to be reachable"
+      #           sleep 2
+      #         done
+      #         echo "movie service is up"
+      containers:
+        - image: <private gcr repo>/apollo11-booking/booking@sha256:9ea5591ce70554ce2183aa46cf473ffa646a6d4e6979311e41b13881887bfe2a
+          name: booking
+          imagePullPolicy: IfNotPresent
+          startupProbe:
+            httpGet:
+              path: /started
+              port: 3000
+            initialDelaySeconds: 30
+            terminationGracePeriodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+            periodSeconds: 2
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3000
+            initialDelaySeconds: 30
+            successThreshold: 5
+            failureThreshold: 3
+            periodSeconds: 20
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 3000
+            initialDelaySeconds: 30
+            terminationGracePeriodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "250m"
+          env:
+            - name: PSQL_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: booking
+                  key: PSQL_DB
+            - name: PSQL_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: booking
+                  key: PSQL_HOST
+            - name: MOVIE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: booking
+                  key: MOVIE_HOST
+            - name: THEATRE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: booking
+                  key: THEATRE_HOST
+            - name: PSQL_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: booking
+                  key: PSQL_PORT
+            - name: PSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: booking
+                  key: PSQL_USER
+            - name: PSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: booking
+                  key: PSQL_PASSWORD
+            - name: MOVIE_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: booking
+                  key: MOVIE_PORT
+            - name: THEATRE_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: booking
+                  key: THEATRE_PORT
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+      restartPolicy: Always
+      volumes:
+        - name: bookinginit
+          configMap:
+            name: bookinginit
