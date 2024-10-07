@@ -4,3 +4,4 @@ pymysql
 psycopg2-binary==2.9.6
 sqlmodel==0.0.8
 cryptography
+prometheus-client

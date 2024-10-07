@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: paymentdb
+  namespace: apollo11
+spec:
+  selector:
+    matchLabels:
+      app: paymentdb
+  serviceName: "paymentdb"
+  replicas: 1
+  minReadySeconds: 10
+  template:
+    metadata:
+      labels:
+        app: paymentdb
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: paymentdb
+        image: mysql
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3306
+          name: paymentdb
+        volumeMounts:
+        - name: paymentdb
+          mountPath:  /var/lib/mysql
+        env:
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: paymentdb
+              key: MYSQL_PASSWORD
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: paymentdb
+              key: MYSQL_USER
+        - name: MYSQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: paymentdb
+              key: MYSQL_DATABASE
+        - name: MYSQL_RANDOM_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: paymentdb
+              key: MYSQL_RANDOM_ROOT_PASSWORD
+      volumes:
+        - name: paymentdb
+          persistentVolumeClaim:
+            claimName: paymentdb
