@@ -16,7 +16,7 @@ spec:
         app: payment
     spec:
       containers:
-        - image: apollo-payment:prmth
+        - image: payment
           name: payment
           imagePullPolicy: Never
           startupProbe:

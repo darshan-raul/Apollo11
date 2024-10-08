@@ -45,21 +45,26 @@ Extra:
 - Stage 1: Run on local k8s cluster
     - create a kind cluster with multiple worker nodes
     - create all the manifests and confirm its working
-
+    - using tilt for local development
+    
 - Stage 2: Move on from Local k8s cluster
     - github actions to push image to gcr/private repo
     - use image pull secrets to pull image
 
-- Stage 3: Routing using ingress controller
+- Stage 3: Monitoring + Observability + Tracing 
+    - monitor the cluster and app metrics with prometheus
+    - get all the logs centrally using loki
+    - visualizing everything in grafana
+    - getting traces using opentelemtry agent in tempo/jaeger
 
 - Stage 4: Helm packaging and Kustomize Patching
 
-- Stage 5: Deployment/Gitops [cover nodeselector, labels, muliple env deployment also]
+- Stage 5: Service Mesh + ingress controller + gateway
 
-- Stage 6: Monitoring + Observability + Tracing + troubleshooting
+- Stage 6: troubleshooting
     - ephemeral containers/kubectl debug command
 
-- Stage 7: Service Mesh
+- Stage 7: Deployment/Gitops [cover nodeselector, labels, muliple env deployment also]
 
 - Stage 8: AutoScaling and Load testing
 
@@ -69,7 +74,7 @@ Extra:
     - https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
     - Enable or configure RBAC rules
 
-- Stage 11: Progressive Deployment
+- Stage 11: progressive deployment + devsecops
 
 
 # Prerequisite
