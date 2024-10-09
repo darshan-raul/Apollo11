@@ -6,13 +6,31 @@ from app.db import get_session, init_db
 
 from app.models import Payment,PaymentCreate
 
-from prometheus_client import Counter, Gauge, generate_latest
+from prometheus_client import Counter, Gauge, Histogram, generate_latest
 from prometheus_client import CONTENT_TYPE_LATEST
+import time 
 
 app = FastAPI()
 
 REQUESTS = Counter('http_requests_total', 'Total HTTP Requests', ['method', 'endpoint', 'status'])
 PAYMENTS_COUNT = Counter('payment_count', 'Number of payments in the database')
+REQUEST_LATENCY = Histogram(
+    'request_latency_seconds', 
+    'Latency of requests in seconds', 
+    ['method', 'endpoint']
+)
+PAYMENTS_RECEIVED = Counter('payment_received', 'Total money received in payments')
+
+@app.middleware("http")
+async def measure_latency(request, call_next):
+    method = request.method
+    endpoint = request.url.path
+    start_time = time.time()
+    
+    response = await call_next(request)
+    request_duration = time.time() - start_time
+    REQUEST_LATENCY.labels(method, endpoint).observe(request_duration) 
+    return response
 
 @app.on_event("startup")
 def on_startup():
@@ -68,5 +86,6 @@ def add_song(payment: PaymentCreate, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(payment)
     PAYMENTS_COUNT.inc()
+    PAYMENTS_RECEIVED.inc(payment.price)
     REQUESTS.labels(method='POST', endpoint='/payments', status='2xx').inc()
     return payment
