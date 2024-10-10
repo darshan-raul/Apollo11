@@ -10,5 +10,10 @@ data:
     scrape_configs:
       - job_name: 'prometheus'
         static_configs:
-          - targets: ['localhost:9090','payment.apollo11.svc.cluster.local:8000']
-      
+          - targets: ['localhost:9090']
+      - job_name: 'payment'
+        static_configs:
+          - targets: ['payment.apollo11.svc.cluster.local:8000']
+      - job_name: 'movie'
+        static_configs:
+          - targets: ['movie.apollo11.svc.cluster.local:8000']

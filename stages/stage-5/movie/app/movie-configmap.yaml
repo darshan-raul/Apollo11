@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+immutable: false
+metadata:
+  name: movie
+  namespace: apollo11
+data:
+  MONGO_URL: "moviedb-0.moviedb.apollo11.svc.cluster.local"
+  THEATRE_URL: "theatre.apollo11.svc.cluster.local"

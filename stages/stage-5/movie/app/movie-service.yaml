@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: movie
+  name: movie
+  namespace: apollo11
+spec:
+  ports:
+    - name: movie
+      port: 8000
+      targetPort: 8000
+  selector:
+    app: movie
