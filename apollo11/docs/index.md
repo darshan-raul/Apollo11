@@ -69,6 +69,7 @@ Extra:
 - Stage 7: Deployment/Gitops [cover nodeselector, labels, muliple env deployment also]
 
 - Stage 8: AutoScaling and Load testing
+    - Qos class
 
 - Stage 9: Chaos Engineering + Backup and Restore
 

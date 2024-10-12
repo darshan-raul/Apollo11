@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+immutable: false
+metadata:
+  name: pushmetric
+  namespace: apollo11
+data:
+  THEATRE_URL: "theatre.apollo11.svc.cluster.local:7000"
+  BOOKING_URL: "booking.apollo11.svc.cluster.local:3000"
+  PAYMENT_URL: "payment.apollo11.svc.cluster.local:8000"
+  MOVIE_URL: "movie.apollo11.svc.cluster.local:8000"
+  PUSHGATEWAY_URL: "pushgateway.monitoring.svc.cluster.local:9091"

@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  namespace: apollo11
+  labels:
+    app: pushmetric
+  name: pushmetric
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: pushmetric
+            image: pushmetric
+            imagePullPolicy: Never
+            envFrom:
+            - configMapRef:
+                name: pushmetric
+          restartPolicy: OnFailure
+          
