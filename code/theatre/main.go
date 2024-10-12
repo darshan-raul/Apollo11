@@ -12,6 +12,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	// prometheus middleware
+	"github.com/darshan-raul/Apollo11/theatre/fiberprometheus"
 )
 
 var collection *mongo.Collection
@@ -72,6 +75,11 @@ func main() {
 
 	app := fiber.New()
 
+	// promethues instrumentation section
+	prometheus := fiberprometheus.New("theatre", "apollo11", "api")
+	prometheus.RegisterAt(app, "/metrics")
+	app.Use(prometheus.Middleware)
+
 	app.Get("/ping", func(c *fiber.Ctx) error {
 		return c.SendString("pong")
 	})
@@ -114,7 +122,6 @@ func main() {
 
 			theatreList = append(theatreList, m)
 		}
-
 		return c.JSON(theatreList)
 	})
 
@@ -122,7 +129,7 @@ func main() {
 		t := new(TheatreRequest)
 
 		if err := c.BodyParser(t); err != nil {
-			return err		
+			return err
 		}
 
 		log.Println(t.Name)
@@ -138,6 +145,7 @@ func main() {
 		}
 
 		createTheatre(theatre)
+		//m.theatreCount.Inc()
 		return c.SendString("theatre created")
 	})
 	log.Fatal(app.Listen(":7000"))

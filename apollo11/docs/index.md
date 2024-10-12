@@ -7,13 +7,12 @@ Here's the architecture of what you will build at the end of this journey
 | Category | Tools |
 |---|---|
 | Backend API |  Golang,Python |
-| Sql Database| Postgres |
+| Sql Database| Postgres,Mysql |
 | Nosql Database | MongoDB | 
-| Local Development | skaffold, telepresence/Tilt |
+| Local Development | Tilt |
+| Dashboard | Headlamp,k9s |
 | Container Management | Docker, Podman |
-| Cluster Provisioning | Kubespray (optional) |
-| Container Builds | Buildah |
-| CI | Argo Workflows |
+| CI | Github Actions |
 | GitOps | ArgoCD |
 | Progressive Deployment | Argo Events, Argo Rollouts |
 | Secret Store | Vault |
@@ -27,9 +26,10 @@ Here's the architecture of what you will build at the end of this journey
 | Policy Engine | OPA/Kyverno |
 | Policy Checker | Kubescape |
 | Backup and Restore | Velero |
-| Load Testing | Kube-monkey |
-| Data Analytics | Python |
+| Load Testing | hey,Kube-monkey |
+| Cluster Provisioning | Kubespray (optional) |
 | Serverless | OpenFaas |
+| Container Builds | Buildah |
 
 Extra:
 
@@ -52,6 +52,7 @@ Extra:
     - use image pull secrets to pull image
 
 - Stage 3: Monitoring + Observability + Tracing 
+    - Headlamp and k9s for k8s dashboard
     - monitor the cluster and app metrics with prometheus
     - get all the logs centrally using loki
     - visualizing everything in grafana
