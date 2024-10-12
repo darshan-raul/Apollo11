@@ -4,6 +4,7 @@ metadata:
   labels:
     app: theatre
   name: theatre
+  namespace: apollo11
 spec:
   ports:
     - name: theatre

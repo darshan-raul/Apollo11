@@ -7,7 +7,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
+
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Movie struct {
@@ -34,23 +38,73 @@ var movieport string
 var bookinghost string
 var bookingport string
 
-func init(){
+var (
+	requestCountVec = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Number of HTTP requests processed, labeled by status code, method, and path.",
+		},
+		[]string{"status_code", "method", "path"},
+	)
+
+	requestDurationVec = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "Duration of HTTP requests in seconds, labeled by status code, method, and path.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"status_code", "method", "path"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(requestCountVec, requestDurationVec)
 	moviehost = os.Getenv("MOVIE_HOST")
 	movieport = os.Getenv("MOVIE_PORT")
 	bookingport = os.Getenv("BOOKING_PORT")
 	bookinghost = os.Getenv("BOOKING_HOST")
 }
 
+func prometheusMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		path := c.FullPath()
+		method := c.Request.Method
+
+		// Skip recording for /metrics path
+		// else I have seen duplicate metric errors here
+		if path == "/metrics" {
+			c.Next()
+			return
+		}
+
+		// first process the request then record the metrics
+		c.Next()
+
+		statusCode := fmt.Sprintf("%d", c.Writer.Status())
+		duration := float64(time.Since(start).Milliseconds())
+
+		requestCountVec.WithLabelValues(statusCode, method, path).Inc()
+		requestDurationVec.WithLabelValues(statusCode, method, path).Observe(duration)
+	}
+}
+
 func main() {
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
 	r.Static("/static", "./static")
-	
+
+	// Apply Prometheus middleware for request metrics
+	r.Use(prometheusMiddleware())
+
+	// Serve Prometheus metrics endpoint at /metrics
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-		  "message": "pong",
+			"message": "pong",
 		})
-	  })
+	})
 
 	r.GET("/ready", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{

@@ -12,6 +12,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	_ "github.com/lib/pq"
+
+	// prometheus middleware
+	"github.com/darshan-raul/Apollo11/booking/fiberprometheus"
 )
 
 var (
@@ -56,6 +59,11 @@ func main() {
 	}
 	defer db.Close()
 	app := fiber.New()
+
+	// promethues instrumentation section
+	prometheus := fiberprometheus.New("theatre", "apollo11", "api")
+	prometheus.RegisterAt(app, "/metrics")
+	app.Use(prometheus.Middleware)
 
 	app.Get("/ping", func(c *fiber.Ctx) error {
 		return c.SendString("pong")

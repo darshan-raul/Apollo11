@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+immutable: false
+metadata:
+  name: dashboard
+  namespace: apollo11
+data:
+ MOVIE_HOST: "movie.apollo11.svc.cluster.local"
+ MOVIE_PING_PATH: "/ping"
+ BOOKING_HOST: "booking.apollo11.svc.cluster.local"
+ BOOKING_PING_PATH: "/ping"

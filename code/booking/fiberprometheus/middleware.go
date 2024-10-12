@@ -126,7 +126,7 @@ func (ps *FiberPrometheus) Middleware(ctx *fiber.Ctx) error {
 	ps.requestsTotal.WithLabelValues(statusCode, method, path).Inc()
 
 	// Update the request duration histogram
-	elapsed := float64(time.Since(start).Milliseconds())
+	elapsed := float64(float64(time.Since(start).Milliseconds()))
 	ps.requestDuration.WithLabelValues(statusCode, method, path).Observe(elapsed)
 
 	return err

@@ -4,6 +4,7 @@ metadata:
   labels:
     app: movie
   name: movie
+  namespace: apollo11
 spec:
   ports:
     - name: movie

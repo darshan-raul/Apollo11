@@ -54,6 +54,7 @@ Extra:
 - Stage 3: Monitoring + Observability + Tracing 
     - Headlamp and k9s for k8s dashboard
     - monitor the cluster and app metrics with prometheus
+    - create cronjobs which will send data to push gateway
     - get all the logs centrally using loki
     - visualizing everything in grafana
     - getting traces using opentelemtry agent in tempo/jaeger

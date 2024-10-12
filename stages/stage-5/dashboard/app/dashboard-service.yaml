@@ -4,6 +4,7 @@ metadata:
   labels:
     app: dashboard
   name: dashboard
+  namespace: apollo11
 spec:
   ports:
     - name: dashboard
