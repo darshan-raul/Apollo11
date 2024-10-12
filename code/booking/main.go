@@ -61,7 +61,7 @@ func main() {
 	app := fiber.New()
 
 	// promethues instrumentation section
-	prometheus := fiberprometheus.New("theatre", "apollo11", "api")
+	prometheus := fiberprometheus.New("booking", "apollo11", "api")
 	prometheus.RegisterAt(app, "/metrics")
 	app.Use(prometheus.Middleware)
 

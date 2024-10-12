@@ -12,13 +12,14 @@ import time
 
 app = FastAPI()
 
-REQUESTS = Counter('http_requests_total', 'Total HTTP Requests', ['method', 'endpoint', 'status'])
+REQUESTS = Counter('http_requests_total', 'Total HTTP Requests', ['status','method', 'endpoint'])
 PAYMENTS_COUNT = Counter('payment_count', 'Number of payments in the database')
 REQUEST_LATENCY = Histogram(
     'request_latency_seconds', 
     'Latency of requests in seconds', 
-    ['method', 'endpoint']
+    ['status','method', 'endpoint']
 )
+
 PAYMENTS_RECEIVED = Counter('payment_received', 'Total money received in payments')
 
 @app.middleware("http")
@@ -29,7 +30,9 @@ async def measure_latency(request, call_next):
     
     response = await call_next(request)
     request_duration = time.time() - start_time
-    REQUEST_LATENCY.labels(method, endpoint).observe(request_duration) 
+    status = response.status_code
+    
+    REQUEST_LATENCY.labels(status, method, endpoint).observe(request_duration) 
     return response
 
 @app.on_event("startup")
@@ -41,32 +44,32 @@ def check_db_readiness(session: Session = Depends(get_session)):
     try:
         # Perform a simple query
         session.exec(select(Payment).limit(1)).first()
-        REQUESTS.labels(method='GET', endpoint='/started', status='2xx').inc()
+        REQUESTS.labels(status='200', method='GET', endpoint='/started' ).inc()
         return {"status": "ready", "database": "up"}
     except SQLAlchemyError as e:
-        REQUESTS.labels(method='GET', endpoint='/started', status='5xx').inc()
+        REQUESTS.labels(status='503',method='GET', endpoint='/started' ).inc()
         raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}")
 
 @app.get("/metrics")
 def metrics():
-    REQUESTS.labels(method='GET', endpoint='/metrics', status='2xx').inc()
+    REQUESTS.labels(status='200', method='GET', endpoint='/metrics').inc()
     return Response(generate_latest(), media_type="text/plain")
 
 @app.get("/ready")
 async def ready():
-    REQUESTS.labels(method='GET', endpoint='/ready', status='2xx').inc()
+    REQUESTS.labels(status='200', method='GET', endpoint='/ready').inc()
     return {"yesiam": "ready!"}
 
 @app.get("/ping")
 async def pong():
-    REQUESTS.labels(method='GET', endpoint='/ping', status='2xx').inc()
+    REQUESTS.labels(status='200', method='GET', endpoint='/ping').inc()
     return {"ping": "pong"}
 
 @app.get("/payments", response_model=list[Payment])
 def get_payments(session: Session = Depends(get_session)):
     result = session.execute(select(Payment))
     payments = result.scalars().all()
-    REQUESTS.labels(method='GET', endpoint='/payments', status='2xx').inc()
+    REQUESTS.labels(status='200', method='GET', endpoint='/payments').inc()
     return [Payment(mode=payment.mode, price=payment.price, id=payment.id, status=payment.status) for payment in payments]
 
 @app.get("/payments/{payment_id}", response_model=list[Payment])
@@ -75,7 +78,7 @@ def get_payments(payment_id,session: Session = Depends(get_session)):
     print(result)
     payment = result.scalars().all()
     print(payment)
-    REQUESTS.labels(method='GET', endpoint='/payments/id', status='2xx').inc()
+    REQUESTS.labels(status='200', method='GET', endpoint='/payments/id').inc()
 
     return payment
 
@@ -85,7 +88,9 @@ def add_song(payment: PaymentCreate, session: Session = Depends(get_session)):
     session.add(payment)
     session.commit()
     session.refresh(payment)
+
     PAYMENTS_COUNT.inc()
     PAYMENTS_RECEIVED.inc(payment.price)
-    REQUESTS.labels(method='POST', endpoint='/payments', status='2xx').inc()
+    REQUESTS.labels(status='200', method='POST', endpoint='/payments').inc()
+
     return payment

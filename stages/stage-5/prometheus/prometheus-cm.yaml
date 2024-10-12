@@ -17,3 +17,16 @@ data:
       - job_name: 'movie'
         static_configs:
           - targets: ['movie.apollo11.svc.cluster.local:8000']
+      - job_name: 'theatre'
+        static_configs:
+          - targets: ['theatre.apollo11.svc.cluster.local:7000']
+      - job_name: 'booking'
+        static_configs:
+          - targets: ['booking.apollo11.svc.cluster.local:3000']
+      - job_name: 'dashoard'
+        static_configs:
+          - targets: ['dashboard.apollo11.svc.cluster.local:8080']
+      - job_name: "pushgateway"
+        honor_labels: true
+        static_configs:
+          - targets: ['pushgateway.monitoring.svc.cluster.local:9091']
