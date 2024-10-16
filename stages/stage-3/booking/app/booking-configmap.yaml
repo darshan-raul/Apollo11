@@ -11,3 +11,4 @@ data:
   THEATRE_HOST: "theatre.apollo11.svc.cluster.local"
   MOVIE_PING_PATH: "/ping"
   THEATRE_PING_PATH: "/ping"
+  DEBUG_LEVEL: "true"

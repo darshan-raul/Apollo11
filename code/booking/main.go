@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -15,6 +14,10 @@ import (
 
 	// prometheus middleware
 	"github.com/darshan-raul/Apollo11/booking/fiberprometheus"
+
+	// for json logging
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -28,6 +31,8 @@ var (
 	theatre_host = os.Getenv("THEATRE_HOST")
 	theatre_port = os.Getenv("THEATRE_PORT")
 )
+
+var logger zerolog.Logger
 
 type Booking struct {
 	MovieName   string `json:"movie_name"`
@@ -46,7 +51,28 @@ type Theatre struct {
 
 var db *sql.DB
 
+func init() {
+
+	// logging config
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+
+	// ref: https://programmingpercy.tech/blog/how-to-use-structured-json-logging-in-golang-applications/
+	logger = log.With().
+		Str("service", "booking").
+		Logger()
+
+	debug := os.Getenv("DEBUG_LEVEL")
+	// Apply log level in the beginning of the application
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if debug == "true" {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
+}
+
 func main() {
+
+	logger.Info().Msg("Booking app has started")
 	portNum64, _ := strconv.ParseInt(port, 10, 32)
 	portNum := int(portNum64)
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
@@ -55,7 +81,7 @@ func main() {
 	var err error
 	db, err = sql.Open("postgres", psqlInfo)
 	if err != nil {
-		panic(err)
+		logger.Fatal().AnErr("error when opening a db connection", err)
 	}
 	defer db.Close()
 	app := fiber.New()
@@ -66,17 +92,20 @@ func main() {
 	app.Use(prometheus.Middleware)
 
 	app.Get("/ping", func(c *fiber.Ctx) error {
+		logger.Debug().Msg("Ping received")
 		return c.SendString("pong")
 	})
 	app.Get("/started", func(c *fiber.Ctx) error {
+		logger.Debug().Msg("Ping received")
 		return c.SendString("started")
 	})
 	app.Get("/ready", func(c *fiber.Ctx) error {
+		logger.Debug().Msg("Ping received")
 		return c.SendString("ready")
 	})
 	app.Get("/api/bookings", getAllBookings)
 	app.Post("/api/bookings", createBooking)
-	log.Fatal(app.Listen(":3000"))
+	logger.Fatal().AnErr("error", app.Listen(":3000"))
 }
 
 func createBooking(c *fiber.Ctx) error {
@@ -91,57 +120,77 @@ func createBooking(c *fiber.Ctx) error {
 	movie_url := fmt.Sprintf("http://%s:%s/movies", movie_host, movie_port)
 	resp, err := http.Get(movie_url)
 	if err != nil {
-		fmt.Println("No response from request")
+		logger.Error().AnErr("Error when connecting to movie service", err)
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("No response from request")
+		logger.Error().AnErr("Error parsing body from movie service response", err)
 	}
 	var movies []Movie
 	if err := json.Unmarshal(body, &movies); err != nil {
-		fmt.Println("Can not unmarshal JSON")
+		logger.Error().AnErr("Error while marshalling json from movie response", err)
 	}
-	fmt.Println(movies)
-	var movie_match bool = false
+
+	logger.Info().Msg(fmt.Sprintf("Got following movies in response %s", movies))
+
+	var movie_exists bool = false
+	var theatre_exists bool = false
 	var theatre_match bool = false
+
 	for _, movie := range movies {
 		if movie.Title == b.MovieName {
-			fmt.Println("movie name matches")
-			movie_match = true
+			logger.Info().Msg(fmt.Sprintf("Movie %s exists in the movie database", b.MovieName))
+			movie_exists = true
 		}
 		for _, theatre := range movie.Theatres {
 			theatre_url := fmt.Sprintf("http://%s:%s/theatres", theatre_host, theatre_port)
 			resp, err := http.Get(theatre_url)
 			if err != nil {
-				fmt.Println("No response from request")
+				logger.Error().AnErr("Error when connecting to theatre service", err)
+
 			}
 			defer resp.Body.Close()
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				fmt.Println("No response from request")
+				logger.Error().AnErr("Error parsing body from theatre service response", err)
 			}
 			var theatres []Theatre
 			if err := json.Unmarshal(body, &theatres); err != nil {
-				fmt.Println("Can not unmarshal JSON")
+				logger.Error().AnErr("Error while marshalling json from theatre response", err)
+
 			}
-			fmt.Println(theatres)
+			logger.Info().Msg(fmt.Sprintf("Got following theatres in response %s", theatres))
+
+			for _, t := range theatres {
+				if t.Name == b.TheatreName {
+					theatre_exists = true
+					logger.Info().Msg(fmt.Sprintf("Theatre %s exists in the theatre database", b.TheatreName))
+					break
+				}
+			}
+
 			if theatre.Name == b.TheatreName {
-				fmt.Println("theatre name matches")
-				theatre_match = true
+				logger.Info().Msg(fmt.Sprintf("Movie %s does have a screening at Theatre %s", b.MovieName, b.TheatreName))
 			}
 		}
 	}
-	if !movie_match {
+	if !movie_exists {
 		return c.Status(409).JSON(&fiber.Map{
 			"success": false,
 			"error":   "There is no such movie!",
 		})
 	}
-	if !theatre_match {
+	if !theatre_exists {
 		return c.Status(409).JSON(&fiber.Map{
 			"success": false,
 			"error":   "There is no such theatre!",
+		})
+	}
+	if !theatre_match {
+		return c.Status(409).JSON(&fiber.Map{
+			"success": false,
+			"error":   "The movie does not have any screening in this theatre!",
 		})
 	}
 
@@ -152,9 +201,11 @@ func createBooking(c *fiber.Ctx) error {
 	id := 0
 	qerr := db.QueryRow(sqlStatement, b.MovieName, b.TheatreName, b.Price).Scan(&id)
 	if qerr != nil {
+		logger.Error().AnErr("Error while inserting booking record in db", err)
 		return err
 	}
-	fmt.Println("New record ID is:", id)
+	logger.Info().Msg(fmt.Sprintf("New booking record added to the database. id is %s", id))
+
 	m := make(map[string]int)
 
 	m["id"] = id
@@ -167,22 +218,22 @@ func getAllBookings(c *fiber.Ctx) error {
 	sqlStatement := `SELECT movie_name,theatre_name,price FROM bookings`
 	rows, err := db.Query(sqlStatement)
 	if err != nil {
-		panic(err)
+		logger.Fatal().AnErr("error when running get all query", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		booking := &Booking{}
 		err = rows.Scan(&booking.MovieName, &booking.TheatreName, &booking.Price)
 		if err != nil {
-			panic(err)
+			logger.Fatal().AnErr("error scanning through booking db entries", err)
 		}
 		*bookings = append(*bookings, *booking)
 	}
 	err = rows.Err()
 	if err != nil {
-		panic(err)
+		logger.Fatal().AnErr("error when opening a db connection", err)
 	}
-	fmt.Println(bookings)
+	logger.Info().Msg(fmt.Sprintf("Got following bookings from db %s", bookings))
 	if len(*bookings) == 0 {
 		return c.Status(404).JSON(&fiber.Map{
 			"success": false,

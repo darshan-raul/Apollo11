@@ -168,6 +168,11 @@ spec:
                 configMapKeyRef:
                   name: booking
                   key: THEATRE_HOST
+            - name: DEBUG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: booking
+                  key: DEBUG_LEVEL
             - name: PSQL_PORT
               valueFrom:
                 secretKeyRef:

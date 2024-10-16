@@ -6,6 +6,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/lib/pq v1.10.9
 	github.com/prometheus/client_golang v1.20.4
+	github.com/rs/zerolog v1.33.0
 )
 
 require (

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -15,10 +14,15 @@ import (
 
 	// prometheus middleware
 	"github.com/darshan-raul/Apollo11/theatre/fiberprometheus"
+
+	// for json logging
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 var collection *mongo.Collection
 var ctx = context.TODO()
+var logger zerolog.Logger
 
 type Theatre struct {
 	ID        primitive.ObjectID `bson:"_id"`
@@ -40,6 +44,22 @@ type TheatreResponse struct {
 
 func init() {
 
+	// logging config
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+
+	// ref: https://programmingpercy.tech/blog/how-to-use-structured-json-logging-in-golang-applications/
+	logger = log.With().
+		Str("service", "theatre").
+		Logger()
+
+	debug := os.Getenv("DEBUG_LEVEL")
+	// Apply log level in the beginning of the application
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if debug == "true" {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
+	// mongo db connectivity
 	mongouser := os.Getenv("MONGO_USER")
 	mongopass := os.Getenv("MONGO_PASSWORD")
 	mongoauthdb := os.Getenv("MONGO_AUTH_DB")
@@ -56,14 +76,16 @@ func init() {
 		SetAuth(credential)
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().AnErr("error while creating db client", err)
 	}
 	err = client.Ping(ctx, nil)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal().AnErr("error while pinging the db", err)
 	}
-	log.Println("db connected")
+	logger.Info().Msg("db connected")
+
 	collection = client.Database("theatres").Collection("theatres")
+
 }
 
 func createTheatre(task *Theatre) error {
@@ -73,6 +95,7 @@ func createTheatre(task *Theatre) error {
 
 func main() {
 
+	logger.Info().Msg("Theatre app has started")
 	app := fiber.New()
 
 	// promethues instrumentation section
@@ -81,14 +104,18 @@ func main() {
 	app.Use(prometheus.Middleware)
 
 	app.Get("/ping", func(c *fiber.Ctx) error {
+		logger.Debug().Msg("Ping received")
+
 		return c.SendString("pong")
 	})
 
 	app.Get("/ready", func(c *fiber.Ctx) error {
+		logger.Debug().Msg("Ready call received")
 		return c.SendString("iam ready")
 	})
 
 	app.Get("/started", func(c *fiber.Ctx) error {
+		logger.Debug().Msg("Started call received")
 		return c.SendString("i have started")
 	})
 
@@ -100,7 +127,7 @@ func main() {
 		}
 		theatre, err := filterTheatres(filter)
 		if err != nil {
-			log.Panic(err)
+			logger.Fatal().AnErr("error", err)
 		}
 		return c.JSON(theatre)
 	})
@@ -110,7 +137,7 @@ func main() {
 		filter := bson.D{{}}
 		theatres, err := filterTheatres(filter)
 		if err != nil {
-			log.Panic(err)
+			logger.Fatal().AnErr("error", err)
 		}
 
 		var theatreList []any
@@ -132,8 +159,8 @@ func main() {
 			return err
 		}
 
-		log.Println(t.Name)
-		log.Println(t.Location)
+		logger.Info().Msg("recevied this name for the theatre" + t.Name)
+		logger.Info().Msg("recevied this location for the theatre" + t.Location)
 
 		theatre := &Theatre{
 			ID:        primitive.NewObjectID(),
@@ -145,10 +172,9 @@ func main() {
 		}
 
 		createTheatre(theatre)
-		//m.theatreCount.Inc()
 		return c.SendString("theatre created")
 	})
-	log.Fatal(app.Listen(":7000"))
+	logger.Fatal().AnErr("error", app.Listen(":7000"))
 }
 
 func filterTheatres(filter interface{}) ([]*Theatre, error) {
