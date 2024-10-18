@@ -12,6 +12,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	// for json logging
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 type Movie struct {
@@ -37,6 +41,7 @@ var moviehost string
 var movieport string
 var bookinghost string
 var bookingport string
+var logger zerolog.Logger
 
 var (
 	requestCountVec = prometheus.NewCounterVec(
@@ -63,6 +68,21 @@ func init() {
 	movieport = os.Getenv("MOVIE_PORT")
 	bookingport = os.Getenv("BOOKING_PORT")
 	bookinghost = os.Getenv("BOOKING_HOST")
+
+	// logging config
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+
+	// ref: https://programmingpercy.tech/blog/how-to-use-structured-json-logging-in-golang-applications/
+	logger = log.With().
+		Str("service", "dashboard").
+		Logger()
+
+	debug := os.Getenv("DEBUG_LEVEL")
+	// Apply log level in the beginning of the application
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if debug == "true" {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
 }
 
 func prometheusMiddleware() gin.HandlerFunc {
@@ -101,18 +121,21 @@ func main() {
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	r.GET("/ping", func(c *gin.Context) {
+		logger.Debug().Msg("Ping received")
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
 		})
 	})
 
 	r.GET("/ready", func(c *gin.Context) {
+		logger.Debug().Msg("Ping received")
 		c.JSON(http.StatusOK, gin.H{
 			"message": "ready",
 		})
 	})
 
 	r.GET("/started", func(c *gin.Context) {
+		logger.Debug().Msg("Ping received")
 		c.JSON(http.StatusOK, gin.H{
 			"message": "started",
 		})
@@ -122,18 +145,18 @@ func main() {
 		movieUrl := fmt.Sprintf("http://%s:%s/movies", moviehost, movieport)
 		resp, err := http.Get(movieUrl)
 		if err != nil {
-			fmt.Println("No response from request")
+			logger.Error().AnErr("Error when connecting to movie service", err)
 		}
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			fmt.Println("No response from request")
+			logger.Error().AnErr("Error parsing body from movie service response", err)
 		}
 		var movies []Movie
 		if err := json.Unmarshal(body, &movies); err != nil {
-			fmt.Println("Can not unmarshal JSON")
+			logger.Error().AnErr("Error while unmarshalling json from movie response", err)
 		}
-		fmt.Println(movies)
+		logger.Info().Msg(fmt.Sprintf("Got following movies in response %s", movies))
 
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"movies": movies,
@@ -145,20 +168,23 @@ func main() {
 		movieUrl := fmt.Sprintf("http://%s:%s/movies", moviehost, movieport)
 		resp, err := http.Get(movieUrl)
 		if err != nil {
-			fmt.Println("No response from request")
+			logger.Error().AnErr("Error when connecting to movie service", err)
 		}
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			fmt.Println("No response from request")
+			logger.Error().AnErr("Error parsing body from movie service response", err)
 		}
 		var movies []Movie
 		if err := json.Unmarshal(body, &movies); err != nil {
-			fmt.Println("Can not unmarshal JSON")
+			logger.Error().AnErr("Error while unmarshalling json from movie response", err)
+
 		}
 		fmt.Println(movies)
 		for _, movie := range movies {
 			if movie.Title == movieTitle {
+				logger.Info().Msg(fmt.Sprintf("Selected movie %s matches in the movies", movieTitle))
+
 				c.HTML(http.StatusOK, "theatres.html", gin.H{
 					"theatres":   movie.Theatres,
 					"movietitle": movie.Title,
@@ -172,33 +198,33 @@ func main() {
 	r.POST("/book-ticket", func(c *gin.Context) {
 		movie := c.PostForm("movie")
 		theatre := c.PostForm("theatre")
-		fmt.Println("Movie:", movie)
-		fmt.Println("Theatre:", theatre)
-		// HTTP endpoint
+
+		logger.Info().Msg(fmt.Sprintf("Booking ticket for movie: %s", movie))
+		logger.Info().Msg(fmt.Sprintf("Booking ticket for theatre: %s", theatre))
+
 		posturl := fmt.Sprintf("http://%s:%s/api/bookings", bookinghost, bookingport)
 
 		data := BookingRequest{
 			Movie:   movie,
 			Theatre: theatre,
-			Price:   50,
+			Price:   50, // TODO: keeping this static for now, later add logic to get this price from theatre service
 		}
 
 		jsonData, err := json.Marshal(data)
 		if err != nil {
-			fmt.Println("Error marshaling data:", err)
+			logger.Error().AnErr("Error marshaling data:", err)
 			return
 		}
 
 		r, err := http.NewRequest("POST", posturl, bytes.NewBuffer(jsonData))
 		if err != nil {
-			panic(err)
+			logger.Fatal().AnErr("error creating request for booking service", err)
 		}
 		r.Header.Add("Content-Type", "application/json")
 		client := &http.Client{}
 		res, err := client.Do(r)
 		if err != nil {
-			fmt.Println("Error sending request:", err)
-			panic(err)
+			logger.Fatal().AnErr("Error sending request to booking service", err)
 		}
 
 		defer res.Body.Close()

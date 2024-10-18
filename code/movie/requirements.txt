@@ -3,3 +3,4 @@ pymongo[srv]
 pydantic
 httpx
 prometheus-client
+ json-logging
