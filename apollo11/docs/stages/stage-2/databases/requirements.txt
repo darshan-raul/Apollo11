@@ -28,5 +28,5 @@ starlette==0.40.0
 toml==0.10.2
 typing-extensions==3.10.0.0
 uvicorn==0.14.0
-virtualenv==20.4.7
+virtualenv==20.26.6
 virtualenv-clone==0.5.4
