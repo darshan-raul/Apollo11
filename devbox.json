@@ -3,10 +3,10 @@
   "packages": [
     "python312@latest",
     "python312Packages.pip@latest",
-    "poetry@latest",
     "go@latest",
-    "postgresql@latest",
-    "nodejs@latest"
+    "docker@latest",
+    "kubectl@latest",
+    "kind@latest"
   ],
   "shell": {
     "init_hook": [
