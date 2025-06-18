@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mission Dashboard</title>
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+</head>
+<body>
+    <h1>Mission Dashboard</h1>
+    <h2>Telemetry Data</h2>
+    <div id="telemetry" hx-get="/" hx-trigger="every 5s" hx-swap="outerHTML">
+        <table border="1">
+            <tr><th>Timestamp</th><th>Position</th><th>Speed</th><th>Status</th><th>Received</th></tr>
+            {{range .}}
+            <tr>
+                <td>{{.Timestamp}}</td>
+                <td>{{.Position}}</td>
+                <td>{{.Speed}}</td>
+                <td>{{.Status}}</td>
+                <td>{{.Received}}</td>
+            </tr>
+            {{end}}
+        </table>
+    </div>
+    <!-- Add moon map, buttons, and events as needed -->
+</body>
+</html>
