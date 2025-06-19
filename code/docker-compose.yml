@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  lunar-app:
+    build:
+      context: ./lunar
+      dockerfile: Dockerfile
+    develop:
+      watch: 
+        - path: ./lunar #rebuild this image whenever any changes occur in this folder
+          action: rebuild
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=lunar-postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=lunar
+      - TELEMETRY_URL=http://telemetry-app:8000/input
+    depends_on:
+      - lunar-postgres
+    networks:
+      - apollo-network
+
+  lunar-postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=lunar
+    volumes:
+      - type: volume
+        source: lunar-postgres-data
+        target: /var/lib/postgresql/data
+      - type: bind
+        source: ./lunar/init.sql
+        target: /docker-entrypoint-initdb.d/init.sql
+    networks:
+      - apollo-network
+
+  telemetry-app:
+    build:
+      context: ./telemetry
+      dockerfile: Dockerfile
+    develop:
+      watch: 
+        - path: ./telemtry #rebuild this image whenever any changes occur in this folder
+          action: rebuild
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=telemetry-postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=telemetry
+    depends_on:
+      - telemetry-postgres
+    networks:
+      - apollo-network
+
+  telemetry-postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=telemetry
+    volumes:
+      - type: volume
+        source: telemetry-postgres-data
+        target: /var/lib/postgresql/data
+      - type: bind
+        source: ./telemetry/init.sql
+        target: /docker-entrypoint-initdb.d/init.sql
+    networks:
+      - apollo-network
+
+volumes:
+  lunar-postgres-data:
+    name: "lunar-postgres"
+  telemetry-postgres-data:
+    name: "telemetry-postgres"
+
+networks:
+  apollo-network:
+    driver: bridge 

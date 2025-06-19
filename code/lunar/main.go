@@ -126,6 +126,14 @@ func main() {
 		return c.SendString("OK")
 	})
 
+	app.Get("/ready", func(c *fiber.Ctx) error {
+		return c.SendString("READY")
+	})
+
+	app.Get("/started", func(c *fiber.Ctx) error {
+		return c.SendString("STARTED")
+	})
+
 	app.Get("/command", func(c *fiber.Ctx) error {
 		cmd, err := getLatestCommand()
 		if err != nil {
@@ -151,7 +159,7 @@ func main() {
 			if err != nil {
 				log.Printf("Error saving telemetry: %v", err)
 			}
-			//sendTelemetry(t)
+			sendTelemetry(t)
 			time.Sleep(30 * time.Second)
 		}
 	}()
