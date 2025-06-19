@@ -152,6 +152,25 @@ func main() {
 		return c.JSON(cmd)
 	})
 
+	app.Post("/command", func(c *fiber.Ctx) error {
+		var cmd Command
+		if err := c.BodyParser(&cmd); err != nil {
+			log.Printf("Failed to parse command: %v", err)
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+		}
+		log.Printf("Received command: %+v", cmd)
+		// Save command to DB
+		_, err := db.Exec(
+			"INSERT INTO commands (timestamp, command_type, parameters, status) VALUES ($1, $2, $3, $4)",
+			time.Now(), cmd.CommandType, cmd.Parameters, cmd.Status,
+		)
+		if err != nil {
+			log.Printf("Failed to save command: %v", err)
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to save command"})
+		}
+		return c.JSON(fiber.Map{"status": "Command saved"})
+	})
+
 	go func() {
 		for {
 			t := generateTelemetry()

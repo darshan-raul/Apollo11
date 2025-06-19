@@ -82,6 +82,24 @@ services:
     networks:
       - apollo-network
 
+  command-dispatcher:
+    build:
+      context: ./command-dispatcher
+      dockerfile: Dockerfile
+    develop:
+      watch:
+        - path: ./command-dispatcher #rebuild this image whenever any changes occur in this folder
+          action: rebuild
+    restart: always
+    ports:
+      - "9000:9000"
+    environment:
+      - LUNAR_MODULE_URL=http://lunar-app:8080/command
+    depends_on:
+      - lunar-app
+    networks:
+      - apollo-network
+
 volumes:
   lunar-postgres-data:
     name: "lunar-postgres"
