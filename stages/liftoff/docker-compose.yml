@@ -3,11 +3,11 @@ version: '3.8'
 services:
   lunar-app:
     build:
-      context: ./lunar
+      context: ../../code/lunar
       dockerfile: Dockerfile
     develop:
       watch: 
-        - path: ./lunar #rebuild this image whenever any changes occur in this folder
+        - path: ../../code/lunar #rebuild this image whenever any changes occur in this folder
           action: rebuild
     restart: always
     ports:
@@ -44,11 +44,11 @@ services:
 
   telemetry-app:
     build:
-      context: ./telemetry
+      context: ../../code/telemetry
       dockerfile: Dockerfile
     develop:
       watch: 
-        - path: ./telemtry #rebuild this image whenever any changes occur in this folder
+        - path: ../../code/telemetry #rebuild this image whenever any changes occur in this folder
           action: rebuild
     restart: always
     ports:
@@ -84,7 +84,7 @@ services:
 
   command-dispatcher:
     build:
-      context: ./command-dispatcher
+      context: ../../code/command-dispatcher
       dockerfile: Dockerfile
     develop:
       watch:
@@ -102,11 +102,11 @@ services:
 
   timeline-app:
     build:
-      context: ./timeline
+      context: ../../code/timeline
       dockerfile: Dockerfile
     develop:
       watch:
-        - path: ./timeline #rebuild this image whenever any changes occur in this folder
+        - path: ../../code/timeline #rebuild this image whenever any changes occur in this folder
           action: rebuild
     restart: always
     ports:
@@ -143,11 +143,11 @@ services:
 
   dashboard-app:
     build:
-      context: ./dashboard
+      context: ../../code/dashboard
       dockerfile: Dockerfile
     develop:
       watch:
-        - path: ./dashboard #rebuild this image whenever any changes occur in this folder
+        - path: ../../code/dashboard #rebuild this image whenever any changes occur in this folder
           action: rebuild
     restart: always
     ports:
