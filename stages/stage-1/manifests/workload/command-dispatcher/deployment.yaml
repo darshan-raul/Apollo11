@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: command-dispatcher
+  name: command-dispatcher
+  namespace: apollo11
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: command-dispatcher
+  template:
+    metadata:
+      labels:
+        app: command-dispatcher
+    spec:
+      containers:
+      - image: liftoff-command-dispatcher
+        name: liftoff-command-dispatcher
+        imagePullPolicy: Never
+

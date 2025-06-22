@@ -37,7 +37,7 @@ services:
         source: lunar-postgres-data
         target: /var/lib/postgresql/data
       - type: bind
-        source: ./lunar/init.sql
+        source:  ../../code/lunar/init.sql
         target: /docker-entrypoint-initdb.d/init.sql
     networks:
       - apollo-network
@@ -77,7 +77,7 @@ services:
         source: telemetry-postgres-data
         target: /var/lib/postgresql/data
       - type: bind
-        source: ./telemetry/init.sql
+        source:  ../../code/telemetry/init.sql
         target: /docker-entrypoint-initdb.d/init.sql
     networks:
       - apollo-network
@@ -123,7 +123,7 @@ services:
       - apollo-network
 
   timeline-mongodb:
-    image: mongo:7.0
+    image: mongo:latest
     ports:
       - "27017:27017"
     environment:
@@ -135,7 +135,7 @@ services:
         source: timeline-mongodb-data
         target: /data/db
       - type: bind
-        source: ./timeline/init-mongo.js
+        source:  ../../code/timeline/init-mongo.js
         target: /docker-entrypoint-initdb.d/init-mongo.js
     command: mongod --auth
     networks:
