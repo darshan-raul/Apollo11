@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: timeline-app
+  name: timeline-app
+  namespace: apollo11
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: timeline-app
+  template:
+    metadata:
+      labels:
+        app: timeline-app
+    spec:
+      nodeName: apollo-worker2
+      containers:
+      - image: liftoff-timeline-app
+        name: liftoff-timeline-app
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+          name: timeline-app
+        env:
+        - name: MONGO_USERNAME
+          value: "admin"
+        - name: MONGO_PASSWORD
+          value: "password"
+        - name: MONGO_HOST
+          value: "timeline-mongodb.apollo11.svc.cluster.local"
+        - name: MONGO_PORT
+          value: "27017"
+
+          

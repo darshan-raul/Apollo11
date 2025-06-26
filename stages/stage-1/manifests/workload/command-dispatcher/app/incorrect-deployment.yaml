@@ -18,5 +18,8 @@ spec:
       containers:
       - image: liftoff-command-dispatcher
         name: liftoff-command-dispatcher
-        imagePullPolicy: Never
+        env:
+          - name: LUNAR_MODULE_URL
+            value: "http://lunar-app:8080/command"
+
 
