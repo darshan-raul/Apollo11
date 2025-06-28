@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: telemetry-postgres
+  name: telemetry-postgres
+  namespace: apollo11
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: telemetry-postgres
+  template:
+    metadata:
+      labels:
+        app: telemetry-postgres
+    spec:
+      containers:
+      - image: postgres:15-alpine
+        name: liftoff-telemetry-postgres
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "postgres"
+        - name: POSTGRES_DB
+          value: "telemetry"
+        ports:
+        - containerPort: 5432
+          name: telemetry-psql
+        volumeMounts:
+        - name: telemetry-postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: init-sql
+          mountPath: /docker-entrypoint-initdb.d/init.sql
+      volumes:
+        - name: telemetry-postgres-data
+          emptyDir: {}
+        - name: init-sql
+          hostPath:
+            path: /etc/telemetry-init.sql
+            type: File
