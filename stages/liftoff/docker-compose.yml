@@ -123,21 +123,21 @@ services:
       - apollo-network
 
   timeline-mongodb:
-    image: mongo:latest
+    image: bitnami/mongodb:latest
     ports:
       - "27017:27017"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password
-      - MONGO_INITDB_DATABASE=timeline
+      - MONGODB_ROOT_USER=admin
+      - MONGODB_ROOT_PASSWORD=password
+      - MONGO_DATABASE=timeline
     volumes:
       - type: volume
         source: timeline-mongodb-data
-        target: /data/db
+        target: /bitnami/mongodb
       - type: bind
         source:  ../../code/timeline/init-mongo.js
         target: /docker-entrypoint-initdb.d/init-mongo.js
-    command: mongod --auth
+    command: mongod --auth --bind_ip_all
     networks:
       - apollo-network
 

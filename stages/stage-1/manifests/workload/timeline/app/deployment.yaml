@@ -32,5 +32,7 @@ spec:
           value: "timeline-mongodb.apollo11.svc.cluster.local"
         - name: MONGO_PORT
           value: "27017"
+        - name: MONGODB_URI
+          value: "mongodb://admin:password@timeline-mongodb.apollo11.svc.cluster.local:27017"
 
           

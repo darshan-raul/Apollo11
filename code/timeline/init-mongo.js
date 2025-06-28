@@ -1,16 +1,6 @@
 // MongoDB initialization script for timeline service
 // This script sets up the timeline database and collection with sample mission events
-
-// Create admin user for timeline database
-db = db.getSiblingDB('admin');
-db.createUser({
-  user: 'admin',
-  pwd: 'password',
-  roles: [
-    { role: 'readWrite', db: 'timeline' },
-    { role: 'dbAdmin', db: 'timeline' }
-  ]
-});
+// Note: Root user is already created by MONGO_INITDB_ROOT_USERNAME environment variable
 
 // Switch to timeline database
 db = db.getSiblingDB('timeline');

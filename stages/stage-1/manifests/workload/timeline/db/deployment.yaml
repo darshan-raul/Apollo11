@@ -16,23 +16,22 @@ spec:
         app: timeline-mongodb
     spec:
       containers:
-      - image: mongo:latest
+      - image: bitnami/mongodb:latest
         name: liftoff-timeline-mongodb
         imagePullPolicy: IfNotPresent
         env:
-        - name: MONGO_INITDB_ROOT_USERNAME
+        - name: MONGODB_ROOT_USER
           value: "admin"
-        - name: MONGO_INITDB_ROOT_PASSWORD
+        - name: MONGODB_ROOT_PASSWORD
           value: "password"
-        - name: MONGO_INITDB_DATABASE
-          value: "timeline"
-        command: ["mongod", "--auth"]
+        - name: MONGO_DATABASE
+          value: "admin"
         ports:
         - containerPort: 27017
           name: timeline-mongo
         volumeMounts:
         - name: timeline-mongodb-data
-          mountPath: /data/db
+          mountPath: /bitnami/mongodb
         - name: init-mongo-js
           mountPath: /docker-entrypoint-initdb.d/init-mongo.js
       volumes:
