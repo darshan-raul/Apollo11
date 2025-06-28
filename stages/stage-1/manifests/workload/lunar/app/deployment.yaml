@@ -34,5 +34,7 @@ spec:
           value: "postgres"
         - name: DB_NAME
           value: "lunar"
+        - name: TELEMETRY_URL
+          value: "http://telemetry-app.apollo11.svc.cluster.local:8000/input"
 
           
