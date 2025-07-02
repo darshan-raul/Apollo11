@@ -24,4 +24,4 @@ spec:
           value: "http://lunar-app:8080/command"
         ports:
         - containerPort: 8000
-          name: timeline-command-dispatcher
+          name: timeline-disp

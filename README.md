@@ -13,21 +13,23 @@
 
 > *"Ignition begins with understanding containers."*
 
-* Intro to containers & Docker
-* Docker CLI, Dockerfiles, Images, Volumes
-* Build & Run multi-service apps via Docker Compose
-* Local workflows with `tilt` or `skaffold` for developer productivity
+- ✅ Intro to containers & Docker
+- ✅ Docker CLI, Dockerfiles, Images, Volumes
+- ✅ Build & Run multi-service apps via Docker Compose
+- Local workflows with `tilt` or `skaffold` for developer productivity
 
 ---
 
-### 🧱 **Stage 1: Launch Pad** — Kubernetes Barebones
+### 🧱 **Stage 1: It Begins** — Kubernetes Barebones
 
 > *"Get it off the ground using the simplest cluster."*
 
-* Intro to Kubernetes concepts: Pods, Nodes, Cluster
-* Setup Kind / Minikube cluster
-* Deploy simple apps via `kubectl`
-* Create basic `Deployment`, `Service`, and use Namespaces
+- ✅ Setup Kind Cluster
+- ✅ Deploy simple nginx via `kubectl`
+- ✅ Create basic `Deployment`, `Service`, and use `Namespaces`
+- View underlying ReplicaSets, simulate pod failure, do one roll out and rollback
+- RollOut Vs Recreate
+- kubectl walkthrough + jsonpath parsing
 
 ---
 
@@ -37,8 +39,11 @@
 
 * ConfigMaps, Secrets
 * Labels, Annotations
+* Selectors
 * Init containers, sidecars
 * Probes: Readiness, Liveness, Startup
+* MaxUnavailable and MaxSurge
+* minReadySeconds,,terminationGracePeriodSeconds
 * Resource requests/limits, Quotas
 * Restart policies
 * Scheduling: Taints/Tolerations, Node Affinity, Pod Affinity/Anti-Affinity
@@ -50,6 +55,7 @@
 
 > *"Save state and survive reboots."*
 
+* Downward API
 * Persistent Volumes & Claims
 * Storage Classes
 * StatefulSets
@@ -90,9 +96,10 @@
 > *"Keep eyes on every subsystem."*
 
 * `kubectl debug`, `ephemeral containers`
+* CrashLoopBackOff
 * Headlamp or Lens UI
 * Metrics Server, API metrics
-* Prometheus + Grafana
+* Prometheus + Grafana + P99 + SRE monitoring
 * Loki for logs
 * Tempo/Jaeger for traces
 * OpenTelemetry overview
@@ -103,6 +110,7 @@
 
 > *"Smooth deployment across galaxies."*
 
+* Jobs and CronJobs
 * GitOps vs traditional CI/CD
 * Argo Workflows / Tekton Pipelines
 * ArgoCD for GitOps deployment
@@ -118,6 +126,7 @@
 * TLS/SSL & Cert Manager
 * Sealed Secrets / External Secrets
 * RBAC (basic to advanced)
+* Service Accounts
 * Vault for secrets management
 * OPA / Kyverno for policies
 * Keycloak for SSO / OIDC
@@ -146,6 +155,8 @@
 * Backup & Restore using Velero/Rook
 * Blue/Green and Canary upgrade patterns
 * Minor/Major cluster version upgrades
+* topologySpreadConstraints
+* Pod Distrubtion Budgets
 * Chaos Engineering with LitmusChaos / ChaosMesh
 
 ---
@@ -166,6 +177,8 @@
 
 > *"Progressive delivery and self-reliance."*
 
+* CRDS
+* Operators
 * Argo Rollouts for Canary/Blue-Green
 * Feature Flags
 * Progressive Delivery strategies
@@ -173,6 +186,7 @@
 * Cluster cost analysis (Kubecost)
 * Platform Engineering intro (Backstage, Crossplane)
 * Multi-tenant Kubernetes
+
 
 
 ## Prerequisites
