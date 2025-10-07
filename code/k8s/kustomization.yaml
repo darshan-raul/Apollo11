@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: apollo11
+
+resources:
+  - namespace.yaml
+  - postgres.yaml
+  - redis.yaml
+  - core-api.yaml
+  - simulator.yaml
+  - frontend.yaml
+  - admin-dashboard.yaml
+
+commonLabels:
+  app.kubernetes.io/name: apollo11
+  app.kubernetes.io/version: "1.0.0"
+  app.kubernetes.io/component: astronaut-onboarding
+  app.kubernetes.io/part-of: apollo11-system
+
+images:
+  - name: apollo11-core-api
+    newTag: latest
+  - name: apollo11-simulator
+    newTag: latest
+  - name: apollo11-frontend
+    newTag: latest
+  - name: apollo11-admin-dashboard
+    newTag: latest

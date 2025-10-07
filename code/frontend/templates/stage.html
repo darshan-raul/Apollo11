@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Stage {{ stage.id }} - {{ stage.name }}{% endblock %}
+
+{% block content %}
+<div class="stage-container">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-rocket"></i> Stage {{ stage.id }}: {{ stage.name }}</h3>
+                </div>
+                <div class="card-body">
+                    <p class="lead">{{ stage.description }}</p>
+                    
+                    {% if progress.status == 'available' %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        This stage is ready to begin. Click the button below to start your simulation.
+                    </div>
+                    <button id="startStageBtn" class="btn btn-primary btn-lg">
+                        <i class="fas fa-play"></i> Start Stage
+                    </button>
+                    {% elif progress.status == 'in_progress' %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-clock"></i>
+                        This stage is currently in progress. Your simulation is running...
+                    </div>
+                    <div id="simulationStatus" class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Simulation in progress...</p>
+                    </div>
+                    {% elif progress.status == 'completed' %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        Congratulations! You have successfully completed this stage.
+                        {% if progress.completed_at %}
+                        <br><small>Completed on: {{ progress.completed_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                        {% endif %}
+                    </div>
+                    <a href="/dashboard" class="btn btn-success">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                    {% elif progress.status == 'failed' %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        This stage was not completed successfully. You can try again.
+                    </div>
+                    <button id="retryStageBtn" class="btn btn-warning">
+                        <i class="fas fa-redo"></i> Retry Stage
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-line"></i> Progress Info</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Attempts:</strong> {{ progress.attempts }}/3
+                    </div>
+                    <div class="mb-3">
+                        <strong>Status:</strong> 
+                        <span class="badge {% if progress.status == 'completed' %}bg-success{% elif progress.status == 'available' %}bg-primary{% elif progress.status == 'in_progress' %}bg-warning{% else %}bg-danger{% endif %}">
+                            {{ progress.status.title() }}
+                        </span>
+                    </div>
+                    {% if progress.simulation_result %}
+                    <div class="mb-3">
+                        <strong>Last Result:</strong> 
+                        <span class="badge {% if progress.simulation_result == 'success' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ progress.simulation_result.title() }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> Stage Details</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Stage ID:</strong> {{ stage.id }}</p>
+                    <p><strong>Max Attempts:</strong> 3</p>
+                    <p><strong>Success Rate:</strong> 80%</p>
+                    <p><strong>Estimated Time:</strong> 5-10 minutes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let simulationInterval;
+
+document.getElementById('startStageBtn')?.addEventListener('click', async function() {
+    try {
+        const response = await fetch(`/api/stage/{{ stage.id }}/start`, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+            }
+        });
+        
+        if (response.ok) {
+            // Start polling for simulation results
+            startSimulationPolling();
+        } else {
+            const error = await response.json();
+            alert('Failed to start stage: ' + error.detail);
+        }
+    } catch (error) {
+        alert('Failed to start stage: ' + error.message);
+    }
+});
+
+document.getElementById('retryStageBtn')?.addEventListener('click', async function() {
+    try {
+        const response = await fetch(`/api/stage/{{ stage.id }}/start`, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+            }
+        });
+        
+        if (response.ok) {
+            // Start polling for simulation results
+            startSimulationPolling();
+        } else {
+            const error = await response.json();
+            alert('Failed to retry stage: ' + error.detail);
+        }
+    } catch (error) {
+        alert('Failed to retry stage: ' + error.message);
+    }
+});
+
+function startSimulationPolling() {
+    // Hide start button and show progress
+    const startBtn = document.getElementById('startStageBtn');
+    const retryBtn = document.getElementById('retryStageBtn');
+    if (startBtn) startBtn.style.display = 'none';
+    if (retryBtn) retryBtn.style.display = 'none';
+    
+    // Show simulation status
+    const statusDiv = document.getElementById('simulationStatus');
+    if (statusDiv) {
+        statusDiv.innerHTML = `
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Simulation in progress...</p>
+        `;
+        statusDiv.style.display = 'block';
+    }
+    
+    // Poll for results every 2 seconds
+    simulationInterval = setInterval(async () => {
+        try {
+            const response = await fetch('/api/user/progress', {
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                const stageProgress = data.progress.find(p => p.stage_id === {{ stage.id }});
+                
+                if (stageProgress && stageProgress.status !== 'in_progress') {
+                    clearInterval(simulationInterval);
+                    
+                    if (stageProgress.status === 'completed') {
+                        location.reload(); // Reload to show success state
+                    } else if (stageProgress.status === 'failed') {
+                        location.reload(); // Reload to show failure state
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error polling simulation status:', error);
+        }
+    }, 2000);
+}
+
+// Clean up interval on page unload
+window.addEventListener('beforeunload', function() {
+    if (simulationInterval) {
+        clearInterval(simulationInterval);
+    }
+});
+</script>
+{% endblock %}
