@@ -123,7 +123,7 @@ services:
       - apollo-network
 
   timeline-mongodb:
-    image: bitnami/mongodb:latest
+    image: bitnamilegacy/mongodb
     ports:
       - "27017:27017"
     environment:
