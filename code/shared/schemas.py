@@ -23,7 +23,7 @@ class SimulationResult(str, Enum):
 class User(BaseModel):
     id: Optional[int] = None
     username: str = Field(..., min_length=3, max_length=50)
-    email: str = Field(..., regex=r'^[^@]+@[^@]+\.[^@]+$')
+    email: str = Field(..., pattern=r'^[^@]+@[^@]+\.[^@]+$')
     full_name: str = Field(..., min_length=2, max_length=100)
     created_at: Optional[datetime] = None
     is_active: bool = True
@@ -31,7 +31,7 @@ class User(BaseModel):
 
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    email: str = Field(..., regex=r'^[^@]+@[^@]+\.[^@]+$')
+    email: str = Field(..., pattern=r'^[^@]+@[^@]+\.[^@]+$')
     full_name: str = Field(..., min_length=2, max_length=100)
     password: str = Field(..., min_length=6)
 

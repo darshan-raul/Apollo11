@@ -34,6 +34,38 @@ The system consists of 5 main microservices:
 - Docker and Docker Compose
 - Kubernetes cluster (for K8s deployment)
 - kubectl (for K8s deployment)
+- [uv](https://docs.astral.sh/uv/) package manager (for local development)
+
+### Local Development Setup
+
+For local development of individual services:
+
+1. **Install uv**:
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. **Navigate to service directory** (e.g., frontend):
+   ```bash
+   cd frontend
+   ```
+
+3. **Install dependencies**:
+   ```bash
+   uv sync
+   ```
+
+4. **Activate virtual environment**:
+   ```bash
+   source .venv/bin/activate  # On Unix/macOS
+   # or
+   .venv\Scripts\activate     # On Windows
+   ```
+
+5. **Run the service**:
+   ```bash
+   uv run python main.py  # or appropriate command
+   ```
 
 ### Docker Compose Deployment
 
@@ -101,6 +133,15 @@ The system consists of 5 main microservices:
 
 ## 🔧 Configuration
 
+### Package Management
+
+This project uses [uv](https://docs.astral.sh/uv/) for fast and reliable Python package management:
+
+- **Faster than pip**: 10-100x faster dependency resolution
+- **Lock files**: Reproducible builds with `uv.lock`
+- **Modern tooling**: Built-in virtual environment management
+- **Compatible**: Works with existing `pyproject.toml` files
+
 ### Environment Variables
 
 | Service | Variable | Default | Description |
@@ -140,6 +181,33 @@ The Admin Dashboard provides:
 - Kubernetes secrets for sensitive data
 
 ## 🚀 Production Deployment
+
+### Development Workflow
+
+1. **Install uv**:
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. **Set up development environment**:
+   ```bash
+   # For each service
+   cd frontend
+   uv sync --dev
+   uv run pytest
+   uv run black .
+   ```
+
+3. **Generate lock files**:
+   ```bash
+   uv lock  # Creates uv.lock for reproducible builds
+   ```
+
+4. **Build and test**:
+   ```bash
+   ./scripts/deploy.sh build
+   ./scripts/deploy.sh deploy
+   ```
 
 ### Security Checklist
 

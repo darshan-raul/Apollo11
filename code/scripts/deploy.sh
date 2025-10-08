@@ -48,6 +48,14 @@ check_prerequisites() {
         exit 1
     fi
     
+    # Check for uv (optional for local development)
+    if ! command_exists uv; then
+        print_warning "uv is not installed. Consider installing it for faster Python package management:"
+        print_warning "curl -LsSf https://astral.sh/uv/install.sh | sh"
+    else
+        print_success "uv package manager found"
+    fi
+    
     print_success "Prerequisites check passed"
 }
 
@@ -177,6 +185,44 @@ stop_services() {
     fi
 }
 
+# Function to set up development environment
+setup_dev_environment() {
+    print_status "Setting up local development environment with uv..."
+    
+    if ! command_exists uv; then
+        print_error "uv is not installed. Please install it first:"
+        print_error "curl -LsSf https://astral.sh/uv/install.sh | sh"
+        exit 1
+    fi
+    
+    # Set up each Python service
+    services=("frontend" "simulator" "admin-dashboard" "shared")
+    
+    for service in "${services[@]}"; do
+        if [ -d "$service" ]; then
+            print_status "Setting up $service..."
+            cd "$service"
+            
+            # Install dependencies
+            uv sync --dev
+            
+            # Generate lock file
+            uv lock
+            
+            print_success "$service setup completed"
+            cd ..
+        else
+            print_warning "Service directory $service not found"
+        fi
+    done
+    
+    print_success "Development environment setup completed"
+    print_status "To run individual services:"
+    print_status "  cd frontend && uv run python main.py"
+    print_status "  cd simulator && uv run python main.py"
+    print_status "  cd admin-dashboard && uv run streamlit run main.py"
+}
+
 # Function to show help
 show_help() {
     echo "Apollo 11 Astronaut Onboarding Deployment Script"
@@ -191,6 +237,7 @@ show_help() {
     echo "  logs [service]        Show logs (all services or specific service)"
     echo "  stop                  Stop all services"
     echo "  health                Check services health"
+    echo "  dev-setup             Set up local development environment with uv"
     echo "  help                  Show this help message"
     echo ""
     echo "Options:"
@@ -202,6 +249,12 @@ show_help() {
     echo "  $0 deploy-k8s               # Deploy with Kubernetes"
     echo "  $0 logs frontend            # Show frontend logs"
     echo "  $0 stop                     # Stop all services"
+    echo "  $0 dev-setup                # Set up local development with uv"
+    echo ""
+    echo "Local Development with uv:"
+    echo "  Install uv: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    echo "  cd frontend && uv sync --dev"
+    echo "  uv run python main.py"
 }
 
 # Main script logic
@@ -250,6 +303,9 @@ main() {
             ;;
         health)
             check_services_health
+            ;;
+        dev-setup)
+            setup_dev_environment
             ;;
         help|--help|-h)
             show_help
