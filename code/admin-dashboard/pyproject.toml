@@ -2,23 +2,7 @@
 name = "apollo11-admin-dashboard"
 version = "1.0.0"
 description = "Apollo 11 Astronaut Onboarding Admin Dashboard - Streamlit application for monitoring and analytics"
-authors = [
-    {name = "Apollo 11 Team", email = "team@apollo11.com"}
-]
-readme = "README.md"
-license = {text = "MIT"}
 requires-python = ">=3.11"
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Framework :: Streamlit",
-    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
-    "Topic :: Scientific/Engineering :: Visualization",
-]
 
 dependencies = [
     "streamlit>=1.28.1",
@@ -31,7 +15,7 @@ dependencies = [
     "requests>=2.31.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
@@ -41,34 +25,8 @@ dev = [
     "isort>=5.12.0",
     "flake8>=6.0.0",
     "mypy>=1.5.0",
-    "streamlit-component-lib>=0.1.0",
 ]
 
-[project.urls]
-Homepage = "https://github.com/apollo11/astronaut-onboarding"
-Repository = "https://github.com/apollo11/astronaut-onboarding"
-Documentation = "https://apollo11.readthedocs.io"
-"Bug Tracker" = "https://github.com/apollo11/astronaut-onboarding/issues"
-
-[project.scripts]
-apollo11-admin-dashboard = "main:main"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.uv]
-dev-dependencies = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.1.0",
-    "pytest-mock>=3.11.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "flake8>=6.0.0",
-    "mypy>=1.5.0",
-    "streamlit-component-lib>=0.1.0",
-]
 
 [tool.black]
 line-length = 88

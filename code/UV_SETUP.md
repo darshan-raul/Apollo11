@@ -69,7 +69,17 @@ This will:
 - Generate lock files for reproducible builds
 - Set up virtual environments
 
-### 2. Individual Service Setup
+### 2. Individual Service Setup (Recommended)
+
+```bash
+# Navigate to each service and set up individually
+cd frontend && uv sync
+cd ../simulator && uv sync
+cd ../admin-dashboard && uv sync
+cd ../shared && uv sync
+```
+
+### 3. Individual Service Setup
 
 ```bash
 # Navigate to a service
@@ -79,7 +89,7 @@ cd frontend
 uv sync
 
 # Install with development dependencies
-uv sync --dev
+uv sync --group dev
 
 # Activate virtual environment (optional)
 source .venv/bin/activate  # Unix/macOS
@@ -87,7 +97,7 @@ source .venv/bin/activate  # Unix/macOS
 .venv\Scripts\activate     # Windows
 ```
 
-### 3. Run Services
+### 4. Run Services
 
 ```bash
 # Frontend
@@ -112,13 +122,13 @@ uv run streamlit run main.py --server.port=8501 --server.address=0.0.0.0
 uv sync
 
 # Install with dev dependencies
-uv sync --dev
+uv sync --group dev
 
 # Add a new dependency
 uv add requests
 
 # Add a dev dependency
-uv add --dev pytest
+uv add --group dev pytest
 
 # Remove a dependency
 uv remove requests

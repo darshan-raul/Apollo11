@@ -2,23 +2,7 @@
 name = "apollo11-frontend"
 version = "1.0.0"
 description = "Apollo 11 Astronaut Onboarding Frontend - FastAPI application with modern UI"
-authors = [
-    {name = "Apollo 11 Team", email = "team@apollo11.com"}
-]
-readme = "README.md"
-license = {text = "MIT"}
 requires-python = ">=3.11"
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Framework :: FastAPI",
-    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
-    "Topic :: Software Development :: Libraries :: Application Frameworks",
-]
 
 dependencies = [
     "fastapi>=0.104.1",
@@ -34,9 +18,10 @@ dependencies = [
     "alembic>=1.12.1",
     "pydantic>=2.5.0",
     "python-dotenv>=1.0.0",
+    "sqlalchemy>=2.0.23",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
@@ -48,30 +33,6 @@ dev = [
     "httpx>=0.25.2",
 ]
 
-[project.urls]
-Homepage = "https://github.com/apollo11/astronaut-onboarding"
-Repository = "https://github.com/apollo11/astronaut-onboarding"
-Documentation = "https://apollo11.readthedocs.io"
-"Bug Tracker" = "https://github.com/apollo11/astronaut-onboarding/issues"
-
-[project.scripts]
-apollo11-frontend = "main:main"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.uv]
-dev-dependencies = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.1.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "flake8>=6.0.0",
-    "mypy>=1.5.0",
-    "httpx>=0.25.2",
-]
 
 [tool.black]
 line-length = 88

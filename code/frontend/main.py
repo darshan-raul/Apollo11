@@ -16,9 +16,6 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 import json
 
-# Add shared module to path
-sys.path.append(str(Path(__file__).parent.parent / "shared"))
-
 from schemas import User, UserCreate, UserLogin, Stage, StageProgress, StageStatus
 from database import get_db, User as DBUser, Stage as DBStage, StageProgress as DBStageProgress
 from sqlalchemy.orm import Session
