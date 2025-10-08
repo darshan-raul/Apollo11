@@ -95,23 +95,24 @@ INSERT INTO users (username, email, full_name, password_hash, is_active) VALUES
 ('michael_collins', 'michael.collins@nasa.gov', 'Michael Collins', 'password123', true)
 ON CONFLICT (username) DO NOTHING;
 
--- Initialize stage progress for sample users
--- This will be handled by the application when users register
--- But we can pre-populate for existing users
-DO $$
-DECLARE
-    user_record RECORD;
-    stage_record RECORD;
-BEGIN
-    FOR user_record IN SELECT id FROM users LOOP
-        FOR stage_record IN SELECT id FROM stages ORDER BY id LOOP
-            INSERT INTO stage_progress (user_id, stage_id, status)
-            VALUES (
-                user_record.id, 
-                stage_record.id, 
-                CASE WHEN stage_record.id = 1 THEN 'available' ELSE 'locked' END
-            )
-            ON CONFLICT (user_id, stage_id) DO NOTHING;
-        END LOOP;
-    END LOOP;
-END $$;
+-- TODO: fix this
+-- -- Initialize stage progress for sample users
+-- -- This will be handled by the application when users register
+-- -- But we can pre-populate for existing users
+-- DO $$
+-- DECLARE
+--     user_record RECORD;
+--     stage_record RECORD;
+-- BEGIN
+--     FOR user_record IN SELECT id FROM users LOOP
+--         FOR stage_record IN SELECT id FROM stages ORDER BY id LOOP
+--             INSERT INTO stage_progress (user_id, stage_id, status)
+--             VALUES (
+--                 user_record.id, 
+--                 stage_record.id, 
+--                 CASE WHEN stage_record.id = 1 THEN 'available' ELSE 'locked' END
+--             )
+--             ON CONFLICT (user_id, stage_id) DO NOTHING;
+--         END LOOP;
+--     END LOOP;
+-- END $$;

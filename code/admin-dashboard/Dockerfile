@@ -10,18 +10,14 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:$PATH"
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Copy pyproject.toml and uv.lock (if exists)
-COPY pyproject.toml ./
-COPY uv.lock* ./
+# Copy application code
+COPY . .
 
 # Install dependencies using uv
 RUN uv sync --frozen --no-dev
 
-# Copy application code
-COPY . .
 
 # Expose port
 EXPOSE 8501

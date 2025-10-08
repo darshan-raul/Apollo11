@@ -89,7 +89,7 @@ services:
       dockerfile: Dockerfile
     container_name: apollo11-frontend
     environment:
-      DATABASE_URL: postgres://apollo11:apollo11@postgres:5432/apollo11?sslmode=disable
+      DATABASE_URL: postgresql://apollo11:apollo11@postgres:5432/apollo11?sslmode=disable
       CORE_API_URL: http://core-api:8080
       REDIS_URL: redis://redis:6379
     ports:

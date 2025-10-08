@@ -6,10 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -137,7 +135,7 @@ func initDatabase() {
 
 // Initialize Redis connection
 func initRedis() {
-	opt, err := redis.ParseURL(cfg.RedIS_URL)
+	opt, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
 		log.Fatal("Failed to parse Redis URL:", err)
 	}
