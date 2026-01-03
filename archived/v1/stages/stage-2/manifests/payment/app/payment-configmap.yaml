@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-immutable: false
-metadata:
-  name: payment
-  namespace: apollo11
-data:
-  DATABASE_HOST: "paymentdb-0.paymentdb.apollo11.svc.cluster.local"
-  DATABASE_NAME: "apollo11"

@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: apollo11
-  labels:
-    name: apollo11
-    app: apollo11-astronaut-onboarding

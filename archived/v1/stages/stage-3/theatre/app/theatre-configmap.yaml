@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-immutable: false
-metadata:
-  name: theatre
-  namespace: apollo11
-data:
-  MONGO_URL: "theatredb-0.theatredb.apollo11.svc.cluster.local"
-  DEBUG_LEVEL: "true"
