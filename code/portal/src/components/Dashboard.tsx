@@ -21,20 +21,24 @@ const Dashboard: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
+    const [error, setError] = useState<string | null>(null);
+
     useEffect(() => {
         fetchData();
     }, []);
 
     const fetchData = async () => {
         try {
+            setError(null);
             const [stagesRes, progressRes] = await Promise.all([
                 api.get<Stage[]>('/stages'),
                 api.get<Progress[]>('/progress')
             ]);
             setStages(stagesRes.data);
             setProgress(progressRes.data);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to fetch data", error);
+            setError(error.message || "Unknown error occurred");
         } finally {
             setLoading(false);
         }
@@ -62,6 +66,16 @@ const Dashboard: React.FC = () => {
 
     if (loading) {
         return <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>Loading Mission Data...</div>;
+    }
+
+    if (error) {
+        return (
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+                <h3 style={{ color: 'var(--error)' }}>Mission Data Unavailable</h3>
+                <p>{error}</p>
+                <button onClick={fetchData} className="btn btn-primary" style={{ marginTop: '1rem' }}>Retry Connection</button>
+            </div>
+        );
     }
 
     return (

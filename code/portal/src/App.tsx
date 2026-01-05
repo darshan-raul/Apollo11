@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from "react-oidc-context";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { setAuthToken } from './api';
@@ -7,13 +7,14 @@ import Quiz from './components/Quiz';
 import LandingPage from './components/LandingPage';
 import LoginPage from './components/LoginPage';
 import Layout from './components/Layout';
+import LoadingScreen from './components/LoadingScreen';
 
 // Wrapper for protected routes
 const ProtectedRoute = () => {
     const auth = useAuth();
 
     if (auth.isLoading) {
-        return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading Mission Control...</div>;
+        return <LoadingScreen message="Authenticating Commander..." />;
     }
 
     if (auth.error) {
@@ -33,14 +34,24 @@ const ProtectedRoute = () => {
 
 function App() {
     const auth = useAuth();
+    const [tokenSet, setTokenSet] = useState(false);
 
     useEffect(() => {
+        if (auth.isLoading) {
+            return;
+        }
+
         if (auth.isAuthenticated) {
             setAuthToken(auth.user!);
         } else {
             setAuthToken(null);
         }
-    }, [auth.isAuthenticated, auth.user]);
+        setTokenSet(true);
+    }, [auth.isAuthenticated, auth.user, auth.isLoading]);
+
+    if (auth.isLoading || !tokenSet) {
+        return <LoadingScreen message="Initializing Control Systems..." />;
+    }
 
     return (
         <BrowserRouter>
