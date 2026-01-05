@@ -25,9 +25,10 @@ const Quiz: React.FC = () => {
             try {
                 const res = await api.post<StartResponse>(`/quiz/${stageId}/start`);
                 setQuestions(res.data.questions);
-            } catch (err) {
+            } catch (err: any) {
                 console.error(err);
-                alert("Failed to start quiz");
+                const msg = err.response?.data?.detail || err.message || "Unknown error";
+                alert(`Failed to start quiz: ${msg}`);
             } finally {
                 setLoading(false);
             }

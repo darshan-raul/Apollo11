@@ -1,9 +1,35 @@
 import { useEffect } from 'react';
 import { useAuth } from "react-oidc-context";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { setAuthToken } from './api';
 import Dashboard from './components/Dashboard';
 import Quiz from './components/Quiz';
+import LandingPage from './components/LandingPage';
+import LoginPage from './components/LoginPage';
+import Layout from './components/Layout';
+
+// Wrapper for protected routes
+const ProtectedRoute = () => {
+    const auth = useAuth();
+
+    if (auth.isLoading) {
+        return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading Mission Control...</div>;
+    }
+
+    if (auth.error) {
+        return <div>Oops... {auth.error.message}</div>;
+    }
+
+    if (!auth.isAuthenticated) {
+        return <Navigate to="/" replace />;
+    }
+
+    return (
+        <Layout>
+            <Outlet />
+        </Layout>
+    );
+};
 
 function App() {
     const auth = useAuth();
@@ -16,40 +42,26 @@ function App() {
         }
     }, [auth.isAuthenticated, auth.user]);
 
-    if (auth.isLoading) {
-        return <div>Loading...</div>;
-    }
-
-    if (auth.error) {
-        return <div>Oops... {auth.error.message}</div>;
-    }
-
-    if (!auth.isAuthenticated) {
-        return (
-            <div style={{ textAlign: 'center', marginTop: '50px' }}>
-                <h1>Welcome to Apollo 11</h1>
-                <p>Your journey begins here.</p>
-                <button onClick={() => auth.signinRedirect()}>Log in to Liftoff</button>
-            </div>
-        );
-    }
-
     return (
         <BrowserRouter>
-            <div style={{ padding: '20px' }}>
-                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h1>Apollo 11 Mission Control</h1>
-                    <div>
-                        <span>Welcome, {auth.user?.profile.preferred_username}</span>
-                        <button onClick={() => auth.removeUser()} style={{ marginLeft: '10px' }}>Sign out</button>
-                    </div>
-                </header>
-                <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" />} />
+            <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={
+                    auth.isAuthenticated ? <Navigate to="/dashboard" /> : <LandingPage />
+                } />
+                <Route path="/login" element={
+                    auth.isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />
+                } />
+
+                {/* Protected Routes */}
+                <Route element={<ProtectedRoute />}>
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/quiz/:stageId" element={<Quiz />} />
-                </Routes>
-            </div>
+                </Route>
+
+                {/* Catch all */}
+                <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
         </BrowserRouter>
     );
 }

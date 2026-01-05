@@ -2,3 +2,5 @@
 .devbox
 venv
 **/.venv
+
+node_modules

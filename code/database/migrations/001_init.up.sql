@@ -68,3 +68,11 @@ INSERT INTO core.stages (id, name, description, "order") VALUES
 (10, 'Stage 9: Adaptive Thrust', 'Autoscaling & Optimization', 10),
 (11, 'Stage 10: Contingency Mode', 'Backup, Upgrades, Chaos', 11)
 ON CONFLICT (id) DO NOTHING;
+
+-- Seed Quiz Questions for Stage 1 (ID=1)
+INSERT INTO quiz.quiz_questions (stage_id, question, options, correct_answer) VALUES
+(1, 'Which command lists running containers?', '["docker list", "docker ps", "docker run", "docker images"]', 'docker ps'),
+(1, 'What is the PID 1 process in a container?', '["The entrypoint process", "systemd", "root", "bash"]', 'The entrypoint process'),
+(1, 'Which flag runs a container in background?', '["-d", "-b", "--hidden", "-bg"]', '-d'),
+(1, 'What is a Docker image?', '["A running instance", "A read-only template", "A virtual machine", "A filesystem"]', 'A read-only template'),
+(1, 'How do you stop a container?', '["docker kill", "docker stop", "docker end", "docker halt"]', 'docker stop');
