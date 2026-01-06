@@ -1,3 +1,5 @@
+name: apollo11
+
 services:
   postgres:
     image: postgres:15-alpine
@@ -9,6 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - ./database/migrations:/docker-entrypoint-initdb.d
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - apollo-net
 
@@ -27,6 +30,7 @@ services:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json
     ports:
       - "8081:8080"
+    restart: always
     depends_on:
       - postgres
     networks:
@@ -41,7 +45,7 @@ services:
       REALM: apollo11
       CLIENT_ID: apollo11-portal
     ports:
-      - "8000:8000"
+      - "8087:8000"
     depends_on:
       - postgres
       - keycloak
@@ -64,7 +68,7 @@ services:
       context: ./portal
       args:
         VITE_KEYCLOAK_URL: http://localhost:8081/realms/apollo11
-        VITE_API_URL: http://localhost:8000
+        VITE_API_URL: http://localhost:8087
     ports:
       - "3000:80"
     networks:
@@ -84,6 +88,10 @@ services:
       - keycloak
     networks:
       - apollo-net
+
+volumes:
+  postgres-data:
+    name: apollo11-postgres-data
 
 networks:
   apollo-net:
