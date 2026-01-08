@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: core-api-config
+  labels:
+    app: core-api
+data:
+  DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/apollo11"
+  KEYCLOAK_URL: "http://keycloak:8080"
+  QUIZ_SERVICE_URL: "http://quiz:8080"
+  REALM: "apollo11"
+  CLIENT_ID: "apollo11-portal"

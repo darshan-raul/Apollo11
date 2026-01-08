@@ -24,8 +24,8 @@
 
 > *"Get it off the ground using the simplest cluster."*
 
-- ✅ Setup Kind Cluster
-- ✅ Deploy simple nginx via `kubectl`
+- ✅ Setup k3d Cluster
+- ✅ Deploy portal via `kubectl`
 - ✅ Create basic `Deployment`, `Service`, and use `Namespaces`
 - View underlying ReplicaSets, simulate pod failure, do one roll out and rollback
 - RollOut Vs Recreate

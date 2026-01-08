@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:23.0.6
+        args: ["start-dev", "--import-realm"]
+        ports:
+        - containerPort: 8080
+        env:
+        - name: KC_DB
+          value: "postgres"
+        - name: KC_DB_URL
+          value: "jdbc:postgresql://postgres:5432/apollo11"
+        - name: KC_DB_USERNAME
+          value: "postgres"
+        - name: KC_DB_SCHEMA
+          value: "keycloak"
+        # Secrets
+        - name: KEYCLOAK_ADMIN
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-credentials
+              key: KEYCLOAK_ADMIN
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-credentials
+              key: KEYCLOAK_ADMIN_PASSWORD
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-credentials
+              key: KC_DB_PASSWORD
+        volumeMounts:
+        - name: realm-config
+          mountPath: /opt/keycloak/data/import
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 20
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1024Mi"
+            cpu: "1000m"
+      volumes:
+      - name: realm-config
+        configMap:
+          name: keycloak-realm-config

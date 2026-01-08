@@ -5,6 +5,12 @@ metadata:
 servers: 1
 agents: 2
 image: rancher/k3s:v1.35.0-k3s1
+registries:
+  create:
+    name: local-registry
+    host: "0.0.0.0"
+    hostPort: "5000"
+
 options:
   k3d: # k3d runtime settings
     wait: true

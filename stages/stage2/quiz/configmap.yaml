@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quiz-config
+  labels:
+    app: quiz
+data:
+  DATABASE_URL: "postgres://postgres:postgres@postgres:5432/apollo11"

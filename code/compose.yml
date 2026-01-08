@@ -89,6 +89,18 @@ services:
     networks:
       - apollo-net
 
+  dozzle:
+    image: amir20/dozzle:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 8080:8080
+    environment:
+      - DOZZLE_ENABLE_ACTIONS=true
+      - DOZZLE_ENABLE_SHELL=true
+    networks:
+      - apollo-net
+
 volumes:
   postgres-data:
     name: apollo11-postgres-data
