@@ -1,0 +1,17 @@
+apiVersion: k3d.io/v1alpha5 
+kind: Simple
+metadata:
+  name: apollo11 # name that you want to give to your cluster (will still be prefixed with `k3d-`)
+servers: 1
+agents: 2
+image: rancher/k3s:v1.35.0-k3s1
+options:
+  k3d: # k3d runtime settings
+    wait: true
+    timeout: "120s"
+    disableLoadbalancer: false
+    disableImageVolume: false
+    disableRollback: false 
+  kubeconfig:
+    updateDefaultKubeconfig: true # add new cluster to your default Kubeconfig; same as `--kubeconfig-update-default` (default: true)
+    switchCurrentContext: true # also set current-context to the new cluster's context; same as `--kubeconfig-switch-context` (default: true)
