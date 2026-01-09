@@ -5,4 +5,4 @@ psycopg2-binary==2.9.9
 python-jose[cryptography]==3.3.0
 pydantic==2.6.0
 pydantic-settings==2.1.0
-requests==2.31.0
+requests==2.32.4
