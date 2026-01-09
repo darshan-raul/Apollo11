@@ -6,6 +6,7 @@ metadata:
     app: quiz
 spec:
   replicas: 1
+  minReadySeconds: 5
   selector:
     matchLabels:
       app: quiz
@@ -19,6 +20,11 @@ spec:
       labels:
         app: quiz
     spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 3000
+        fsGroup: 2000
       containers:
       - name: quiz
         image: local-registry:5000/apollo11-quiz-service:latest
@@ -28,13 +34,22 @@ spec:
         envFrom:
         - configMapRef:
             name: quiz-config
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
         readinessProbe:
-          tcpSocket:
+          httpGet:
+            path: /health/ready
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
         livenessProbe:
-          tcpSocket:
+          httpGet:
+            path: /health/live
             port: 8080
           initialDelaySeconds: 15
           periodSeconds: 20
@@ -45,3 +60,7 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "250m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]

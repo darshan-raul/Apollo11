@@ -14,6 +14,11 @@ spec:
       labels:
         app: keycloak
     spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
       containers:
       - name: keycloak
         image: quay.io/keycloak/keycloak:23.0.6
@@ -48,11 +53,18 @@ spec:
         volumeMounts:
         - name: realm-config
           mountPath: /opt/keycloak/data/import
+        startupProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          failureThreshold: 30
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8080
-          initialDelaySeconds: 15
+          initialDelaySeconds: 5
           periodSeconds: 10
         livenessProbe:
           httpGet:
@@ -60,6 +72,10 @@ spec:
             port: 8080
           initialDelaySeconds: 30
           periodSeconds: 20
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         resources:
           requests:
             memory: "256Mi"

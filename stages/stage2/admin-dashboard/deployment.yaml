@@ -6,6 +6,7 @@ metadata:
     app: admin-dashboard
 spec:
   replicas: 1
+  minReadySeconds: 5
   selector:
     matchLabels:
       app: admin-dashboard
@@ -19,6 +20,11 @@ spec:
       labels:
         app: admin-dashboard
     spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 3000
+        fsGroup: 2000
       containers:
       - name: admin-dashboard
         image: local-registry:5000/apollo11-admin-dashboard:latest
@@ -28,6 +34,13 @@ spec:
         envFrom:
         - configMapRef:
             name: admin-dashboard-config
+        startupProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8501
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
         readinessProbe:
           httpGet:
             path: /_stcore/health
@@ -47,3 +60,7 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]

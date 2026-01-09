@@ -1,21 +1,26 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: postgres
   labels:
     app: postgres
 spec:
+  serviceName: "postgres"
   replicas: 1
+  minReadySeconds: 10
   selector:
     matchLabels:
       app: postgres
-  strategy:
-    type: Recreate 
   template:
     metadata:
       labels:
         app: postgres
     spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        fsGroup: 70
+        runAsUser: 70
+        runAsGroup: 70
       containers:
       - name: postgres
         image: postgres:15-alpine
@@ -27,6 +32,14 @@ spec:
         volumeMounts:
         - name: init-script
           mountPath: /docker-entrypoint-initdb.d
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        startupProbe:
+          exec:
+            command: ["pg_isready", "-U", "postgres"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 10
         readinessProbe:
           exec:
             command: ["pg_isready", "-U", "postgres"]
@@ -44,7 +57,19 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "500m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
       volumes:
       - name: init-script
         configMap:
           name: postgres-init-script
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
