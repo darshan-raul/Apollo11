@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgadmin-passwords
+  labels:
+    app: pgadmin
+data:
+  PGADMIN_DEFAULT_PASSWORD: "admin"
+  PGADMIN_DEFAULT_EMAIL: "admin@apollo11.com"
+  PGADMIN_SERVER_JSON_FILE: "/pgadmin4/servers.json"
+  PGADMIN_REPLACE_SERVERS_ON_STARTUP: "True"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgadmin-configs
+  labels:
+    app: pgadmin
+data:
+  servers.json: |
+      {
+        "Servers": {
+          "1": {
+            "Name": "apollo11 Postgres",
+            "Group": "Servers",
+            "Host": "postgres-0.postgres.default.svc.cluster.local",
+            "Port": 5432,
+            "MaintenanceDB": "postgres",
+            "Username": "postgres",
+            "PassFile": "/pgadmin4/pgpass"
+          }
+        }
+      }

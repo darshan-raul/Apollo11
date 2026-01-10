@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: portal
+  name: pgadmin
+  labels:
+    app: pgadmin
 spec:
   selector:
-    app: portal
+    app: pgadmin
   ports:
     - protocol: TCP
       port: 80
-      nodePort: 30001
       targetPort: 80
-  type: NodePort

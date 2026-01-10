@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin
+  labels:
+    app: pgadmin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgadmin
+  template:
+    metadata:
+      labels:
+        app: pgadmin
+    spec:
+      containers:
+      - name: pgadmin
+        image: dpage/pgadmin4
+        ports:
+        - containerPort: 80
+        env:
+        - name: PGADMIN_DEFAULT_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: pgadmin-passwords
+              key: PGADMIN_DEFAULT_PASSWORD
+        - name: PGADMIN_DEFAULT_EMAIL
+          valueFrom:
+            configMapKeyRef:
+              name: pgadmin-passwords
+              key: PGADMIN_DEFAULT_EMAIL
+        - name: PGADMIN_SERVER_JSON_FILE
+          valueFrom:
+            configMapKeyRef:
+              name: pgadmin-passwords
+              key: PGADMIN_SERVER_JSON_FILE
+        - name: PGADMIN_REPLACE_SERVERS_ON_STARTUP
+          valueFrom:
+            configMapKeyRef:
+              name: pgadmin-passwords
+              key: PGADMIN_REPLACE_SERVERS_ON_STARTUP
+        volumeMounts:
+        - name: pgadmin-configs
+          mountPath: /pgadmin4/servers.json
+          subPath: servers.json
+          readOnly: true
+        - name: pgadmin-credentials
+          mountPath: /pgadmin4/pgpass
+          subPath: pgpass
+          readOnly: true
+      volumes:
+      - name: pgadmin-configs
+        configMap:
+          name: pgadmin-configs
+      - name: pgadmin-credentials
+        secret:
+          secretName: pgadmin-credentials
+

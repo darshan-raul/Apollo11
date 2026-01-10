@@ -10,7 +10,11 @@ registries:
     name: local-registry
     host: "0.0.0.0"
     hostPort: "5000"
-
+ports:
+  - port: 8082:30001 # for nodeport
+    nodeFilters:
+      - server:0
+      - agent:*
 options:
   k3d: # k3d runtime settings
     wait: true

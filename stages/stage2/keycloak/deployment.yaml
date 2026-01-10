@@ -15,10 +15,6 @@ spec:
         app: keycloak
     spec:
       terminationGracePeriodSeconds: 60
-      securityContext:
-        fsGroup: 1000
-        runAsNonRoot: true
-        runAsUser: 1000
       containers:
       - name: keycloak
         image: quay.io/keycloak/keycloak:23.0.6
@@ -27,14 +23,25 @@ spec:
         - containerPort: 8080
         env:
         - name: KC_DB
-          value: "postgres"
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_DB
         - name: KC_DB_URL
-          value: "jdbc:postgresql://postgres:5432/apollo11"
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_DB_URL
         - name: KC_DB_USERNAME
-          value: "postgres"
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_DB_USERNAME
         - name: KC_DB_SCHEMA
-          value: "keycloak"
-        # Secrets
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_DB_SCHEMA
         - name: KEYCLOAK_ADMIN
           valueFrom:
             secretKeyRef:
@@ -72,13 +79,10 @@ spec:
             port: 8080
           initialDelaySeconds: 30
           periodSeconds: 20
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop: ["ALL"]
+          failureThreshold: 10
         resources:
           requests:
-            memory: "256Mi"
+            memory: "512Mi"
             cpu: "250m"
           limits:
             memory: "1024Mi"
