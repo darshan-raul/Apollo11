@@ -77,6 +77,7 @@ data:
   KC_DB_URL: "jdbc:postgresql://postgres-0.postgres.default.svc.cluster.local:5432/apollo11"
   KC_DB_USERNAME: "postgres"
   KC_DB_SCHEMA: "keycloak"
+  KC_HEALTH_ENABLED: "true"
 
 
 

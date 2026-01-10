@@ -5,8 +5,8 @@ metadata:
   labels:
     app: core-api
 data:
-  DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/apollo11"
-  KEYCLOAK_URL: "http://keycloak:8080"
-  QUIZ_SERVICE_URL: "http://quiz:8080"
+  DATABASE_URL: "postgresql://postgres-0.postgres.default.svc.cluster.local:5432/apollo11"
+  KEYCLOAK_URL: "http://keycloak.default.svc.cluster.local:8080"
+  QUIZ_SERVICE_URL: "http://quiz.default.svc.cluster.local:8080"
   REALM: "apollo11"
   CLIENT_ID: "apollo11-portal"

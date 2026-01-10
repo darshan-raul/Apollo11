@@ -21,19 +21,26 @@ spec:
         app: core-api
     spec:
       terminationGracePeriodSeconds: 30
-      securityContext:
-        runAsUser: 1000
-        runAsGroup: 3000
-        fsGroup: 2000
       containers:
       - name: core-api
         image: local-registry:5000/apollo11-core-api:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         envFrom:
         - configMapRef:
              name: core-api-config
+        env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: core-api-credentials
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: core-api-credentials
+              key: POSTGRES_PASSWORD
         startupProbe:
           httpGet:
             path: /health/live
@@ -60,7 +67,3 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "500m"
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop: ["ALL"]

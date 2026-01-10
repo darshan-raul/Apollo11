@@ -34,7 +34,8 @@ def health_ready(db: Session = Depends(database.get_db)):
         from sqlalchemy import text
         db.execute(text("SELECT 1"))
     except Exception as e:
-        raise HTTPException(status_code=503, detail="Database not ready")
+        print(f"Health check failed: {e}")
+        raise HTTPException(status_code=503, detail=f"Database not ready: {e}")
     return {"status": "ready"}
 
 @app.get("/me", response_model=models.UserResponse)

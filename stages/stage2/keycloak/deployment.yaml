@@ -57,27 +57,32 @@ spec:
             secretKeyRef:
               name: keycloak-credentials
               key: KC_DB_PASSWORD
+        - name: KC_HEALTH_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: keycloak-config
+              key: KC_HEALTH_ENABLED
         volumeMounts:
         - name: realm-config
           mountPath: /opt/keycloak/data/import
         startupProbe:
           httpGet:
-            path: /health/ready
+            path: /health/live
             port: 8080
-          initialDelaySeconds: 20
+          initialDelaySeconds: 60
           periodSeconds: 10
           failureThreshold: 30
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8080
-          initialDelaySeconds: 5
+          initialDelaySeconds: 60
           periodSeconds: 10
         livenessProbe:
           httpGet:
             path: /health/live
             port: 8080
-          initialDelaySeconds: 30
+          initialDelaySeconds: 60
           periodSeconds: 20
           failureThreshold: 10
         resources:

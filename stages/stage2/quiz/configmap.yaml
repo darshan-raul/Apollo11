@@ -5,4 +5,4 @@ metadata:
   labels:
     app: quiz
 data:
-  DATABASE_URL: "postgres://postgres:postgres@postgres:5432/apollo11"
+  DATABASE_URL: "postgres://postgres-0.postgres.default.svc.cluster.local:5432/apollo11"

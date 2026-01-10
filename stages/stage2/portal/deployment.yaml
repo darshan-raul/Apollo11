@@ -21,16 +21,15 @@ spec:
         app: portal
     spec:
       terminationGracePeriodSeconds: 30
-      securityContext:
-        runAsUser: 101 # nginx user
-        runAsGroup: 101
-        fsGroup: 101
       containers:
       - name: portal
         image: local-registry:5000/apollo11-portal:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
+        envFrom:
+        - configMapRef:
+            name: portal-config
         startupProbe:
           httpGet:
             path: /health/live
@@ -40,7 +39,7 @@ spec:
           failureThreshold: 30
         readinessProbe:
           httpGet:
-            path: /health/live
+            path: /health/ready
             port: 80
           initialDelaySeconds: 5
           periodSeconds: 5
@@ -57,8 +56,13 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "250m"
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop: ["ALL"]
-            add: ["NET_BIND_SERVICE"] # Needed for port 80
+        volumeMounts:
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-run
+          mountPath: /var/run
+      volumes:
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-run
+        emptyDir: {}

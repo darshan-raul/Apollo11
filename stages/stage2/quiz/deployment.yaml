@@ -21,19 +21,26 @@ spec:
         app: quiz
     spec:
       terminationGracePeriodSeconds: 30
-      securityContext:
-        runAsUser: 1000
-        runAsGroup: 3000
-        fsGroup: 2000
       containers:
       - name: quiz
         image: local-registry:5000/apollo11-quiz-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
         envFrom:
         - configMapRef:
             name: quiz-config
+        env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: quiz-credentials
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: quiz-credentials
+              key: POSTGRES_PASSWORD
         startupProbe:
           httpGet:
             path: /health/live
@@ -60,7 +67,4 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "250m"
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop: ["ALL"]
+

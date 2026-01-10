@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/apollo11/quiz-service/internal/models"
 	"github.com/gofiber/fiber/v2"
@@ -19,7 +21,19 @@ var db *pgxpool.Pool
 func main() {
 	// Database connection
 	dbUrl := os.Getenv("DATABASE_URL")
-	if dbUrl == "" {
+	dbUser := strings.TrimSpace(os.Getenv("DB_USER"))
+	dbPassword := strings.TrimSpace(os.Getenv("DB_PASSWORD"))
+
+	if dbUrl != "" && dbUser != "" && dbPassword != "" {
+		// Parse and inject credentials
+		u, err := url.Parse(dbUrl)
+		if err != nil {
+			log.Fatalf("Invalid DATABASE_URL: %v", err)
+		}
+		u.User = url.UserPassword(dbUser, dbPassword)
+		dbUrl = u.String()
+	} else if dbUrl == "" {
+		// Fallback (mostly for local dev if envs missing)
 		dbUrl = "postgres://postgres:postgres@postgres:5432/apollo11"
 	}
 
@@ -48,6 +62,7 @@ func main() {
 	})
 	app.Get("/health/ready", func(c *fiber.Ctx) error {
 		if err := db.Ping(context.Background()); err != nil {
+			log.Printf("Health check failed: %v", err)
 			return c.Status(503).JSON(fiber.Map{"status": "not ready", "error": err.Error()})
 		}
 		return c.Status(200).JSON(fiber.Map{"status": "ready"})
