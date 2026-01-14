@@ -15,7 +15,7 @@ ports:
     nodeFilters:
       - server:0
       - agent:*
-  - port: 8081:30002 # for keycloak nodeport
+  - port: 8081:30002 # for coreapi nodeport
     nodeFilters:
       - server:0
       - agent:*

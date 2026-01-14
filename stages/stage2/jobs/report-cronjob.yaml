@@ -1,6 +1,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
+  namespace: apollo11
   name: report-generator
 spec:
   schedule: "0 6 * * *"

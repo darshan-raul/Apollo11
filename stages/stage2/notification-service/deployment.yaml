@@ -1,6 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: apollo11
   name: notification-service
 spec:
   replicas: 1
@@ -14,22 +15,11 @@ spec:
     spec:
       containers:
         - name: notification-service
-          image: notification-service:latest
+          image: local-registry:5000/apollo11-notification-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
           env:
             - name: DATABASE_URL
               value: "postgresql://postgres:postgres@postgres:5432/apollo11"
-          livenessProbe:
-            httpGet:
-              path: /health/live
-              port: 8000
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /health/ready
-              port: 8000
-            initialDelaySeconds: 10
-            periodSeconds: 10
+

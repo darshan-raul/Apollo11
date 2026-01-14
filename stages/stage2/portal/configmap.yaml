@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: portal-config
-  labels:
-    app: portal
-data:
-  VITE_API_URL: "http://core-api:8000"
-  VITE_KEYCLOAK_URL: "http://keycloak:8080/realms/apollo11"

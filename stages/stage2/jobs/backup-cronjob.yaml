@@ -1,6 +1,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
+  namespace: apollo11
   name: backup-service
 spec:
   schedule: "0 0 * * *"

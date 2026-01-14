@@ -1,6 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: apollo11
   name: quiz-service
 spec:
   replicas: 1
@@ -14,22 +15,11 @@ spec:
     spec:
       containers:
         - name: quiz-service
-          image: quiz-service:latest
+          image: local-registry:5000/apollo11-quiz-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           env:
             - name: DATABASE_URL
               value: "postgres://postgres:postgres@postgres:5432/apollo11"
-          livenessProbe:
-            httpGet:
-              path: /health/live
-              port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /health/ready
-              port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 10
+  

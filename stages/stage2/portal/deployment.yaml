@@ -1,6 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: apollo11
   name: portal
 spec:
   replicas: 1
@@ -14,19 +15,10 @@ spec:
     spec:
       containers:
         - name: portal
-          image: portal:latest
+          image: local-registry:5000/apollo11-portal-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
-          livenessProbe:
-            httpGet:
-              path: /health/live
-              port: 80
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /health/ready
-              port: 80
-            initialDelaySeconds: 10
-            periodSeconds: 10
+          env:
+            - name: VITE_API_URL
+              value: "http://core-api:8000"
