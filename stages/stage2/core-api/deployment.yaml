@@ -21,9 +21,11 @@ spec:
         app: core-api
     spec:
       terminationGracePeriodSeconds: 30
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
       - name: core-api
-        image: local-registry:5000/apollo11-core-api:latest
+        image: ghcr.io/darshan-raul/apollo11-devsecops/core-api:main-2b9738f
         imagePullPolicy: Always
         ports:
         - containerPort: 8000

@@ -1,6 +1,6 @@
 
 import React, { ReactNode } from 'react';
-import { useAuth } from "react-oidc-context";
+import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 
 interface LayoutProps {
@@ -8,7 +8,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-    const auth = useAuth();
+    const { user, logout } = useAuth();
 
     return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -25,12 +25,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <div className="desktop-only" style={{ textAlign: 'right' }}>
                             <span style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600 }}>
-                                {auth.user?.profile.preferred_username || "Commander"}
+                                {user?.username || "Commander"}
                             </span>
                         </div>
                         <button
                             className="btn btn-secondary"
-                            onClick={() => auth.removeUser()}
+                            onClick={() => logout()}
                             style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
                         >
                             Sign Out

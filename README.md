@@ -6,194 +6,173 @@
 
 ![tools](./images/apollo11-flavor2-project.drawio.png)
 
-## Stages
+# Stages
 
+### 🧱 **Launchpad – fundamentals**
 
-### 🚀 **Liftoff** — Containers & Local Development
-
-> *"Ignition begins with understanding containers."*
-
-- ✅ Intro to containers & Docker
-- ✅ Docker CLI, Dockerfiles, Images, Volumes
-- ✅ Build & Run multi-service apps via Docker Compose
-- Local workflows with `tilt` or `skaffold` for developer productivity
+* Learn what **Docker** is, why it exists, and how it solves the problem of environment consistency.
+* Understand containers conceptually and how they differ from virtual machines.
+* Write **Dockerfiles** and build container images using best practices and layering principles.
+* Use **Docker Compose** to run and wire together multiple containers locally.
+* Learn **YAML** syntax and structure as the foundation for Kubernetes configuration files.
 
 ---
 
-### 🧱 **Stage 1: It Begins** — Kubernetes Barebones
+### 🔥**Ignition** 🔥 – first k8s cluster and pod**
 
-> *"Get it off the ground using the simplest cluster."*
-
-- ✅ Setup k3d Cluster
-- ✅ Deploy portal via `kubectl`
-- ✅ Create basic `Deployment`, `Service`, and use `Namespaces`
-- View underlying ReplicaSets, simulate pod failure, do one roll out and rollback
-- RollOut Vs Recreate
-- kubectl walkthrough + jsonpath parsing
+* Launch a local Kubernetes cluster using **kind** and understand what components are created.
+* Use core **kubectl** commands to inspect, apply, modify, and delete Kubernetes resources.
+* Understand the difference between **imperative and declarative** resource management in Kubernetes.
+* Get a high-level overview of Kubernetes cluster architecture, with concepts that will be revisited in depth later.
+* **Launch your first Pod** and understand the structure and fields of a Pod manifest YAML.
+* Learn why Pods are fragile and why higher-level workload abstractions are required.
 
 ---
 
-### 🧠 **Stage 2: Structural Integrity** — Best Practices
+### Stage 1 : 🚀 **Liftoff – launch all workloads on cluster with configuration**
 
-> *"Harden the fundamentals."*
-
-* ConfigMaps, Secrets
-* Labels, Annotations
-* Selectors
-* Init containers, sidecars
-* Probes: Readiness, Liveness, Startup
-* MaxUnavailable and MaxSurge
-* minReadySeconds,,terminationGracePeriodSeconds
-* Resource requests/limits, Quotas
-* Restart policies
-* Scheduling: Taints/Tolerations, Node Affinity, Pod Affinity/Anti-Affinity
-* SecurityContext & PodDisruptionBudgets
+* Organize workloads using **namespaces** and understand logical isolation within a cluster.
+* Deploy applications using **ReplicaSets** and **Deployments** and understand their reconciliation behavior.
+* Launch and manage multiple deployments simultaneously on the cluster.
+* Access running workloads using **port forwarding** for local testing and debugging.
+* Run one-time and scheduled tasks using **Jobs** and **CronJobs**.
+* Externalize configuration using **ConfigMaps** and understand when to use them.
+* Manage sensitive data securely using Kubernetes **Secrets**.
+* Design multi-container Pods using **init containers and sidecars** to support application behavior.
 
 ---
 
-### 💾 **Stage 3: Persistent Journey** — Storage Deep Dive
+### Stage 2 :🧭 **Guidance, Navigation & Control – Networking**
 
-> *"Save state and survive reboots."*
-
-* Downward API
-* Persistent Volumes & Claims
-* Storage Classes
-* StatefulSets
-* Volume Modes & Access Modes
-* Reclaim Policies (Retain, Delete, Recycle)
-* CSI Drivers (brief intro)
+* Understand Kubernetes **DNS** and how **service discovery** works inside the cluster.
+* Learn how Pods communicate with each other and **what networking guarantees Kubernetes requires**.
+* Expose applications using **Services** and understand ClusterIP, NodePort, and LoadBalancer types.
+* Control network traffic using **NetworkPolicies** to enforce isolation and security.
+* Route external traffic into the cluster using **Ingress resources** using **traefik**.
+* Understand the role of **kube-proxy** and how CNI plugins implement pod networking.
+* Use the **Gateway API** as a modern, extensible alternative to traditional Ingress.
 
 ---
 
-### 🌐 **Stage 4: Orbit Control** — Networking in Depth
+### Stage 3 : 💾 **Mission Data Systems – Persistent Storage**
 
-> *"Achieve stable orbit with secure comms."*
-
-* Cluster Networking 101
-* Services: ClusterIP, NodePort, LoadBalancer
-* Ingress Controllers & TLS Termination
-* NetworkPolicies
-* CoreDNS config
-* Gateway API (replacing Ingress)
-* Intro to Service Mesh (Linkerd or Istio lite)
+* Use ephemeral storage options like **emptyDir** and **hostPath** and understand their limitations.
+* Learn what **Persistent Volumes** are and how storage is abstracted in Kubernetes.
+* Understand **reclaim policies** and how Kubernetes handles storage after workloads are deleted.
+* Request storage using **Persistent Volume Claims** and see how binding works.
+* Use **StorageClasses** to define dynamic provisioning behavior for storage.
+* Expose Pod and node metadata to applications using the **Downward API**.
+* Run stateful applications using **StatefulSets** and understand their guarantees.
 
 ---
 
-### 📦 **Stage 5: Modular Payloads** — Packaging and Extensibility
+### Stage 4 : 🎛️ **Flight Control Systems – Controls in place**
 
-> *"Standardize and ship the system."*
-
-* Helm Charts (create and use)
-* Kustomize for environment-based configs
-* Intro to Operators
-* Custom Resources / CRDs
-* Helmfile / GitOps bundling patterns
+* Configure **liveness**, **readiness**, and **startup probes** to control workload health.
+* Define **resource requests** and **limits** to manage CPU and memory consumption.
+* Understand **Quality of Service (QoS) classes** and how Kubernetes prioritizes Pods under pressure.
+* Control scheduling behavior using **Pod Priority** and **Preemption**.
+* Enforce fair usage and prevent resource exhaustion using **resource quotas**.
 
 ---
 
-### 🔎 **Stage 6: Mission Control** — Monitoring & Debugging
+### Stage 5 : 📦 **Mission Payload Integration – Packaging and Deployment**
 
-> *"Keep eyes on every subsystem."*
-
-* `kubectl debug`, `ephemeral containers`
-* CrashLoopBackOff
-* Headlamp or Lens UI
-* Metrics Server, API metrics
-* Prometheus + Grafana + P99 + SRE monitoring
-* Loki for logs
-* Tempo/Jaeger for traces
-* OpenTelemetry overview
+* Package and template Kubernetes manifests using **Helm charts**.
+* Customize Kubernetes configurations using **Kustomize overlays and patches**.
+* Build **CI/CD** pipelines to test and deploy applications automatically using **GitHub Actions**.
+* Using **testContainers** to do integration testing.
+* Implement **GitOps** workflows using **Argo CD** to manage deployments declaratively.
 
 ---
 
-### 🔁 **Stage 7: Flight Automation** — CI/CD and Workflows
+### Stage 6 : 📡 **Mission Operations (Houston) – Monitoring and Observability**
 
-> *"Smooth deployment across galaxies."*
-
-* Jobs and CronJobs
-* GitOps vs traditional CI/CD
-* Argo Workflows / Tekton Pipelines
-* ArgoCD for GitOps deployment
-* Multi-env deploys via Helmfile / ArgoCD apps
-* Event-driven pipelines
-
----
-
-### 🔐 **Stage 8: Secure Docking** — Kubernetes Security
-
-> *"Protect your capsule at all costs."*
-
-* TLS/SSL & Cert Manager
-* Sealed Secrets / External Secrets
-* RBAC (basic to advanced)
-* Service Accounts
-* Vault for secrets management
-* OPA / Kyverno for policies
-* Keycloak for SSO / OIDC
-* Tools: Kubescape, Trivy, Polaris
+* Revisit probes from an operational perspective to understand real-world failure signals.
+* Use **DaemonSets** to deploy monitoring and system agents on every node.
+* Debug running Pods using **ephemeral containers** without restarting workloads.
+* Explore the cluster visually using the **Headlamp** dashboard.
+* Collect and query metrics using **Prometheus**.
+* Visualize metrics and build dashboards using **Grafana**.
+* Centralize logs using **Loki** and correlate them with metrics.
+* Trace requests across services using **OpenTelemetry**.
+* Systematically troubleshoot failing applications and Pods using observability data.
 
 ---
 
-### 📈 **Stage 9: Adaptive Thrust** — Autoscaling & Optimization
+### Stage 7 : 🛰️ **Orbital Maneuvering – Scaling**
 
-> *"Match thrust with need."*
-
-* Horizontal Pod Autoscaler (HPA)
-* Vertical Pod Autoscaler (VPA)
-* Cluster Autoscaler
-* Karpenter (modern autoscaling)
-* QoS Classes
-* Load Testing (k6, vegeta)
-* Pod Priority & Preemption
+* Automatically scale workloads using **Horizontal Pod Autoscaler (HPA)**.
+* Control where Pods run using **taints and tolerations**.
+* Influence scheduling decisions using **node affinity rules**.
+* Control Pod co-location and separation using **pod affinity and anti-affinity**.
 
 ---
 
-### 💥 **Stage 10: Contingency Mode** — Backup, Upgrades, Chaos
+### Stage 8 : 🔐 **Command Module Hardening – Security**
 
-> *"Prepare for failure and return."*
-
-* Backup & Restore using Velero/Rook
-* Blue/Green and Canary upgrade patterns
-* Minor/Major cluster version upgrades
-* topologySpreadConstraints
-* Pod Distrubtion Budgets
-* Chaos Engineering with LitmusChaos / ChaosMesh
-
----
-
-### 🌍 **Stage 11: Earth Departure** — Production-Grade Clusters
-
-> *"Beyond the test lab."*
-
-* CI/CD integration: GitHub Actions to push images
-* Use GCR, ECR, Harbor (with pull secrets)
-* IaC with Terraform/Pulumi for cluster setup
-* Cluster hardening guides (NSA/CIS Benchmarks)
-* Multi-cluster and Federation basics
+* Implement fine-grained access control using **Role-Based Access Control (RBAC)**.
+* Secure Pods using security contexts to restrict privileges.
+* Use **hardened container images** to minimize the attack surface using **docker hardened images**.
+* Authenticate workloads using **Service Accounts**.
+* Store and manage secrets securely using **Vault** as an external key store.
+* Manage encrypted secrets using **Sealed Secrets** and **External Secrets Operator**.
+* Enforce baseline security standards using **Pod Security Admission**.
+* Manage **TLS** certificates automatically using **cert-manager**.
+* Integrate Kubernetes authentication with **OIDC** using **Keycloak**.
+* Control and mutate resources using **admission controllers**.
+* Enforce policy-as-code using **OPA** or **Kyverno**.
+* Scan source code and container images using **TruffleHog** and **Trivy**.
 
 ---
 
-### 🪐 **To Mars** — Advanced Delivery & Operations
+### Stage 9 : 🌕 **Lunar Orbit Operations – Deploy to Cloud**
 
-> *"Progressive delivery and self-reliance."*
+* Deploy Kubernetes clusters on **EKS, GKE, and AKS using Terraform**.
+* Scale cluster nodes dynamically using **Cluster Autoscaler or Karpenter**.
+* Load test applications using **k6** to validate performance.
+* Distribute workloads evenly using **topology spread constraints**.
+* **Perform safe Kubernetes cluster upgrades**.
+* Protect availability during disruptions using **Pod Disruption Budgets**.
+* Maintain cluster health through routine operational tasks.
+* Design and operate a **truly highly available Kubernetes cluster**.
 
-* CRDS
-* Operators
-* Argo Rollouts for Canary/Blue-Green
-* Feature Flags
-* Progressive Delivery strategies
-* Harbor – self-hosted registry with security scanning
-* Cluster cost analysis (Kubecost)
-* Platform Engineering intro (Backstage, Crossplane)
-* Multi-tenant Kubernetes
+---
 
+### Stage 10 : 🧪 **Mission Extensions**
 
+* Hook into Pod and container lifecycle events using **lifecycle hooks**.
+* Implement a **service mesh** using **Linkerd** for traffic management and security.
+* Perform **progressive deployments** using **Argo Rollouts**.
+* Build a full **DevSecOps pipeline** integrating security into delivery.
+* Implement backup and restore strategies using **Velero** and **Rook**.
+* Introduce controlled failures using **Chaos Mesh** to test resilience.
+* Monitor systems using **eBPF-based tooling** such as **Coroot**.
+
+---
+
+### Stage 11 : 🚀 **Towards Mars**
+
+* Design and implement custom **CRDs** and **Kubernetes operators**.
+* Extend the Kubernetes API server with custom functionality.
+* Build a **homelab using k3s** and expose services securely via **Cloudflare Tunnel or Tailscale**.
+* Implement event-driven autoscaling using **KEDA**.
+* Manage application behavior dynamically using **feature flags**.
+* Build internal developer platforms using **Backstage**.
+* Analyze and optimize cluster costs using **Goldilocks and Kubecost**.
+* Use Kubernetes as a control plane for external infrastructure with **Crossplane**.
+* Harden clusters using **CIS benchmarks and runtime security tools like Falco**.
+* Manage clusters declaratively using **Cluster API**.
+* Design and operate **multi-cloud Kubernetes architectures**.
+* Build serverless workloads using **Knative**.
+* Prevent misconfigurations using **Datree**.
+* Learn how to engage with the Kubernetes community through **SIGs and TAGs**.
+
+---
 
 ## Prerequisites
 
-- This course assumes that you come with bare basic knowledge about k8s concepts. 
-- I highly recommend this playlist, will cover everything you ever need to know [varjosh k8s course](https://youtube.com/playlist?list=PLmPit9IIdzwRjqD-l_sZBDdPlcSfKqpAt&si=TN-MJ8-1pKj1_V4J)
-    - Its long so you can choose what you need, if you are a complete beginner i would encourage to go through all of it from start to end
+- This course assumes that you come with bare basic knowledge about linux. 
 
 
 ## Tools

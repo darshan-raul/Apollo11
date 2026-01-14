@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 import requests
 import os
-from . import models, database, auth
+from . import models, database
 from .models import User, Stage, UserStageProgress
 
 app = FastAPI(title="Apollo 11 Core API")
@@ -23,27 +23,41 @@ app.add_middleware(
 # models.Base.metadata.create_all(bind=database.engine)
 
 QUIZ_SERVICE_URL = os.getenv("QUIZ_SERVICE_URL", "http://quiz-service:8080")
+NOTIFICATION_SERVICE_URL = os.getenv("NOTIFICATION_SERVICE_URL", "http://notification-service:8000")
+PAYMENT_SERVICE_URL = os.getenv("PAYMENT_SERVICE_URL", "http://payment-api:8080")
+
+def get_current_user(db: Session = Depends(database.get_db)) -> User:
+    # Dummy user for dev since Keycloak is removed
+    email = "commander@apollo11.com"
+    keycloak_id = "dummy-commander-id" 
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user:
+        user = models.User(keycloak_id=keycloak_id, email=email)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user
 
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
 
 @app.get("/me", response_model=models.UserResponse)
-def get_me(user: User = Depends(auth.get_current_user)):
+def get_me(user: User = Depends(get_current_user)):
     return user
 
 @app.get("/stages", response_model=List[models.StageResponse])
-def get_stages(db: Session = Depends(database.get_db), user: User = Depends(auth.get_current_user)):
+def get_stages(db: Session = Depends(database.get_db), user: User = Depends(get_current_user)):
     stages = db.query(Stage).order_by(Stage.order).all()
     return stages
 
 @app.get("/progress", response_model=List[models.ProgressResponse])
-def get_progress(db: Session = Depends(database.get_db), user: User = Depends(auth.get_current_user)):
+def get_progress(db: Session = Depends(database.get_db), user: User = Depends(get_current_user)):
     progress = db.query(UserStageProgress).filter(UserStageProgress.user_id == user.id).all()
     return progress
 
 @app.post("/stages/{stage_id}/start")
-def start_stage(stage_id: int, db: Session = Depends(database.get_db), user: User = Depends(auth.get_current_user)):
+def start_stage(stage_id: int, db: Session = Depends(database.get_db), user: User = Depends(get_current_user)):
     # Unlock stage if possible or mark in progress
     # Logic: Can only start if previous stage completed?
     # For now, simplistic implementation
@@ -57,7 +71,7 @@ def start_stage(stage_id: int, db: Session = Depends(database.get_db), user: Use
     return {"status": "started"}
 
 @app.post("/stages/{stage_id}/complete")
-def complete_stage(stage_id: int, db: Session = Depends(database.get_db), user: User = Depends(auth.get_current_user)):
+def complete_stage(stage_id: int, db: Session = Depends(database.get_db), user: User = Depends(get_current_user)):
     prog = db.query(UserStageProgress).filter(UserStageProgress.user_id == user.id, UserStageProgress.stage_id == stage_id).first()
     if not prog:
          prog = UserStageProgress(user_id=user.id, stage_id=stage_id, status=models.StageStatus.completed)
@@ -72,7 +86,7 @@ def complete_stage(stage_id: int, db: Session = Depends(database.get_db), user: 
     return {"status": "completed"}
 
 @app.post("/quiz/{stage_id}/start")
-def start_quiz(stage_id: int, user: User = Depends(auth.get_current_user)):
+def start_quiz(stage_id: int, user: User = Depends(get_current_user)):
     # Call Quiz Service to start quiz
     try:
         resp = requests.post(f"{QUIZ_SERVICE_URL}/quiz/start", json={"user_id": str(user.id), "stage_id": stage_id})
@@ -82,7 +96,7 @@ def start_quiz(stage_id: int, user: User = Depends(auth.get_current_user)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/quiz/{stage_id}/submit")
-def submit_quiz(stage_id: int, answers: dict, user: User = Depends(auth.get_current_user)):
+def submit_quiz(stage_id: int, answers: dict, user: User = Depends(get_current_user)):
     # Call Quiz Service to evaluate
     try:
         payload = {
@@ -94,19 +108,12 @@ def submit_quiz(stage_id: int, answers: dict, user: User = Depends(auth.get_curr
         resp.raise_for_status()
         result = resp.json()
         
-        # If passed, update progress
-        if result.get("passed"):
-             # Update DB to completed? Or just record quiz passed?
-             # Prompt says "Take quizzes per stage", "View results". 
-             # Also "Core API orchestrates Quiz Service".
-             pass
-             
         return result
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/quiz/results")
-def get_quiz_results(user: User = Depends(auth.get_current_user)):
+def get_quiz_results(user: User = Depends(get_current_user)):
     try:
          resp = requests.get(f"{QUIZ_SERVICE_URL}/quiz/results/{user.id}")
          resp.raise_for_status()

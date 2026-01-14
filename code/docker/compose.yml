@@ -14,41 +14,24 @@ services:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - apollo-net
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:23.0.6
-    command: start-dev --import-realm
-    environment:
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/apollo11
-      KC_DB_USERNAME: postgres
-      KC_DB_PASSWORD: postgres
-      KC_DB_SCHEMA: keycloak
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-    volumes:
-      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json
-    ports:
-      - "8081:8080"
-    restart: always
-    depends_on:
-      - postgres
-    networks:
-      - apollo-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   core-api:
     build: ./core-api
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/apollo11
-      KEYCLOAK_URL: http://keycloak:8080
       QUIZ_SERVICE_URL: http://quiz-service:8080
-      REALM: apollo11
-      CLIENT_ID: apollo11-portal
+      NOTIFICATION_SERVICE_URL: http://notification-service:8000
+      PAYMENT_SERVICE_URL: http://payment-api:8080
     ports:
       - "8087:8000"
     depends_on:
-      - postgres
-      - keycloak
+      postgres:
+        condition: service_healthy
     networks:
       - apollo-net
 
@@ -59,7 +42,51 @@ services:
     ports:
       - "8082:8080"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    networks:
+      - apollo-net
+
+  notification-service:
+    build: ./notification-service
+    environment:
+      # Future DB connection if needed
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/apollo11
+    ports:
+      - "8001:8000"
+    networks:
+      - apollo-net
+
+  payment-api:
+    build: ./payment-api
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/apollo11
+      NOTIFICATION_SERVICE_URL: http://notification-service:8000
+    ports:
+      - "8083:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - apollo-net
+
+  report-generator:
+    build: ./jobs/report-generator
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/apollo11
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - apollo-net
+
+  backup-service:
+    build: ./jobs/backup-service
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/apollo11
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - apollo-net
 
@@ -67,7 +94,6 @@ services:
     build:
       context: ./portal
       args:
-        VITE_KEYCLOAK_URL: http://localhost:8081/realms/apollo11
         VITE_API_URL: http://localhost:8087
     ports:
       - "3000:80"
@@ -75,19 +101,6 @@ services:
       - apollo-net
     depends_on:
       - core-api
-
-  admin-dashboard:
-    build: ./admin-dashboard
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/apollo11
-      KEYCLOAK_URL: http://keycloak:8080
-    ports:
-      - "8501:8501"
-    depends_on:
-      - postgres
-      - keycloak
-    networks:
-      - apollo-net
 
   dozzle:
     image: amir20/dozzle:latest

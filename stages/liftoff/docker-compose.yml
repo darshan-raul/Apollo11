@@ -1,0 +1,174 @@
+services:
+  lunar-app:
+    build:
+      context: ../../code/lunar
+      dockerfile: Dockerfile
+    develop:
+      watch: 
+        - path: ../../code/lunar #rebuild this image whenever any changes occur in this folder
+          action: rebuild
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=lunar-postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=lunar
+      - TELEMETRY_URL=http://telemetry-app:8000/input
+    depends_on:
+      - lunar-postgres
+    networks:
+      - apollo-network
+
+  lunar-postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=lunar
+    volumes:
+      - type: volume
+        source: lunar-postgres-data
+        target: /var/lib/postgresql/data
+      - type: bind
+        source:  ../../code/lunar/init.sql
+        target: /docker-entrypoint-initdb.d/init.sql
+    networks:
+      - apollo-network
+
+  telemetry-app:
+    build:
+      context: ../../code/telemetry
+      dockerfile: Dockerfile
+    develop:
+      watch: 
+        - path: ../../code/telemetry #rebuild this image whenever any changes occur in this folder
+          action: rebuild
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=telemetry-postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=telemetry
+    depends_on:
+      - telemetry-postgres
+    networks:
+      - apollo-network
+
+  telemetry-postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=telemetry
+    volumes:
+      - type: volume
+        source: telemetry-postgres-data
+        target: /var/lib/postgresql/data
+      - type: bind
+        source:  ../../code/telemetry/init.sql
+        target: /docker-entrypoint-initdb.d/init.sql
+    networks:
+      - apollo-network
+
+  command-dispatcher:
+    build:
+      context: ../../code/command-dispatcher
+      dockerfile: Dockerfile
+    develop:
+      watch:
+        - path: ./command-dispatcher #rebuild this image whenever any changes occur in this folder
+          action: rebuild
+    restart: always
+    ports:
+      - "9000:8000"
+    environment:
+      - LUNAR_MODULE_URL=http://lunar-app:8080/command
+    depends_on:
+      - lunar-app
+    networks:
+      - apollo-network
+
+  timeline-app:
+    build:
+      context: ../../code/timeline
+      dockerfile: Dockerfile
+    develop:
+      watch:
+        - path: ../../code/timeline #rebuild this image whenever any changes occur in this folder
+          action: rebuild
+    restart: always
+    ports:
+      - "8081:8080"
+    environment:
+      - MONGODB_URI=mongodb://admin:password@timeline-mongodb:27017
+      - MONGO_USERNAME=admin
+      - MONGO_PASSWORD=password
+      - MONGO_HOST=timeline-mongodb
+      - MONGO_PORT=27017
+    depends_on:
+      - timeline-mongodb
+    networks:
+      - apollo-network
+
+  timeline-mongodb:
+    image: docker.io/bitnamilegacy/mongodb:latest
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGODB_ROOT_USER=admin
+      - MONGODB_ROOT_PASSWORD=password
+      - MONGO_DATABASE=timeline
+    volumes:
+      - type: volume
+        source: timeline-mongodb-data
+        target: /bitnami/mongodb
+      - type: bind
+        source:  ../../code/timeline/init-mongo.js
+        target: /docker-entrypoint-initdb.d/init-mongo.js
+    command: mongod --auth --bind_ip_all
+    networks:
+      - apollo-network
+
+  dashboard-app:
+    build:
+      context: ../../code/dashboard
+      dockerfile: Dockerfile
+    develop:
+      watch:
+        - path: ../../code/dashboard #rebuild this image whenever any changes occur in this folder
+          action: rebuild
+    restart: always
+    ports:
+      - "3000:8080"
+    environment:
+      - TELEMETRY_URL=http://telemetry-app:8000/data
+      - TIMELINE_URL=http://timeline-app:8080
+      - COMMAND_DISPATCHER_URL=http://command-dispatcher:8000/command
+    depends_on:
+      - telemetry-app
+      - timeline-app
+      - command-dispatcher
+    networks:
+      - apollo-network
+
+volumes:
+  lunar-postgres-data:
+    name: "lunar-postgres"
+  telemetry-postgres-data:
+    name: "telemetry-postgres"
+  timeline-mongodb-data:
+    name: "timeline-mongodb"
+
+networks:
+  apollo-network:
+    driver: bridge 

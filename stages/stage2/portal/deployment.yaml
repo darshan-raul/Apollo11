@@ -21,9 +21,11 @@ spec:
         app: portal
     spec:
       terminationGracePeriodSeconds: 30
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
       - name: portal
-        image: local-registry:5000/apollo11-portal:latest
+        image: ghcr.io/darshan-raul/apollo11-devsecops/portal:main-2b9738f
         imagePullPolicy: Always
         ports:
         - containerPort: 80

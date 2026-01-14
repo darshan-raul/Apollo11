@@ -1,20 +1,9 @@
-
 import React from 'react';
-import { useAuth } from "react-oidc-context";
-// We will assume the image is in the public folder or reachable via relative path. 
-// Based on current location: codebase/portal/apollobanner.png. 
-// Vite public assets usually go in 'public' dir or imported. 
-// If it's in root 'code/portal/', we might need to move it or import it if configured.
-// For now, let's assume we can import it if it's in src or ../
-// Let's rely on standard Vite asset handling, best to put images in `src/assets` or `public`.
-// Checking file listing: apollobanner.png is in code/portal/ (root of vite project).
-// In Vite, files in project root are not automatically served as static assets unless in public.
-// I will need to move these images to a better location later, or import them relatively if possible.
-// For this component, I'll assume they will be moved to `src/assets` or linked correctly.
-// I will handle the "move" step in the next tool call.
+import { useNavigate } from 'react-router-dom';
 
+// We will assume the image is in the public folder or reachable via relative path. 
 const LandingPage: React.FC = () => {
-    const auth = useAuth();
+    const navigate = useNavigate();
 
     return (
         <div className="landing-page" style={{
@@ -36,7 +25,6 @@ const LandingPage: React.FC = () => {
                     <div className="logo" style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.5px' }}>
                         Apollo<span style={{ color: 'var(--accent-primary)' }}>11</span>
                     </div>
-                    {/* Placeholder for Login if we want it in nav, but request says "login page" */}
                 </div>
             </nav>
 
@@ -80,7 +68,7 @@ const LandingPage: React.FC = () => {
                         <div className="actions">
                             <button
                                 className="btn btn-primary"
-                                onClick={() => auth.signinRedirect()}
+                                onClick={() => navigate('/login')}
                                 style={{ minWidth: '160px' }}
                             >
                                 Start Mission
