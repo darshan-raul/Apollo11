@@ -1,70 +1,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: quiz
-  labels:
-    app: quiz
+  name: quiz-service
 spec:
   replicas: 1
-  minReadySeconds: 5
   selector:
     matchLabels:
-      app: quiz
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+      app: quiz-service
   template:
     metadata:
       labels:
-        app: quiz
+        app: quiz-service
     spec:
-      terminationGracePeriodSeconds: 30
       containers:
-      - name: quiz
-        image: local-registry:5000/apollo11-quiz-service:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8080
-        envFrom:
-        - configMapRef:
-            name: quiz-config
-        env:
-        - name: DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: quiz-credentials
-              key: POSTGRES_USER
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: quiz-credentials
-              key: POSTGRES_PASSWORD
-        startupProbe:
-          httpGet:
-            path: /health/live
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          failureThreshold: 30
-        readinessProbe:
-          httpGet:
-            path: /health/ready
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 5
-        livenessProbe:
-          httpGet:
-            path: /health/live
-            port: 8080
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        resources:
-          requests:
-            memory: "32Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "250m"
-
+        - name: quiz-service
+          image: quiz-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              value: "postgres://postgres:postgres@postgres:5432/apollo11"
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10

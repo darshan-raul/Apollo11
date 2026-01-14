@@ -1,0 +1,19 @@
+{
+  "packages": [
+    "kubectl@latest",
+    "minikube@latest",
+    "k3d@latest",
+    "docker@latest",
+    "go-task@latest",
+    "termshot@latest"
+  ],
+  "shell": {
+    "init_hook": [
+      "echo '🚀 Apollo 11 Devbox Environment Loaded'",
+      "echo 'Tools available: kubectl, minikube, docker, task'"
+    ],
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    }
+  }
+}

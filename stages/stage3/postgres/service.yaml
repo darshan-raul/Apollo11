@@ -1,12 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: admin-dashboard
+  name: postgres
 spec:
   selector:
-    app: admin-dashboard
+    app: postgres
   ports:
     - protocol: TCP
-      port: 8501
-      targetPort: 8501
+      port: 5432
+      targetPort: 5432
+  clusterIP: None
   type: ClusterIP

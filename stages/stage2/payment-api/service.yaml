@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: quiz-service
+  name: payment-api
 spec:
   selector:
-    app: quiz-service
+    app: payment-api
   ports:
     - port: 8080
       targetPort: 8080

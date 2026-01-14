@@ -3,11 +3,10 @@ kind: Service
 metadata:
   name: portal
 spec:
+  type: NodePort
   selector:
     app: portal
   ports:
-    - protocol: TCP
-      port: 80
-      nodePort: 30001
+    - port: 80
       targetPort: 80
-  type: NodePort
+      nodePort: 30000

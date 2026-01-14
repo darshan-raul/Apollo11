@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-service
+spec:
+  schedule: "0 0 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup-service
+            image: backup-service:latest
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: DATABASE_URL
+              value: "postgres://postgres:postgres@postgres:5432/apollo11"
+          restartPolicy: OnFailure

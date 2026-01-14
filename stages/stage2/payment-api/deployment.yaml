@@ -1,32 +1,37 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: portal
+  name: payment-api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: portal
+      app: payment-api
   template:
     metadata:
       labels:
-        app: portal
+        app: payment-api
     spec:
       containers:
-        - name: portal
-          image: portal:latest
+        - name: payment-api
+          image: payment-api:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 80
+            - containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              value: "postgres://postgres:postgres@postgres:5432/apollo11"
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification-service:8000"
           livenessProbe:
             httpGet:
               path: /health/live
-              port: 80
+              port: 8080
             initialDelaySeconds: 10
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /health/ready
-              port: 80
+              port: 8080
             initialDelaySeconds: 10
             periodSeconds: 10

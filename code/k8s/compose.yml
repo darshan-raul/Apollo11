@@ -1,0 +1,123 @@
+name: apollo11
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: apollo11
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/migrations:/docker-entrypoint-initdb.d
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - apollo-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  core-api:
+    build: ./core-api
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/apollo11
+      QUIZ_SERVICE_URL: http://quiz-service:8080
+      NOTIFICATION_SERVICE_URL: http://notification-service:8000
+      PAYMENT_SERVICE_URL: http://payment-api:8080
+    ports:
+      - "8087:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - apollo-net
+
+  quiz-service:
+    build: ./quiz-service
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/apollo11
+    ports:
+      - "8082:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - apollo-net
+
+  notification-service:
+    build: ./notification-service
+    environment:
+      # Future DB connection if needed
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/apollo11
+    ports:
+      - "8001:8000"
+    networks:
+      - apollo-net
+
+  payment-api:
+    build: ./payment-api
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/apollo11
+      NOTIFICATION_SERVICE_URL: http://notification-service:8000
+    ports:
+      - "8083:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - apollo-net
+
+  report-generator:
+    build: ./jobs/report-generator
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/apollo11
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - apollo-net
+
+  backup-service:
+    build: ./jobs/backup-service
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/apollo11
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - apollo-net
+
+  portal:
+    build:
+      context: ./portal
+      args:
+        VITE_API_URL: http://localhost:8087
+    ports:
+      - "3000:80"
+    networks:
+      - apollo-net
+    depends_on:
+      - core-api
+
+  dozzle:
+    image: amir20/dozzle:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 8080:8080
+    environment:
+      - DOZZLE_ENABLE_ACTIONS=true
+      - DOZZLE_ENABLE_SHELL=true
+    networks:
+      - apollo-net
+
+volumes:
+  postgres-data:
+    name: apollo11-postgres-data
+
+networks:
+  apollo-net:
+    driver: bridge
