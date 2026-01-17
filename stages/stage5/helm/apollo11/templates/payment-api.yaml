@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-api
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+    app: payment-api
+spec:
+  type: {{ .Values.paymentApi.service.type }}
+  ports:
+    - port: {{ .Values.paymentApi.service.port }}
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app: payment-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-api
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+    app: payment-api
+spec:
+  replicas: {{ .Values.paymentApi.replicaCount }}
+  selector:
+    matchLabels:
+      app: payment-api
+  template:
+    metadata:
+      labels:
+        app: payment-api
+    spec:
+      containers:
+        - name: payment-api
+          image: "{{ .Values.paymentApi.image.repository }}:{{ .Values.paymentApi.image.tag }}"
+          imagePullPolicy: {{ .Values.paymentApi.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              value: {{ .Values.global.databaseUrl | quote }}
+            - name: NOTIFICATION_SERVICE_URL
+              value: {{ .Values.paymentApi.env.notificationServiceUrl | quote }}

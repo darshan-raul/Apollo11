@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-api
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+    app: core-api
+spec:
+  replicas: {{ .Values.coreApi.replicaCount }}
+  selector:
+    matchLabels:
+      app: core-api
+  template:
+    metadata:
+      labels:
+        app: core-api
+    spec:
+      containers:
+        - name: core-api
+          image: "{{ .Values.coreApi.image.repository }}:{{ .Values.coreApi.image.tag }}"
+          imagePullPolicy: {{ .Values.coreApi.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: {{ .Values.global.databaseUrl | quote }}
+            - name: QUIZ_SERVICE_URL
+              value: {{ .Values.coreApi.env.quizServiceUrl | quote }}
+            - name: PAYMENT_SERVICE_URL
+              value: {{ .Values.coreApi.env.paymentServiceUrl | quote }}
+            - name: NOTIFICATION_SERVICE_URL
+              value: {{ .Values.coreApi.env.notificationServiceUrl | quote }}

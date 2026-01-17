@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portal
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+    app: portal
+spec:
+  replicas: {{ .Values.portal.replicaCount }}
+  selector:
+    matchLabels:
+      app: portal
+  template:
+    metadata:
+      labels:
+        app: portal
+    spec:
+      containers:
+        - name: portal
+          image: "{{ .Values.portal.image.repository }}:{{ .Values.portal.image.tag }}"
+          imagePullPolicy: {{ .Values.portal.image.pullPolicy }}
+          ports:
+            - containerPort: 80
+          env:
+            - name: VITE_API_URL
+              value: {{ .Values.portal.env.viteApiUrl | quote }}

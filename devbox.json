@@ -5,7 +5,8 @@
     "k3d@latest",
     "docker@latest",
     "go-task@latest",
-    "termshot@latest"
+    "termshot@latest",
+    "kubernetes-helm@latest"
   ],
   "shell": {
     "init_hook": [

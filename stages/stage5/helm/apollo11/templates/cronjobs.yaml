@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-service
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+    app: backup-service
+spec:
+  schedule: {{ .Values.jobs.backupService.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup-service
+            image: "{{ .Values.jobs.backupService.image.repository }}:{{ .Values.jobs.backupService.image.tag }}"
+            imagePullPolicy: {{ .Values.jobs.backupService.image.pullPolicy }}
+            env:
+            - name: DATABASE_URL
+              value: {{ .Values.global.databaseUrl | quote }}
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: report-generator
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+    app: report-generator
+spec:
+  schedule: {{ .Values.jobs.reportGenerator.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: report-generator
+            image: "{{ .Values.jobs.reportGenerator.image.repository }}:{{ .Values.jobs.reportGenerator.image.tag }}"
+            imagePullPolicy: {{ .Values.jobs.reportGenerator.image.pullPolicy }}
+            env:
+            - name: DATABASE_URL
+              value: {{ .Values.global.databaseUrl | quote }}
+          restartPolicy: OnFailure

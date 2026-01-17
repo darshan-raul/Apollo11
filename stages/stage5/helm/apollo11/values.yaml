@@ -1,0 +1,93 @@
+# Default values for apollo11.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  databaseUrl: "postgresql://postgres:postgres@postgres:5432/apollo11"
+
+coreApi:
+  replicaCount: 2
+  image:
+    repository: local-registry:5000/apollo11-core-api-service
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8000
+  env:
+    quizServiceUrl: "http://quiz-service:8080"
+    paymentServiceUrl: "http://payment-api:8080"
+    notificationServiceUrl: "http://notification-service:8000"
+
+portal:
+  replicaCount: 1
+  image:
+    repository: local-registry:5000/apollo11-portal-service
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30001 
+  env:
+    viteApiUrl: "http://core-api:8000"
+
+quizService:
+  replicaCount: 1
+  image:
+    repository: local-registry:5000/apollo11-quiz-service
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8080
+
+paymentApi:
+  replicaCount: 1
+  image:
+    repository: local-registry:5000/apollo11-payment-service
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8080
+  env:
+    notificationServiceUrl: "http://notification-service:8000"
+
+notificationService:
+  replicaCount: 1
+  image:
+    repository: local-registry:5000/apollo11-notification-service
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8000
+
+postgres:
+  replicaCount: 1
+  image:
+    repository: postgres
+    pullPolicy: IfNotPresent
+    tag: "15-alpine"
+  service:
+    type: ClusterIP
+    port: 5432
+  auth:
+    username: postgres
+    password: postgres
+    database: apollo11
+
+jobs:
+  backupService:
+    image:
+      repository: localhost:5000/apollo11-backup-service
+      pullPolicy: IfNotPresent
+      tag: "latest"
+    schedule: "0 0 * * *"
+  reportGenerator:
+    image:
+      repository: localhost:5000/apollo11-report-service
+      pullPolicy: IfNotPresent
+      tag: "latest"
+    schedule: "0 6 * * *"

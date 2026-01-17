@@ -1,8 +1,17 @@
 resources:
+- ../../base/namespace
 - ../../base/core-api
 - ../../base/postgres
 - ../../base/quiz
 - ../../base/payment-api
 - ../../base/notification-service
-patches:
-- path: patch.yaml
+- ../../base/portal
+namespace: apollo11
+# namePrefix: dev-
+# nameSuffix: "-001"
+# labels:
+#   - pairs:
+#       app: apollo11
+#     includeSelectors: true 
+# commonAnnotations:
+#   oncallPager: 800-555-1212

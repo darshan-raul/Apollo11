@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: portal
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+    app: portal
+spec:
+  type: {{ .Values.portal.service.type }}
+  ports:
+    - port: {{ .Values.portal.service.port }}
+      targetPort: 80
+      protocol: TCP
+      name: http
+      {{- if and (eq .Values.portal.service.type "NodePort") .Values.portal.service.nodePort }}
+      nodePort: {{ .Values.portal.service.nodePort }}
+      {{- end }}
+  selector:
+    app: portal
