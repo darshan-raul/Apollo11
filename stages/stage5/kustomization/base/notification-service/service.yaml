@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: apollo11
+  name: notification-service
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP

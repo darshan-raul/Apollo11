@@ -1,0 +1,8 @@
+resources:
+- ../../base/core-api
+- ../../base/postgres
+- ../../base/quiz
+- ../../base/payment-api
+- ../../base/notification-service
+patches:
+- path: patch.yaml

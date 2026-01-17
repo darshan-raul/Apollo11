@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-script
+  namespace: apollo11
+  labels:
+    app: postgres
+data:
+  init.sql: |
+    -- Enable UUID extension
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+    -- Create Schemas
+    CREATE SCHEMA IF NOT EXISTS core;
+    CREATE SCHEMA IF NOT EXISTS quiz;
+    CREATE SCHEMA IF NOT EXISTS audit;
+    CREATE SCHEMA IF NOT EXISTS keycloak;
+
+    -- core.users
+    CREATE TABLE IF NOT EXISTS core.users (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        keycloak_id TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- core.stages
+    CREATE TABLE IF NOT EXISTS core.stages (
+        id INT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        "order" INT NOT NULL
+    );
+
+    -- core.user_stage_progress
+    CREATE TYPE core.stage_status AS ENUM ('locked', 'in_progress', 'completed');
+    CREATE TABLE IF NOT EXISTS core.user_stage_progress (
+        user_id UUID REFERENCES core.users(id),
+        stage_id INT REFERENCES core.stages(id),
+        status core.stage_status DEFAULT 'locked',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, stage_id)
+    );
+
+    -- quiz.quiz_questions
+    CREATE TABLE IF NOT EXISTS quiz.quiz_questions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        stage_id INT REFERENCES core.stages(id),
+        question TEXT NOT NULL,
+        options JSONB NOT NULL,
+        correct_answer TEXT NOT NULL
+    );
+
+    -- quiz.quiz_attempts
+    CREATE TABLE IF NOT EXISTS quiz.quiz_attempts (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES core.users(id),
+        stage_id INT REFERENCES core.stages(id),
+        score INT NOT NULL,
+        passed BOOLEAN NOT NULL,
+        attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Seed Stages (1-13)
+    INSERT INTO core.stages (id, name, description, "order") VALUES
+    (1, 'Launchpad', 'fundamentals', 1),
+    (2, 'Ignition', 'first k8s cluster and pod', 2),
+    (3, 'Stage 1: Liftoff', 'launch all workloads on cluster with configuration', 3),
+    (4, 'Stage 2: Guidance, Navigation & Control', 'Networking', 4),
+    (5, 'Stage 3: Mission Data Systems', 'Persistent Storage', 5),
+    (6, 'Stage 4: Flight Control Systems', 'Controls in place', 6),
+    (7, 'Stage 5: Mission Payload Integration', 'Packaging and Deployment', 7),
+    (8, 'Stage 6: Mission Operations (Houston)', 'Monitoring and Observability', 8),
+    (9, 'Stage 7: Orbital Maneuvering', 'Scaling', 9),
+    (10, 'Stage 8: Command Module Hardening', 'Security', 10),
+    (11, 'Stage 9: Lunar Orbit Operations', 'Deploy to Cloud', 11),
+    (12, 'Stage 10: Mission Extensions', 'Advanced topics', 12),
+    (13, 'Stage 11: Towards Mars', 'Future frontiers', 13)
+    ON CONFLICT (id) DO UPDATE SET 
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        "order" = EXCLUDED."order";
+
+    -- Seed Quiz Questions for Stage 1 (ID=3 in new numbering? Or stick to ID=1 logic?)
+    -- NOTE: In the previous seeding (Stage 3 configmap), Launchpad/Ignition weren't there or were mapped differently. 
+    -- The questions in Stage 3 configmap were for Stage ID 1 ('Liftoff').
+    -- In my new list above, 'Liftoff' is ID 3.
+    -- However, the user request is just to make sure all list items are there.
+    -- I will seed questions for Stage 3 (Liftoff) to match the name, or I can keep them at ID 1 if Launchpad covers them.
+    -- Looking at the questions: "Which command lists running containers?" -> This is Docker basics (Launchpad).
+    -- So I will map them to ID 1 (Launchpad).
+    
+    INSERT INTO quiz.quiz_questions (stage_id, question, options, correct_answer) VALUES
+    (1, 'Which command lists running containers?', '["docker list", "docker ps", "docker run", "docker images"]', 'docker ps'),
+    (1, 'What is the PID 1 process in a container?', '["The entrypoint process", "systemd", "root", "bash"]', 'The entrypoint process'),
+    (1, 'Which flag runs a container in background?', '["-d", "-b", "--hidden", "-bg"]', '-d'),
+    (1, 'What is a Docker image?', '["A running instance", "A read-only template", "A virtual machine", "A filesystem"]', 'A read-only template'),
+    (1, 'How do you stop a container?', '["docker kill", "docker stop", "docker end", "docker halt"]', 'docker stop');

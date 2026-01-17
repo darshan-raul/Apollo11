@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: core-api
+  template:
+    metadata:
+      labels:
+        app: core-api
+    spec:
+      containers:
+        - name: core-api
+          image: local-registry:5000/apollo11-core-api-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:postgres@postgres:5432/apollo11"
+            - name: QUIZ_SERVICE_URL
+              value: "http://quiz-service:8080"
+            - name: PAYMENT_SERVICE_URL
+              value: "http://payment-api:8080"
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification-service:8000"

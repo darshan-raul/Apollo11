@@ -1,0 +1,12 @@
+namespace: apollo11
+namePrefix: dev-
+nameSuffix: "-001"
+labels:
+  - pairs:
+      app: apollo11
+    includeSelectors: true 
+commonAnnotations:
+  oncallPager: 800-555-1212
+resources:
+  - backup-cronjob.yaml
+  - report-cronjob.yaml

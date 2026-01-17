@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import List
 import requests
 import os
@@ -30,12 +31,16 @@ def get_current_user(db: Session = Depends(database.get_db)) -> User:
     # Dummy user for dev since Keycloak is removed
     email = "commander@apollo11.com"
     keycloak_id = "dummy-commander-id" 
-    user = db.query(models.User).filter(models.User.email == email).first()
+    user = db.query(models.User).filter(models.User.keycloak_id == keycloak_id).first()
     if not user:
-        user = models.User(keycloak_id=keycloak_id, email=email)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        try:
+            user = models.User(keycloak_id=keycloak_id, email=email)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        except IntegrityError:
+            db.rollback()
+            user = db.query(models.User).filter(models.User.keycloak_id == keycloak_id).first()
     return user
 
 from fastapi import Response, status
