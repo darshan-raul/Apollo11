@@ -12,9 +12,11 @@ spec:
       labels:
         app: payment-api
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: payment-api
-          image: local-registry:5000/apollo11-payment-service:latest
+          image: ghcr.io/darshan-raul/apollo11-devsecops/payment-api:main-900ddaf
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

@@ -12,9 +12,11 @@ spec:
       labels:
         app: core-api
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: core-api
-          image: local-registry:5000/apollo11-core-api-service:latest
+          image: ghcr.io/darshan-raul/apollo11-devsecops/core-api:main-900ddaf
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000

@@ -13,9 +13,11 @@ spec:
       labels:
         app: quiz-service
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: quiz-service
-          image: local-registry:5000/apollo11-quiz-service:latest
+          image: ghcr.io/darshan-raul/apollo11-devsecops/quiz-service:main-900ddaf
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

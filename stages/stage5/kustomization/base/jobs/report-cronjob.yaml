@@ -8,9 +8,11 @@ spec:
     spec:
       template:
         spec:
+          imagePullSecrets:
+            - name: ghcr-secret
           containers:
           - name: report-generator
-            image: localhost:5000/apollo11-report-service:latest
+            image: ghcr.io/darshan-raul/apollo11-devsecops/report-generator:main-900ddaf
             imagePullPolicy: IfNotPresent
             env:
             - name: DATABASE_URL

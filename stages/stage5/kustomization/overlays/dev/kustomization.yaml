@@ -1,5 +1,5 @@
 resources:
-- ../../base/namespace
+# - ../../base/namespace
 - ../../base/core-api
 - ../../base/postgres
 - ../../base/quiz

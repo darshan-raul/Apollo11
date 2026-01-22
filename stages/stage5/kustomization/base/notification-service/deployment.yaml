@@ -12,9 +12,11 @@ spec:
       labels:
         app: notification-service
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: notification-service
-          image: local-registry:5000/apollo11-notification-service:latest
+          image: ghcr.io/darshan-raul/apollo11-devsecops/notification-service:main-900ddaf
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000

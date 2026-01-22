@@ -11,10 +11,12 @@ spec:
     metadata:
       labels:
         app: portal
-    spec:
+    spec: 
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: portal
-          image: local-registry:5000/apollo11-portal-service:latest
+          image: ghcr.io/darshan-raul/apollo11-devsecops/portal:main-900ddaf
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
