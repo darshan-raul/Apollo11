@@ -1,0 +1,15 @@
+# whoami-ingressroute.yaml
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: portal
+  namespace: apollo11
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`portal.localhost`)
+      kind: Rule
+      services:
+        - name: portal
+          port: 80
