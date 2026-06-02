@@ -16,6 +16,39 @@ description: "Deploy all 11 services to a kind cluster using Deployments, Config
 - Run one-time tasks with **Jobs**, scheduled tasks with **CronJobs**
 - Access workloads using **port forwarding**
 
+## K8s Manifest Structure
+
+```
+k8s/
+├── config/                  # Cluster-level config
+│   ├── namespace.yaml
+│   ├── configmap.yaml
+│   ├── secrets.yaml
+│   └── kustomization.yaml
+├── infra/                   # Backing services
+│   ├── postgres/             # auth, catalog, circulation DBs
+│   │   └── kustomization.yaml
+│   └── redis/                # catalog, notification caches
+│       └── kustomization.yaml
+├── apps/                     # Application services
+│   ├── auth/
+│   ├── catalog/
+│   ├── circulation/
+│   ├── notification/
+│   ├── fines/
+│   ├── frontend/
+│   └── (each has dep.yaml + svc.yaml + kustomization.yaml)
+├── jobs/                     # DB init Jobs
+│   ├── init-auth-db.yaml
+│   ├── init-catalog-db.yaml
+│   ├── init-circulation-db.yaml
+│   ├── auth-init-configmap.yaml
+│   ├── catalog-init-configmap.yaml
+│   ├── circulation-init-configmap.yaml
+│   └── kustomization.yaml
+└── kustomization.yaml       # Top-level, composes all sub-folders
+```
+
 ## Services (11 total — all Deployments)
 
 | Service | Port | Type | Database |
@@ -91,3 +124,10 @@ Deployment reconciliation:
 ## Note on Storage
 
 Postgres and Redis use **emptyDir** volumes — data is lost when Pods restart. Stage 3 introduces PersistentVolumeClaims and StatefulSets for durable storage.
+
+## Build Images
+
+```bash
+cd stages/stage1
+./scripts/build-images.sh
+```

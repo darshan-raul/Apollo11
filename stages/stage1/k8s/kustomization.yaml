@@ -1,40 +1,17 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: apollo11
-
 commonLabels:
   app.kubernetes.io/name: apollo11
 
 resources:
-  - namespace.yaml
-  - configmap.yaml
-  - secrets.yaml
-  - auth-postgres-dep.yaml
-  - auth-postgres-svc.yaml
-  - catalog-postgres-dep.yaml
-  - catalog-postgres-svc.yaml
-  - catalog-redis-dep.yaml
-  - catalog-redis-svc.yaml
-  - circulation-postgres-dep.yaml
-  - circulation-postgres-svc.yaml
-  - notification-redis-dep.yaml
-  - notification-redis-svc.yaml
-  - auth-init-configmap.yaml
-  - init-auth-db.yaml
-  - catalog-init-configmap.yaml
-  - init-catalog-db.yaml
-  - circulation-init-configmap.yaml
-  - init-circulation-db.yaml
-  - auth-dep.yaml
-  - auth-svc.yaml
-  - catalog-dep.yaml
-  - catalog-svc.yaml
-  - circulation-dep.yaml
-  - circulation-svc.yaml
-  - notification-dep.yaml
-  - notification-svc.yaml
-  - fines-dep.yaml
-  - fines-svc.yaml
-  - frontend-dep.yaml
-  - frontend-svc.yaml
+  - config/kustomization.yaml
+  - infra/postgres/kustomization.yaml
+  - infra/redis/kustomization.yaml
+  - apps/auth/kustomization.yaml
+  - apps/catalog/kustomization.yaml
+  - apps/circulation/kustomization.yaml
+  - apps/notification/kustomization.yaml
+  - apps/fines/kustomization.yaml
+  - apps/frontend/kustomization.yaml
+  - jobs/kustomization.yaml
