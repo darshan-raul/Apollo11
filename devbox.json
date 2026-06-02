@@ -7,7 +7,12 @@
     "go-task@latest",
     "termshot@latest",
     "kubernetes-helm@latest",
-    "argocd@latest"
+    "argocd@latest",
+    "kind@latest",
+    "kustomize@latest",
+    "k6@latest",
+    "trivy@latest",
+    "opa@latest"
   ],
   "shell": {
     "init_hook": [

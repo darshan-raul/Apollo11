@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-circulation-db
+  namespace: apollo11
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: init-circulation-db
+    spec:
+      containers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h circulation-postgres -U postgres; do
+                echo "Waiting for circulation-postgres..."
+                sleep 2
+              done
+
+              psql -h circulation-postgres -U postgres -d circulation -f /init/init.sql || true
+              echo "circulation DB init done"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: init-script
+              mountPath: /init
+      volumes:
+        - name: init-script
+          configMap:
+            name: circulation-init-script
+      restartPolicy: OnFailure

@@ -172,8 +172,39 @@
 
 ## Prerequisites
 
-- This course assumes that you come with bare basic knowledge about linux. 
+- This course assumes that you come with bare basic knowledge about linux.
 
+## Getting Started
+
+### 1. Install Devbox
+
+```bash
+curl -fsSL https://get.jetify.com/devbox | bash
+```
+
+### 2. Set Up Environment
+
+```bash
+devbox shell  # loads all tools defined in devbox.json
+```
+
+### 3. Tools Installed
+
+| Tool | Purpose |
+|---|---|
+| docker | Container runtime |
+| kubectl | Kubernetes CLI |
+| kind | Local k8s clusters |
+| k3d | Alternative local k8s (轻量) |
+| helm | Chart packaging |
+| kustomize | Config patching |
+| skaffold | Local dev pipelines |
+| k9s | Terminal dashboard |
+| terraform | Cloud provisioning |
+| argocd | GitOps deployment |
+| k6 | Load testing |
+| trivy | Image scanning |
+| opa | Policy engine |
 
 ## Tools
 
