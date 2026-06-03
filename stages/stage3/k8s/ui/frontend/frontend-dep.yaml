@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: apollo11-ui
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      serviceAccountName: apollo11-ui
+      containers:
+
+        # ── Sidecar: Nginx ──────────────────────────────────────────────
+        # Public-facing container. Serves static assets from its image root.
+        # Proxies API calls and health checks to the Go backend on :3000.
+        #
+        # Pattern demonstrated: sidecar = co-located helper container
+        # - Shares network namespace with main container (localhost works)
+        # - Both containers restart together (same pod lifecycle)
+        # - Can be swapped independently without changing the main app
+        - name: nginx
+          image: nginx:alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 1
+            periodSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+        # ── Main container: Go Frontend ─────────────────────────────────
+        # API server: /health, /api/*, /
+        # Only reached via nginx proxy (not directly from outside)
+        - name: frontend
+          image: apollo11/frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: backend

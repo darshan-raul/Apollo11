@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: notification-redis-allow-specific
+  namespace: apollo11-infra
+spec:
+  podSelector:
+    matchLabels:
+      app: notification-redis
+  policyTypes:
+    - Ingress
+  ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                name: apollo11-apps
+            podSelector:
+              matchLabels:
+                app: notification

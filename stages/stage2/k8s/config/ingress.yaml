@@ -1,0 +1,45 @@
+# Legacy Ingress — Traefik CRD (kubernetes.io/traefik)
+# This is the older style, kept for reference.
+# In production, prefer the Gateway API HTTPRoute below.
+#
+# Prerequisites:
+#   kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v3.0/
+#     docs/content/reference/dynamic-configuration/kubernetes-crd-definition.yaml
+#
+# Install Traefik IngressClass:
+#   kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v3.0/
+#     docs/content/reference/dynamic-configuration/kubernetes-ingressclass.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: apollo11-ingress
+  namespace: apollo11-apps
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+spec:
+  ingressClassName: traefik
+  rules:
+    # Route 1: api.apollo11.local → auth service (port 8080)
+    - host: api.apollo11.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: auth
+                port:
+                  number: 8080
+
+    # Route 2: catalog.apollo11.local → catalog service (port 8081)
+    - host: catalog.apollo11.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: catalog
+                port:
+                  number: 8081

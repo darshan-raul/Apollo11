@@ -1,0 +1,142 @@
+{{- /*
+Circulation, Notification, Fines Deployments/StatefulSet
+*/ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: circulation
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    app: circulation
+    stage: "5"
+spec:
+  replicas: {{ .Values.apps.circulation.replicas }}
+  selector:
+    matchLabels:
+      app: circulation
+  template:
+    metadata:
+      labels:
+        app: circulation
+        stage: "5"
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.apps }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      containers:
+        - name: circulation
+          image: {{ .Values.image.repository }}/circulation:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.apps.circulation.port }}
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:changeme@circulation-postgres.{{ .Values.namespaces.infra }}.svc.cluster.local:5432/circulation"
+          envFrom:
+            - configMapRef:
+                name: apollo11-config
+          startupProbe:
+            httpGet:
+              path: /healthz/startup
+              port: {{ .Values.apps.circulation.port }}
+            initialDelaySeconds: 0
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: {{ .Values.apps.circulation.port }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: {{ .Values.apps.circulation.port }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.apps.circulation.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: circulation
+  namespace: {{ .Values.namespaces.apps }}
+spec:
+  selector:
+    app: circulation
+  ports:
+    - port: 8082
+      targetPort: 8082
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    app: notification
+    stage: "5"
+spec:
+  replicas: {{ .Values.apps.notification.replicas }}
+  selector:
+    matchLabels:
+      app: notification
+  template:
+    metadata:
+      labels:
+        app: notification
+        stage: "5"
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.apps }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      containers:
+        - name: notification
+          image: {{ .Values.image.repository }}/notification:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.apps.notification.port }}
+          env:
+            - name: REDIS_URL
+              value: "redis://notification-redis.{{ .Values.namespaces.infra }}.svc.cluster.local:6380"
+          envFrom:
+            - configMapRef:
+                name: apollo11-config
+          startupProbe:
+            httpGet:
+              path: /healthz/startup
+              port: {{ .Values.apps.notification.port }}
+            initialDelaySeconds: 0
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: {{ .Values.apps.notification.port }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: {{ .Values.apps.notification.port }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.apps.notification.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification
+  namespace: {{ .Values.namespaces.apps }}
+spec:
+  selector:
+    app: notification
+  ports:
+    - port: 8083
+      targetPort: 8083

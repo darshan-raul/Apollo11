@@ -1,0 +1,131 @@
+{{- /*
+Namespaces, ServiceAccounts, PriorityClass, init ConfigMaps/Scripts
+*/ -}}
+
+{{- /* 3 namespaces */ -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespaces.infra }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespaces.apps }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespaces.ui }}
+
+{{- /* 3 service accounts */ -}}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.serviceAccounts.infra }}
+  namespace: {{ .Values.namespaces.infra }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.serviceAccounts.apps }}
+  namespace: {{ .Values.namespaces.apps }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.serviceAccounts.ui }}
+  namespace: {{ .Values.namespaces.ui }}
+
+{{- /* PriorityClass for app pods */ -}}
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ .Values.priorityClassName }}
+description: "Apollo11 app pods"
+value: 100000
+globalDefault: false
+
+{{- /* Auth init script ConfigMap */ -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-postgres-init-script
+  namespace: {{ .Values.namespaces.infra }}
+data:
+  init.sql: |
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        full_name VARCHAR(255) NOT NULL,
+        role VARCHAR(50) NOT NULL DEFAULT 'patron',
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+{{- /* Catalog init script ConfigMap */ -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catalog-postgres-init-script
+  namespace: {{ .Values.namespaces.infra }}
+data:
+  init.sql: |
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE TABLE IF NOT EXISTS authors (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name VARCHAR(255) NOT NULL,
+        bio TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS books (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        isbn VARCHAR(20) UNIQUE NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        author_id UUID REFERENCES authors(id),
+        genre VARCHAR(100),
+        copies_total INT DEFAULT 1,
+        copies_available INT DEFAULT 1,
+        created_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_books_isbn ON books(isbn);
+    CREATE INDEX IF NOT EXISTS idx_books_author ON books(author_id);
+
+{{- /* Circulation init script ConfigMap */ -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: circulation-postgres-init-script
+  namespace: {{ .Values.namespaces.infra }}
+data:
+  init.sql: |
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE TABLE IF NOT EXISTS loans (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        book_id UUID NOT NULL,
+        user_id UUID NOT NULL,
+        borrowed_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        due_date TIMESTAMP NOT NULL,
+        returned_at TIMESTAMP,
+        status VARCHAR(20) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS reservations (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        book_id UUID NOT NULL,
+        user_id UUID NOT NULL,
+        status VARCHAR(20) DEFAULT 'active',
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_loans_user ON loans(user_id);
+    CREATE INDEX IF NOT EXISTS idx_loans_book ON loans(book_id);
+    CREATE INDEX IF NOT EXISTS idx_reservations_user ON reservations(user_id);

@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: fines
+  namespace: apollo11-apps
+  labels:
+    app: fines
+    stage: "4"
+spec:
+  serviceName: fines-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fines
+  template:
+    metadata:
+      labels:
+        app: fines
+        stage: "4"
+    spec:
+      serviceAccountName: apollo11-apps
+      priorityClassName: apollo11-app-critical
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: fines
+          image: apollo11/fines:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8084
+          env:
+            - name: DATABASE_PATH
+              value: "/data/fines.db"
+          envFrom:
+            - configMapRef:
+                name: apollo11-config
+          volumeMounts:
+            - name: fines-data
+              mountPath: /data
+          startupProbe:
+            httpGet:
+              path: /healthz/startup
+              port: 8084
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 8084
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 8084
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: fines-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

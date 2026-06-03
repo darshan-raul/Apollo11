@@ -30,7 +30,7 @@ description: "Get the application running locally with Docker Compose. No Kubern
 ## Run It
 
 ```bash
-cd stages/liftoff
+cd stages/launchpad
 docker compose up -d
 ```
 
@@ -45,7 +45,7 @@ curl http://localhost:8081/health
 ## Key Files
 
 ```
-stages/liftoff/
+stages/launchpad/
 ├── docker-compose.yml        # All 11 services
 └── code/
     ├── auth/                 # FastAPI — JWT auth

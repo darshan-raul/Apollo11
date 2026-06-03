@@ -1,0 +1,179 @@
+---
+# Default values for apollo11 Helm chart
+
+# Global image settings
+image:
+  repository: apollo11
+  pullPolicy: IfNotPresent
+  tag: latest
+
+# Namespace configuration
+namespace: apollo11
+
+# 3-namespace structure
+namespaces:
+  infra: apollo11-infra
+  apps: apollo11-apps
+  ui: apollo11-ui
+
+# Service account names
+serviceAccounts:
+  infra: apollo11-infra
+  apps: apollo11-apps
+  ui: apollo11-ui
+
+# Priority class (from priorityclass.yaml)
+priorityClassName: apollo11-app-critical
+
+# Image pull secret (for prod — leave empty for dev)
+imagePullSecrets: []
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: traefik
+  host: apollo11.local
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+
+# PostgreSQL infra StatefulSets
+postgres:
+  auth:
+    replicas: 1
+    storage: 1Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  catalog:
+    replicas: 1
+    storage: 1Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  circulation:
+    replicas: 1
+    storage: 1Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+# Redis infra StatefulSets
+redis:
+  catalog:
+    replicas: 1
+    storage: 1Gi
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+  notification:
+    replicas: 1
+    storage: 1Gi
+    port: 6380
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+
+# App service Deployments
+apps:
+  auth:
+    replicas: 2
+    port: 8080
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  catalog:
+    replicas: 2
+    port: 8081
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  circulation:
+    replicas: 2
+    port: 8082
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  notification:
+    replicas: 2
+    port: 8083
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  fines:
+    replicas: 1
+    port: 8084
+    storage: 1Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+
+# UI (frontend) Deployment
+frontend:
+  replicas: 2
+  port: 3000
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# Termination grace periods
+terminationGracePeriod:
+  apps: 30
+  infra: 60
+
+# Probe configuration
+probes:
+  startup:
+    periodSeconds: 5
+    failureThreshold: 6
+  liveness:
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 3

@@ -89,11 +89,11 @@ Apollo11/
 
 ---
 
-## Stage 1 Details (current focus)
+## Stage 1 Details
 
 **Location:** `stages/stage1/`
 
-**k8s manifests** (35 files):
+**k8s manifests** (27 files after removing netpols):
 - `namespace.yaml` — `apollo11` namespace
 - `configmap.yaml` — service ports, URLs, DB names
 - `secrets.yaml` — POSTGRES_PASSWORD, JWT_SECRET
@@ -106,7 +106,39 @@ Apollo11/
 **Stage 1 code changes** (vs launchpad):
 - All services already have `/health` endpoint (added in launchpad)
 - No code changes needed for stage1 — stub code works as-is
-- Stage 2+ will add service discovery, probes, metrics, etc.
+
+**Stage 1 covers:** Namespace, ConfigMap, Secret, Deployment, Service, Job, emptyDir volume, Kustomize. No NetworkPolicies (those start in stage2).
+
+---
+
+## Stage 3 Details
+
+**Location:** `stages/stage3/`
+
+**k8s manifests** (~50 files):
+- 3 namespaces (apollo11-infra, apollo11-apps, apollo11-ui)
+- StatefulSets: 5 infra DBs (postgres × 3, redis × 2) + fines = 6 total
+- Headless Services for all 6 StatefulSets
+- VolumeClaimTemplates (1Gi) per StatefulSet
+- Init containers inside StatefulSets for DB schema seeding
+- 5 app Deployments (auth, catalog, circulation, notification, fines → now STS)
+- 1 ui Deployment with nginx sidecar
+- NetworkPolicies (ingress allowlisting)
+- Ingress for frontend (frontend.apollo11.local)
+- Init ConfigMaps for postgres init scripts
+- Init Jobs (still present from stage2)
+
+**Key changes from stage2:**
+- DB Deployments → StatefulSets with PVCs (data survives restarts)
+- Fines Deployment → StatefulSet with PVC (SQLite persists)
+- Init Jobs → Init containers inside StatefulSets
+- Frontend NodePort → Traefik Ingress
+- ClusterIP → Headless services for databases
+
+**Stage 3 code changes** (vs stage2):
+- No code changes needed — code doesn't care about StatefulSet vs Deployment
+
+**Stage 3 is complete** — README.md and stage3_test.sh written.
 
 ---
 
@@ -124,7 +156,7 @@ Apollo11/
 
 | Stage | Code additions |
 |---|---|
-| liftoff | Base stubs — all services return hardcoded JSON, `/health` exists |
+| launchpad | Base stubs — all services return hardcoded JSON, `/health` exists |
 | stage1 | (no code change — k8s deployment layer only) |
 | stage2 | Service URLs via k8s DNS |
 | stage3 | Volume mount paths for PVCs; init containers for DB seeding |
@@ -141,16 +173,16 @@ Apollo11/
 
 ## Stage Completion Status
 
-| Phase | Status |
-|---|---|
-| Launchpad | ✅ Complete (docker-compose.yml, 6 services) |
-| Ignition | ✅ Complete (README + pod manifest) |
-| Stage 1 | ✅ Complete (k8s/ manifests, kustomization, init jobs, code) |
-| Stage 2 | ❌ Empty |
-| Stage 3 | ❌ Empty |
-| Stage 4 | ❌ Empty |
-| Stage 5 | ⚠️ Dirs exist (helm/, overlays/) but empty |
-| Stage 6–11 | ❌ Empty |
+| Phase | Status | Details |
+|---|---|---|
+| Launchpad | ✅ Complete | docker-compose.yml, 6 services, stub code |
+| Ignition | ✅ Complete | kind cluster, first Pod, kubectl basics |
+| Stage 1 | ✅ Complete | All 11 services as Deployments, Jobs, ConfigMaps, Secrets |
+| Stage 2 | ✅ Complete | 3 namespaces, DNS, NetworkPolicies, Ingress, Gateway API |
+| Stage 3 | ✅ Complete | k8s manifests, StatefulSets, PVCs, Headless SVCs, init containers, Ingress, README, test script |
+| Stage 4 | ⚠️ Partial | code/ copied from stage3 only, no k8s manifests yet |
+| Stage 5 | ⚠️ Partial | code/ copied from stage4 only, helm/ and overlays/ dirs exist but empty |
+| Stage 6–11 | ❌ Empty | No manifests or code yet |
 
 ---
 

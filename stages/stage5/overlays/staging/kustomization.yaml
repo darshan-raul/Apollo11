@@ -1,0 +1,22 @@
+{{- /*
+Staging overlay — 2 replicas per service, standard image tags
+*/ -}}
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: apollo11
+
+commonLabels:
+  environment: staging
+
+replicas:
+  - name: auth
+    count: 2
+  - name: catalog
+    count: 2
+  - name: circulation
+    count: 2
+  - name: notification
+    count: 2
+  - name: frontend
+    count: 2

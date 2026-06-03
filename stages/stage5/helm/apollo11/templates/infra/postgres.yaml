@@ -1,0 +1,326 @@
+{{- /*
+PostgreSQL StatefulSets — auth, catalog, circulation
+*/ -}}
+
+{{- /* Auth PostgreSQL */ -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: auth-postgres
+  namespace: {{ .Values.namespaces.infra }}
+  labels:
+    app: auth-postgres
+    stage: "5"
+spec:
+  serviceName: auth-postgres-headless
+  replicas: {{ .Values.postgres.auth.replicas }}
+  selector:
+    matchLabels:
+      app: auth-postgres
+  template:
+    metadata:
+      labels:
+        app: auth-postgres
+        stage: "5"
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.infra }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.infra }}
+      initContainers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for auth-postgres..."
+              until pg_isready -h auth-postgres -U postgres; do sleep 1; done
+              psql -h auth-postgres -U postgres -d auth -f /init/init.sql || true
+              echo "auth DB init complete"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: init-script
+              mountPath: /init
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "auth"
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-h", "localhost", "-U", "postgres"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-h", "localhost", "-U", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.postgres.auth.resources | nindent 10 }}
+      volumes:
+        - name: init-script
+          configMap:
+            name: auth-postgres-init-script
+  volumeClaimTemplates:
+    - metadata:
+        name: pg-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.postgres.auth.storage }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-postgres-headless
+  namespace: {{ .Values.namespaces.infra }}
+spec:
+  clusterIP: None
+  selector:
+    app: auth-postgres
+
+{{- /* Catalog PostgreSQL */ -}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: catalog-postgres
+  namespace: {{ .Values.namespaces.infra }}
+  labels:
+    app: catalog-postgres
+    stage: "5"
+spec:
+  serviceName: catalog-postgres-headless
+  replicas: {{ .Values.postgres.catalog.replicas }}
+  selector:
+    matchLabels:
+      app: catalog-postgres
+  template:
+    metadata:
+      labels:
+        app: catalog-postgres
+        stage: "5"
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.infra }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.infra }}
+      initContainers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for catalog-postgres..."
+              until pg_isready -h catalog-postgres -U postgres; do sleep 1; done
+              psql -h catalog-postgres -U postgres -d catalog -f /init/init.sql || true
+              echo "catalog DB init complete"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: init-script
+              mountPath: /init
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "catalog"
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-h", "localhost", "-U", "postgres"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-h", "localhost", "-U", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.postgres.catalog.resources | nindent 10 }}
+      volumes:
+        - name: init-script
+          configMap:
+            name: catalog-postgres-init-script
+  volumeClaimTemplates:
+    - metadata:
+        name: pg-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.postgres.catalog.storage }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-postgres-headless
+  namespace: {{ .Values.namespaces.infra }}
+spec:
+  clusterIP: None
+  selector:
+    app: catalog-postgres
+
+{{- /* Circulation PostgreSQL */ -}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: circulation-postgres
+  namespace: {{ .Values.namespaces.infra }}
+  labels:
+    app: circulation-postgres
+    stage: "5"
+spec:
+  serviceName: circulation-postgres-headless
+  replicas: {{ .Values.postgres.circulation.replicas }}
+  selector:
+    matchLabels:
+      app: circulation-postgres
+  template:
+    metadata:
+      labels:
+        app: circulation-postgres
+        stage: "5"
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.infra }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.infra }}
+      initContainers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for circulation-postgres..."
+              until pg_isready -h circulation-postgres -U postgres; do sleep 1; done
+              psql -h circulation-postgres -U postgres -d circulation -f /init/init.sql || true
+              echo "circulation DB init complete"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: init-script
+              mountPath: /init
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "circulation"
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-h", "localhost", "-U", "postgres"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-h", "localhost", "-U", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.postgres.circulation.resources | nindent 10 }}
+      volumes:
+        - name: init-script
+          configMap:
+            name: circulation-postgres-init-script
+  volumeClaimTemplates:
+    - metadata:
+        name: pg-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.postgres.circulation.storage }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: circulation-postgres-headless
+  namespace: {{ .Values.namespaces.infra }}
+spec:
+  clusterIP: None
+  selector:
+    app: circulation-postgres

@@ -4,8 +4,8 @@
 
 ```
 stages/
-├── liftoff/          ✅ docker-compose.yml complete (11 services, valid YAML)
-│   └── code/         ✅ All 6 microservices + Dockerfiles + init.sql
+├── launchpad/       ✅ docker-compose.yml complete (11 services, valid YAML)
+│   └── code/        ✅ All 6 microservices + Dockerfiles + init.sql
 ├── stage1/           ⚠️  k8s/ dir exists, no manifests yet
 ├── stage2–stage4/     ❌  k8s/ dirs + code/ copies exist, nothing else
 ├── stage5/           ⚠️  helm/ + overlays/ dirs exist, code/ exists
@@ -13,13 +13,13 @@ stages/
 └── stage11/          ⚠️  k8s/ dir exists, code/ exists
 ```
 
-All stage directories (1–11) have `./code/` copied from liftoff. Stage 1 and stage 5 have placeholder k8s/helm dirs.
+All stage directories (1–11) have `./code/` copied from launchpad. Stage 1 and stage 5 have placeholder k8s/helm dirs.
 
 ---
 
 ## What Each Stage Needs
 
-### Liftoff ✅
+### Launchpad ✅
 - **k8s manifests:** None (Docker Compose only)
 - **code:** Complete stubs — all services return hardcoded JSON
 - **test:** `docker compose up -d && curl localhost:3000`
@@ -87,7 +87,7 @@ All stage directories (1–11) have `./code/` copied from liftoff. Stage 1 and s
 ## Recommended Work Order
 
 ```
-Phase 1: Validate liftoff works
+Phase 1: Validate launchpad works
   → docker compose up -d
   → fix any service errors
 

@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: init-catalog-db
-  namespace: apollo11
+  namespace: apollo11-apps
 spec:
   backoffLimit: 3
   template:

@@ -1,4 +1,4 @@
-# Build stage
+# Stage 1: Build Go binary
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /src
@@ -9,11 +9,26 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/frontend .
 
-# Runtime stage
-FROM scratch
+# Stage 2: Build nginx static assets
+FROM nginx:alpine AS assets
 
+COPY static/* /usr/share/nginx/html/static/
+
+# Stage 3: Runtime — Go binary + nginx
+FROM alpine:3.19
+
+RUN apk add --no-cache nginx
+
+# Copy Go binary
 COPY --from=builder /bin/frontend /bin/frontend
 
-EXPOSE 3000
+# Copy nginx config
+COPY nginx.conf /etc/nginx/nginx.conf
 
-ENTRYPOINT ["/bin/frontend"]
+# Copy static assets
+COPY --from=assets /usr/share/nginx/html/static/ /usr/share/nginx/html/static/
+
+EXPOSE 80 3000
+
+# Start nginx in background, then run Go
+CMD ["sh", "-c", "nginx -c /etc/nginx/nginx.conf &> /dev/null & sleep 1 && /bin/frontend"]

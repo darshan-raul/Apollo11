@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: apollo11-apps
+  labels:
+    app: auth
+    stage: "4"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+        stage: "4"
+    spec:
+      serviceAccountName: apollo11-apps
+      priorityClassName: apollo11-app-critical
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: auth
+          image: apollo11/auth:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:***@auth-postgres.apollo11-infra.svc.cluster.local:5432/auth"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: JWT_SECRET
+            - name: PORT
+              value: "8080"
+          envFrom:
+            - configMapRef:
+                name: apollo11-config
+          # Startup probe: give app up to 30s to start
+          startupProbe:
+            httpGet:
+              path: /healthz/startup
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            failureThreshold: 6
+          # Liveness probe: restart if stuck
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          # Readiness probe: remove fromEndpoints if can't handle traffic
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

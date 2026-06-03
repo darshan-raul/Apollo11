@@ -1,0 +1,15 @@
+apiVersion: v2
+name: apollo11
+description: Apollo11 Kubernetes learning bootstrap — library management system
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - kubernetes
+  - learning
+  - library-management
+
+maintainers:
+  - name: Apollo11
+    email: apollo11@example.com

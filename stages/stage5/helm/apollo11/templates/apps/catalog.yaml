@@ -1,0 +1,74 @@
+{{- /*
+Catalog Deployment template
+*/ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    app: catalog
+    stage: "5"
+spec:
+  replicas: {{ .Values.apps.catalog.replicas }}
+  selector:
+    matchLabels:
+      app: catalog
+  template:
+    metadata:
+      labels:
+        app: catalog
+        stage: "5"
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.apps }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      containers:
+        - name: catalog
+          image: {{ .Values.image.repository }}/catalog:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.apps.catalog.port }}
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:***@catalog-postgres.{{ .Values.namespaces.infra }}.svc.cluster.local:5432/catalog"
+            - name: REDIS_URL
+              value: "redis://catalog-redis.{{ .Values.namespaces.infra }}.svc.cluster.local:6379"
+          envFrom:
+            - configMapRef:
+                name: apollo11-config
+          startupProbe:
+            httpGet:
+              path: /healthz/startup
+              port: {{ .Values.apps.catalog.port }}
+            initialDelaySeconds: 0
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: {{ .Values.apps.catalog.port }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: {{ .Values.apps.catalog.port }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.apps.catalog.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog
+  namespace: {{ .Values.namespaces.apps }}
+spec:
+  selector:
+    app: catalog
+  ports:
+    - port: 8081
+      targetPort: {{ .Values.apps.catalog.port }}

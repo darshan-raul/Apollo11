@@ -1,0 +1,82 @@
+{{- /*
+Fines StatefulSet + headless service (needs PVC)
+*/ -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: fines
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    app: fines
+    stage: "5"
+spec:
+  serviceName: fines-headless
+  replicas: {{ .Values.apps.fines.replicas }}
+  selector:
+    matchLabels:
+      app: fines
+  template:
+    metadata:
+      labels:
+        app: fines
+        stage: "5"
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.apps }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      containers:
+        - name: fines
+          image: {{ .Values.image.repository }}/fines:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.apps.fines.port }}
+          env:
+            - name: DATABASE_PATH
+              value: "/data/fines.db"
+          envFrom:
+            - configMapRef:
+                name: apollo11-config
+          volumeMounts:
+            - name: fines-data
+              mountPath: /data
+          startupProbe:
+            httpGet:
+              path: /healthz/startup
+              port: {{ .Values.apps.fines.port }}
+            initialDelaySeconds: 0
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: {{ .Values.apps.fines.port }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: {{ .Values.apps.fines.port }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.apps.fines.resources | nindent 10 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: fines-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.apps.fines.storage }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fines-headless
+  namespace: {{ .Values.namespaces.apps }}
+spec:
+  clusterIP: None
+  selector:
+    app: fines

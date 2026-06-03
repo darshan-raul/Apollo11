@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: circulation-postgres
+  namespace: apollo11-infra
+spec:
+  serviceName: circulation-postgres-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: circulation-postgres
+  template:
+    metadata:
+      labels:
+        app: circulation-postgres
+    spec:
+      serviceAccountName: apollo11-infra
+      initContainers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for circulation-postgres to be ready..."
+              until pg_isready -h circulation-postgres -U postgres; do sleep 1; done
+              echo "Running circulation init SQL..."
+              psql -h circulation-postgres -U postgres -d circulation -f /init/init.sql || true
+              echo "circulation DB init complete"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: init-script
+              mountPath: /init
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "circulation"
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: init-script
+          configMap:
+            name: circulation-postgres-init-script
+  volumeClaimTemplates:
+    - metadata:
+        name: pg-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

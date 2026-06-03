@@ -1,0 +1,124 @@
+{{- /*
+Init jobs — run once to seed databases
+*/ -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-auth-db
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    app: init-auth-db
+    stage: "5"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: init-auth-db
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.apps }}
+      restartPolicy: OnFailure
+      containers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "Seeding auth DB..."
+              psql -h auth-postgres.{{ .Values.namespaces.infra }}.svc.cluster.local -U postgres -d auth -f /init/init.sql || echo "Auth DB init done or already exists"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: init-script
+              mountPath: /init
+      volumes:
+        - name: init-script
+          configMap:
+            name: auth-postgres-init-script
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-catalog-db
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    app: init-catalog-db
+    stage: "5"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: init-catalog-db
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.apps }}
+      restartPolicy: OnFailure
+      containers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "Seeding catalog DB..."
+              psql -h catalog-postgres.{{ .Values.namespaces.infra }}.svc.cluster.local -U postgres -d catalog -f /init/init.sql || echo "Catalog DB init done or already exists"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: init-script
+              mountPath: /init
+      volumes:
+        - name: init-script
+          configMap:
+            name: catalog-postgres-init-script
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-circulation-db
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    app: init-circulation-db
+    stage: "5"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: init-circulation-db
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.apps }}
+      restartPolicy: OnFailure
+      containers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "Seeding circulation DB..."
+              psql -h circulation-postgres.{{ .Values.namespaces.infra }}.svc.cluster.local -U postgres -d circulation -f /init/init.sql || echo "Circulation DB init done or already exists"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: init-script
+              mountPath: /init
+      volumes:
+        - name: init-script
+          configMap:
+            name: circulation-postgres-init-script
