@@ -69,6 +69,23 @@ Apollo11/
 
 ---
 
+## Apollo11 vs Apollo11-Docs (Two-Repo Pattern)
+
+**Apollo11** (`/home/darshan/projects/Apollo11/`) — the **code repository**
+- All service code, Dockerfiles, Kubernetes manifests, scripts, and stage READMEs live here.
+- This is the repo users clone to follow along and run the labs.
+- Never modify Apollo11 code based on what's in the docs — the code is the source of truth.
+
+**Apollo11-Docs** (`/home/darshan/projects/apollo11-docs/`) — the **Docusaurus learning site**
+- Built with Docusaurus, deployed separately (e.g., Vercel).
+- Contains narrative guides, screenshots, step-by-step instructions, architecture diagrams, and explanations.
+- Docs reference Apollo11 code by path — the docs don't contain the code itself.
+- When updating docs, write detailed instructional content (screenshots, commands, troubleshooting, expected outputs) — don't just summarize. The docs teach; Apollo11 is the lab environment.
+
+**Relationship:** Apollo11 is the lab, apollo11-docs is the textbook. They are separate repos. Apollo11 code changes don't require docs updates (except when behavior changes), but every new topic covered in docs should have corresponding working code in Apollo11.
+
+---
+
 ## Services (what gets deployed)
 
 | Service | Tech | Port | Database |

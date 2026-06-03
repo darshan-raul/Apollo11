@@ -1,12 +1,19 @@
 # Apollo11 Auth Service - FastAPI
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 import uuid
 from datetime import datetime, timedelta
 
 app = FastAPI(title="Apollo11 Auth Service")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 security = HTTPBearer()
 
 # In-memory stub storage (replace with PostgreSQL in production)
