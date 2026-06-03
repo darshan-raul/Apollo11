@@ -1,0 +1,38 @@
+{{- /*
+Dev overlay — 1 replica per service, dev image tag
+*/ -}}
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: apollo11
+
+commonLabels:
+  environment: dev
+
+replicas:
+  - name: auth
+    count: 1
+  - name: catalog
+    count: 1
+  - name: circulation
+    count: 1
+  - name: notification
+    count: 1
+  - name: fines
+    count: 1
+  - name: frontend
+    count: 1
+
+images:
+  - name: apollo11/catalog
+    newTag: dev
+  - name: apollo11/auth
+    newTag: dev
+  - name: apollo11/circulation
+    newTag: dev
+  - name: apollo11/notification
+    newTag: dev
+  - name: apollo11/fines
+    newTag: dev
+  - name: apollo11/frontend
+    newTag: dev
