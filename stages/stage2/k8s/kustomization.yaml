@@ -1,0 +1,48 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: apollo-airlines-apps
+
+resources:
+  - config/namespace.yaml
+  - config/serviceaccount.yaml
+  - config/configmap.yaml
+  - config/secrets.yaml
+  - config/ingress.yaml
+  - config/gateway.yaml
+  - infra/identity-db/identity-db-dep.yaml
+  - infra/identity-db/identity-db-svc-headless.yaml
+  - infra/identity-db/identity-db-netpol.yaml
+  - infra/flight-db/flight-db-dep.yaml
+  - infra/flight-db/flight-db-svc-headless.yaml
+  - infra/flight-db/flight-db-netpol.yaml
+  - infra/booking-db/booking-db-dep.yaml
+  - infra/booking-db/booking-db-svc-headless.yaml
+  - infra/booking-db/booking-db-netpol.yaml
+  - infra/redis/redis-dep.yaml
+  - infra/redis/redis-svc-headless.yaml
+  - infra/redis/redis-netpol.yaml
+  - apps/identity/identity-dep.yaml
+  - apps/identity/identity-svc.yaml
+  - apps/identity/identity-netpol.yaml
+  - apps/flight/flight-dep.yaml
+  - apps/flight/flight-svc.yaml
+  - apps/flight/flight-netpol.yaml
+  - apps/booking/booking-dep.yaml
+  - apps/booking/booking-svc.yaml
+  - apps/booking/booking-netpol.yaml
+  - apps/search/search-dep.yaml
+  - apps/search/search-svc.yaml
+  - apps/search/search-netpol.yaml
+  - apps/notification/notification-dep.yaml
+  - apps/notification/notification-svc.yaml
+  - apps/notification/notification-netpol.yaml
+  - ui/frontend/frontend-dep.yaml
+  - ui/frontend/frontend-svc.yaml
+  - ui/frontend/frontend-netpol.yaml
+  - jobs/identity-init-configmap.yaml
+  - jobs/init-identity-db.yaml
+  - jobs/flight-init-configmap.yaml
+  - jobs/init-flight-db.yaml
+  - jobs/booking-init-configmap.yaml
+  - jobs/init-booking-db.yaml

@@ -1,49 +1,13 @@
-# Traefik Ingress
-# Routes:
-#   api.apollo11.local    → auth:8080
-#   catalog.apollo11.local → catalog:8081
-#   frontend.apollo11.local → frontend:80 (new in stage3)
-#
-# Prerequisites:
-#   kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v3.0/docs/content/reference/dynamic-configuration/kubernetes-crd-definition.yaml
-#   kubectl apply -f https://raw.githubusercontent.com/traefik/traefik/v3.0/docs/content/reference/dynamic-configuration/kubernetes-ingressclass.yaml
-
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: apollo11-ingress
-  namespace: apollo11-apps
+  name: apollo-airlines-gateway
+  namespace: apollo-airlines-ui
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    kubernetes.io/ingress.class: traefik
 spec:
-  ingressClassName: traefik
   rules:
-    # Route 1: api.apollo11.local → auth service
-    - host: api.apollo11.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: auth
-                port:
-                  number: 8080
-
-    # Route 2: catalog.apollo11.local → catalog service
-    - host: catalog.apollo11.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: catalog
-                port:
-                  number: 8081
-
-    # Route 3: frontend.apollo11.local → frontend service (new in stage3)
-    - host: frontend.apollo11.local
+    - host: frontend.apolloairlines.local
       http:
         paths:
           - path: /
@@ -52,4 +16,4 @@ spec:
               service:
                 name: frontend
                 port:
-                  number: 80
+                  number: 3000

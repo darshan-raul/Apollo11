@@ -2,11 +2,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: notification
-  namespace: apollo11-apps
+  namespace: apollo-airlines
 spec:
   selector:
     app: notification
   ports:
-    - port: 8083
-      targetPort: 8083
-  type: ClusterIP
+    - port: 8084
+      targetPort: 8084

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: apollo11
+  name: apollo-airlines
   labels:
-    app.kubernetes.io/name: apollo11
+    app.kubernetes.io/name: apollo-airlines
     app.kubernetes.io/component: namespace

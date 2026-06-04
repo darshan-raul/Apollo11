@@ -1,32 +1,26 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: apollo11-config
-  namespace: apollo11-apps
+  name: apollo-airlines-config
+  namespace: apollo-airlines-apps
 data:
-  # Service ports
+  PORT_IDENTITY: "8080"
+  PORT_FLIGHT: "8081"
+  PORT_BOOKING: "8082"
+  PORT_SEARCH: "8083"
+  PORT_NOTIFICATION: "8084"
   PORT_FRONTEND: "3000"
-  PORT_AUTH: "8080"
-  PORT_CATALOG: "8081"
-  PORT_CIRCULATION: "8082"
-  PORT_NOTIFICATION: "8083"
-  PORT_FINES: "8084"
 
-  # Service URLs (intra-cluster DNS)
-  AUTH_SERVICE_URL: "http://auth.apollo11-apps.svc.cluster.local:8080"
-  CATALOG_SERVICE_URL: "http://catalog.apollo11-apps.svc.cluster.local:8081"
-  CIRCULATION_SERVICE_URL: "http://circulation.apollo11-apps.svc.cluster.local:8082"
-  NOTIFICATION_SERVICE_URL: "http://notification.apollo11-apps.svc.cluster.local:8083"
-  FINES_SERVICE_URL: "http://fines.apollo11-apps.svc.cluster.local:8084"
+  IDENTITY_DB: "identity"
+  FLIGHT_DB: "flight"
+  BOOKING_DB: "booking"
 
-  # Database names
-  AUTH_DB: "auth"
-  CATALOG_DB: "catalog"
-  CIRCULATION_DB: "circulation"
+  IDENTITY_SERVICE_URL: "http://identity.apollo-airlines-apps.svc.cluster.local:8080"
+  FLIGHT_SERVICE_URL: "http://flight.apollo-airlines-apps.svc.cluster.local:8081"
+  NOTIFICATION_SERVICE_URL: "http://notification.apollo-airlines-apps.svc.cluster.local:8084"
 
-  # Redis
-  CATALOG_REDIS_URL: "redis://catalog-redis:6379"
-  NOTIFICATION_REDIS_URL: "redis://notification-redis:6380"
-
-  # Fines (SQLite on emptyDir — data lost on pod restart, fixed in stage3)
-  DATABASE_PATH: "/data/fines.db"
+  REDIS_URL: "redis://redis.apollo-airlines-infra.svc.cluster.local:6379"
+  DATABASE_URL_TEMPLATE: "postgresql://postgres:postgres@{{host}}:5432/{{db}}"
+  IDENTITY_DB_URL: "postgresql://postgres:postgres@identity-db.apollo-airlines-infra.svc.cluster.local:5432/identity"
+  FLIGHT_DB_URL: "postgresql://postgres:postgres@flight-db.apollo-airlines-infra.svc.cluster.local:5432/flight"
+  BOOKING_DB_URL: "postgresql://postgres:postgres@booking-db.apollo-airlines-infra.svc.cluster.local:5432/booking"

@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: identity-allow-specific
+  namespace: apollo-airlines-apps
+spec:
+  podSelector:
+    matchLabels:
+      app: identity
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend
+      - from:
+        - podSelector:
+            matchLabels:
+              app: booking
+      ports:
+        - protocol: TCP
+          port: 8080
+  policyTypes:
+    - Ingress

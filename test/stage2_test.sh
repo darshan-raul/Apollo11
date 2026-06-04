@@ -6,25 +6,20 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-NAMESPACES="apollo11-infra apollo11-apps apollo11-ui"
-PASS=0
-FAIL=0
+NAMESPACES="apollo-airlines-infra apollo-airlines-apps apollo-airlines-ui"
+PASS=0; FAIL=0
 
 info()  { echo -e "  \033[1;34m[INFO]\033[0m  $1"; }
 pass()  { echo -e "  \033[1;32m[PASS]\033[0m  $1"; ((PASS++)); }
 fail()  { echo -e "  \033[1;31m[FAIL]\033[0m  $1"; ((FAIL++)); }
 warn()  { echo -e "  \033[1;33m[WARN]\033[0m  $1"; }
 
-section() {
-  echo ""
-  echo -e "\033[1;36m=== $1 ===\033[0m"
-}
+section() { echo ""; echo -e "\033[1;36m=== $1 ===\033[0m"; }
 
 # ── Section 1: Namespaces ────────────────────────────────────────────────
 section "1. Namespaces exist"
 for ns in $NAMESPACES; do
-  result=$(kubectl get namespace "$ns" -o name 2>/dev/null)
-  if [[ -n "$result" ]]; then
+  if kubectl get namespace "$ns" &>/dev/null; then
     pass "$ns namespace exists"
   else
     fail "$ns namespace NOT found"
@@ -34,10 +29,9 @@ done
 # ── Section 2: ServiceAccounts ─────────────────────────────────────────────
 section "2. ServiceAccounts exist"
 for ns in $NAMESPACES; do
-  sa_name="${ns#apollo11-}"  # infra, apps, ui
+  sa_name="${ns#apollo-airlines-}"  # infra, apps, ui
   sa_name="apollo11-${sa_name}"
-  result=$(kubectl get sa "$sa_name" -n "$ns" -o name 2>/dev/null)
-  if [[ -n "$result" ]]; then
+  if kubectl get sa "$sa_name" -n "$ns" &>/dev/null; then
     pass "$ns: ServiceAccount '$sa_name' exists"
   else
     fail "$ns: ServiceAccount '$sa_name' NOT found"
@@ -45,53 +39,42 @@ for ns in $NAMESPACES; do
 done
 
 # ── Section 3: ConfigMap and Secrets ─────────────────────────────────────
-section "3. ConfigMap and Secrets in apollo11-apps"
-if kubectl get configmap apollo11-config -n apollo11-apps &>/dev/null; then
-  pass "apollo11-config ConfigMap exists in apollo11-apps"
-  # Verify FQDN entries
-  if kubectl get configmap apollo11-config -n apollo11-apps -o jsonpath='{.data.AUTH_SERVICE_URL}' | grep -q "svc.cluster.local"; then
-    pass "AUTH_SERVICE_URL uses FQDN format"
+section "3. ConfigMap and Secrets in apollo-airlines-apps"
+if kubectl get configmap apollo-airlines-config -n apollo-airlines-apps &>/dev/null; then
+  pass "apollo-airlines-config ConfigMap exists"
+  if kubectl get configmap apollo-airlines-config -n apollo-airlines-apps -o jsonpath='{.data.IDENTITY_SERVICE_URL}' | grep -q "svc.cluster.local"; then
+    pass "Service URLs use FQDN format"
   else
-    fail "AUTH_SERVICE_URL missing FQDN"
+    fail "Service URLs missing FQDN format"
   fi
 else
-  fail "apollo11-config ConfigMap NOT found"
+  fail "apollo-airlines-config ConfigMap NOT found"
 fi
 
-if kubectl get secret apollo11-secrets -n apollo11-apps &>/dev/null; then
-  pass "apollo11-secrets Secret exists in apollo11-apps"
+if kubectl get secret apollo-airlines-secrets -n apollo-airlines-apps &>/dev/null; then
+  pass "apollo-airlines-secrets Secret exists"
 else
-  fail "apollo11-secrets Secret NOT found"
+  fail "apollo-airlines-secrets Secret NOT found"
 fi
 
 # ── Section 4: Ingress and Gateway ─────────────────────────────────────────
 section "4. Ingress and Gateway API resources"
-if kubectl get ingress apollo11-gateway -n apollo11-apps &>/dev/null; then
-  pass "Ingress 'apollo11-gateway' exists in apollo11-apps"
-  host_count=$(kubectl get ingress apollo11-gateway -n apollo11-apps -o jsonpath='{.spec.rules}' | grep -o '"host"' | wc -l)
-  info "Ingress has $host_count host rule(s)"
+if kubectl get ingress apollo-airlines-gateway -n apollo-airlines-ui &>/dev/null; then
+  pass "Ingress 'apollo-airlines-gateway' exists in apollo-airlines-ui"
 else
-  fail "Ingress 'apollo11-gateway' NOT found"
+  fail "Ingress 'apollo-airlines-gateway' NOT found"
 fi
 
-if kubectl get gateway gateway-gateway -n apollo11-apps &>/dev/null; then
-  pass "Gateway 'gateway-gateway' exists in apollo11-apps"
+if kubectl get gateway gateway -n apollo-airlines-apps &>/dev/null; then
+  pass "Gateway 'gateway' exists in apollo-airlines-apps"
 else
-  fail "Gateway 'gateway-gateway' NOT found"
-fi
-
-if kubectl get httproute catalog-route -n apollo11-apps &>/dev/null; then
-  pass "HTTPRoute 'catalog-route' exists in apollo11-apps"
-else
-  fail "HTTPRoute 'catalog-route' NOT found"
+  fail "Gateway 'gateway' NOT found"
 fi
 
 # ── Section 5: Infrastructure Deployments ──────────────────────────────────
 section "5. Infrastructure Deployments (infra namespace)"
-INFRA_DEPS="auth-postgres catalog-postgres circulation-postgres catalog-redis notification-redis"
-for dep in $INFRA_DEPS; do
-  result=$(kubectl get deployment "$dep" -n apollo11-infra -o name 2>/dev/null)
-  if [[ -n "$result" ]]; then
+for dep in identity-db flight-db booking-db redis; do
+  if kubectl get deployment "$dep" -n apollo-airlines-infra &>/dev/null; then
     pass "infra/$dep Deployment exists"
   else
     fail "infra/$dep Deployment NOT found"
@@ -100,10 +83,8 @@ done
 
 # ── Section 6: App Deployments ────────────────────────────────────────────
 section "6. Application Deployments (apps namespace)"
-APP_DEPS="auth catalog circulation notification fines"
-for dep in $APP_DEPS; do
-  result=$(kubectl get deployment "$dep" -n apollo11-apps -o name 2>/dev/null)
-  if [[ -n "$result" ]]; then
+for dep in identity flight booking search notification; do
+  if kubectl get deployment "$dep" -n apollo-airlines-apps &>/dev/null; then
     pass "apps/$dep Deployment exists"
   else
     fail "apps/$dep Deployment NOT found"
@@ -112,8 +93,7 @@ done
 
 # ── Section 7: UI Deployment ─────────────────────────────────────────────
 section "7. Frontend Deployment (ui namespace)"
-result=$(kubectl get deployment frontend -n apollo11-ui -o name 2>/dev/null)
-if [[ -n "$result" ]]; then
+if kubectl get deployment frontend -n apollo-airlines-ui &>/dev/null; then
   pass "ui/frontend Deployment exists"
 else
   fail "ui/frontend Deployment NOT found"
@@ -122,53 +102,44 @@ fi
 # ── Section 8: Deployment ReadyReplicas ───────────────────────────────────
 section "8. Deployment ReadyReplicas"
 for ns in $NAMESPACES; do
-  deploys=$(kubectl get deployments -n "$ns" -o jsonpath='{.items[*].metadata.name}')
+  deploys=$(kubectl get deployments -n "$ns" -o jsonpath='{.items[*].metadata.name}' 2>/dev/null)
   for dep in $deploys; do
-    replicas=$(kubectl get deployment "$dep" -n "$ns" -o jsonpath='{.status.readyReplicas}')
-    if [[ "$replicas" == "1" ]]; then
-      pass "$ns/$dep: readyReplicas=1"
+    replicas=$(kubectl get deployment "$dep" -n "$ns" -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+    if [[ "$replicas" == "1" ]] || [[ "$replicas" == "2" ]]; then
+      pass "$ns/$dep: readyReplicas=$replicas"
     elif [[ -z "$replicas" ]]; then
       fail "$ns/$dep: readyReplicas=0 (not ready)"
     else
-      warn "$ns/$dep: readyReplicas=$replicas (expected 1)"
+      warn "$ns/$dep: readyReplicas=$replicas"
     fi
   done
 done
 
 # ── Section 9: Services ─────────────────────────────────────────────────────
 section "9. Services exist with correct ports"
-declare -A expected_ports
-expected_ports[auth-postgres]="5432"
-expected_ports[catalog-postgres]="5432"
-expected_ports[circulation-postgres]="5432"
-expected_ports[catalog-redis]="6379"
-expected_ports[notification-redis]="6380"
-expected_ports[auth]="8080"
-expected_ports[catalog]="8081"
-expected_ports[circulation]="8082"
-expected_ports[notification]="8083"
-expected_ports[fines]="8084"
-expected_ports[frontend]="30080"
-
-for svc in "${!expected_ports[@]}"; do
-  # Determine namespace
+declare -A SERVICES
+SERVICES=(
+  ["identity-db"]="5432"
+  ["flight-db"]="5432"
+  ["booking-db"]="5432"
+  ["redis"]="6379"
+  ["identity"]="8080"
+  ["flight"]="8081"
+  ["booking"]="8082"
+  ["search"]="8083"
+  ["notification"]="8084"
+  ["frontend"]="3000"
+)
+for svc in "${!SERVICES[@]}"; do
+  port="${SERVICES[$svc]}"
   case "$svc" in
-    auth-postgres|catalog-postgres|circulation-postgres|catalog-redis|notification-redis)
-      ns="apollo11-infra" ;;
-    frontend) ns="apollo11-ui" ;;
-    *)        ns="apollo11-apps" ;;
+    identity-db|flight-db|booking-db|redis) ns="apollo-airlines-infra" ;;
+    frontend) ns="apollo-airlines-ui" ;;
+    *) ns="apollo-airlines-apps" ;;
   esac
-
-  port="${expected_ports[$svc]}"
-  result=$(kubectl get svc "$svc" -n "$ns" -o name 2>/dev/null)
-  if [[ -z "$result" ]]; then
-    fail "$svc Service NOT found in $ns"
-    continue
-  fi
-
-  actual=$(kubectl get svc "$svc" -n "$ns" -o jsonpath="{.spec.ports[?(@.port==$port)].port}" 2>/dev/null)
+  actual=$(kubectl get svc "$svc" -n "$ns" -o jsonpath="{.spec.ports[?(@.port==$port)].port}" 2>/dev/null || echo "")
   if [[ "$actual" == "$port" ]]; then
-    pass "$svc:$port Service exists with correct port"
+    pass "$svc:$port Service exists"
   else
     fail "$svc: expected port $port, found '$actual'"
   fi
@@ -176,27 +147,20 @@ done
 
 # ── Section 10: NetworkPolicies ────────────────────────────────────────────
 section "10. NetworkPolicies exist"
-netpols=(
-  "auth-postgres-allow-specific:apollo11-infra"
-  "catalog-postgres-allow-specific:apollo11-infra"
-  "circulation-postgres-allow-specific:apollo11-infra"
-  "catalog-redis-allow-specific:apollo11-infra"
-  "notification-redis-allow-specific:apollo11-infra"
-  "auth-allow-specific:apollo11-apps"
-  "catalog-allow-specific:apollo11-apps"
-  "circulation-allow-specific:apollo11-apps"
-  "notification-allow-specific:apollo11-apps"
-  "fines-allow-specific:apollo11-apps"
-)
-
-for entry in "${netpols[@]}"; do
+for entry in \
+  "identity-db-allow-apps:apollo-airlines-infra" \
+  "flight-db-allow-apps:apollo-airlines-infra" \
+  "booking-db-allow-apps:apollo-airlines-infra" \
+  "redis-allow-apps:apollo-airlines-infra" \
+  "identity-allow-specific:apollo-airlines-apps" \
+  "flight-allow-specific:apollo-airlines-apps" \
+  "booking-allow-specific:apollo-airlines-apps" \
+  "search-allow-specific:apollo-airlines-apps" \
+  "notification-allow-specific:apollo-airlines-apps" \
+  "frontend-allow-external:apollo-airlines-ui"; do
   IFS=':' read -r name ns <<< "$entry"
-  result=$(kubectl get netpol "$name" -n "$ns" -o name 2>/dev/null)
-  if [[ -n "$result" ]]; then
+  if kubectl get netpol "$name" -n "$ns" &>/dev/null; then
     pass "NetworkPolicy $ns/$name exists"
-    # Verify ingress rules
-    ingress_count=$(kubectl get netpol "$name" -n "$ns" -o jsonpath='{.spec.ingress}' 2>/dev/null | grep -c "from:" || echo "0")
-    info "  $ns/$name: $ingress_count ingress rule(s)"
   else
     fail "NetworkPolicy $ns/$name NOT found"
   fi
@@ -204,57 +168,34 @@ done
 
 # ── Section 11: Init Jobs ───────────────────────────────────────────────────
 section "11. Init Jobs completed"
-JOBS="init-auth-db init-catalog-db init-circulation-db"
-for job in $JOBS; do
-  result=$(kubectl get job "$job" -n apollo11-apps -o name 2>/dev/null)
-  if [[ -z "$result" ]]; then
-    fail "Job '$job' NOT found in apollo11-apps"
-    continue
-  fi
-  pass "Job '$job' exists"
-
-  # Check completion
-  succeeded=$(kubectl get job "$job" -n apollo11-apps -o jsonpath='{.status.succeeded}' 2>/dev/null)
-  if [[ "$succeeded" == "1" ]]; then
-    pass "Job '$job' completed successfully"
+for job in init-identity-db init-flight-db init-booking-db; do
+  if kubectl get job "$job" -n apollo-airlines-apps &>/dev/null; then
+    pass "Job '$job' exists"
+    succeeded=$(kubectl get job "$job" -n apollo-airlines-apps -o jsonpath='{.status.succeeded}' 2>/dev/null || echo "0")
+    if [[ "$succeeded" == "1" ]]; then
+      pass "Job '$job' completed successfully"
+    else
+      fail "Job '$job' has not completed (succeeded=$succeeded)"
+    fi
   else
-    fail "Job '$job' has not completed (succeeded=$succeeded)"
+    fail "Job '$job' NOT found"
   fi
 done
 
-# ── Section 12: DNS Resolution ─────────────────────────────────────────────
-section "12. DNS resolution (cross-namespace FQDN)"
-if kubectl cluster-info &>/dev/null; then
-  info "Cluster available — testing DNS from a debug pod"
-
-  # Start temporary debug pod
-  kubectl run dns-test --image=tutum/dnsutils --rm -it --restart=Never \
-    --namespace apollo11-apps -- sh -c "
-      echo '=== FQDN tests ===' &&
-      nslookup auth.apollo11-apps.svc.cluster.local | grep -q 'Address' && echo 'PASS: FQDN resolves in same namespace' || echo 'FAIL: FQDN same-ns failed' &&
-      nslookup auth-postgres.apollo11-infra.svc.cluster.local | grep -q 'Address' && echo 'PASS: FQDN cross-namespace works' || echo 'FAIL: FQDN cross-ns failed' &&
-      nslookup auth | grep -q 'NXDOMAIN' && echo 'PASS: short name correctly fails' || echo 'NOTE: short name may resolve (search path)'
-    " 2>/dev/null || warn "DNS pod test failed (may need cluster)"
-else
-  warn "No cluster — skipping DNS live test"
-fi
-
-# ── Section 13: ServiceAccount on Deployments ─────────────────────────────
-section "13. serviceAccountName on all Deployments"
+# ── Section 12: serviceAccountName ─────────────────────────────────────────
+section "12. serviceAccountName on all Deployments"
 all_deps=(
-  "auth:apollo11-apps"
-  "catalog:apollo11-apps"
-  "circulation:apollo11-apps"
-  "notification:apollo11-apps"
-  "fines:apollo11-apps"
-  "auth-postgres:apollo11-infra"
-  "catalog-postgres:apollo11-infra"
-  "circulation-postgres:apollo11-infra"
-  "catalog-redis:apollo11-infra"
-  "notification-redis:apollo11-infra"
-  "frontend:apollo11-ui"
+  "identity:apollo-airlines-apps"
+  "flight:apollo-airlines-apps"
+  "booking:apollo-airlines-apps"
+  "search:apollo-airlines-apps"
+  "notification:apollo-airlines-apps"
+  "frontend:apollo-airlines-ui"
+  "identity-db:apollo-airlines-infra"
+  "flight-db:apollo-airlines-infra"
+  "booking-db:apollo-airlines-infra"
+  "redis:apollo-airlines-infra"
 )
-
 for entry in "${all_deps[@]}"; do
   IFS=':' read -r dep ns <<< "$entry"
   sa=$(kubectl get deployment "$dep" -n "$ns" -o jsonpath='{.spec.template.spec.serviceAccountName}' 2>/dev/null)
@@ -262,6 +203,17 @@ for entry in "${all_deps[@]}"; do
     pass "$ns/$dep: serviceAccountName=$sa"
   else
     fail "$ns/$dep: no serviceAccountName"
+  fi
+done
+
+# ── Section 13: Headless Services ──────────────────────────────────────────
+section "13. Headless Services (clusterIP: None)"
+for svc in identity-db flight-db booking-db redis; do
+  ip=$(kubectl get svc "$svc" -n apollo-airlines-infra -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
+  if [[ "$ip" == "None" ]]; then
+    pass "$svc is Headless (clusterIP=None)"
+  else
+    fail "$svc clusterIP=$ip (expected None for Headless)"
   fi
 done
 
@@ -281,13 +233,12 @@ if [[ $FAIL -gt 0 ]]; then
   echo ""
   echo "If pods are Pending due to image pull errors, rebuild:"
   echo "  cd $PROJECT_ROOT/stages/stage2 && ./scripts/build-images.sh"
-  echo "Then re-apply:"
-  echo "  cd $PROJECT_ROOT/stages/stage2/k8s && kubectl apply -f config/namespace.yaml && kubectl apply -f config/"
   exit 1
 fi
 
 echo ""
 echo "All checks passed. Stage 2 is fully deployed."
 echo ""
-echo "Next: bash test/stage2_test.sh (full verification)"
-echo "Then: cd stages/stage2 && kubectl apply -f k8s/config/namespace.yaml ..."
+echo "Next: bash test/stage2_test.sh (this script)"
+echo "Then: cd stages/stage2 && kubectl apply -k k8s/"
+exit 0

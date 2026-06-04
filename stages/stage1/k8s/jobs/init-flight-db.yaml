@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-flight-db
+  namespace: apollo-airlines
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: init-flight-db
+    spec:
+      containers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h flight-db -U postgres; do echo "Waiting for flight-db..."; sleep 2; done
+              psql -h flight-db -U postgres -d flight -f /init/init.sql || true
+              echo "flight DB init done"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: init-script
+              mountPath: /init
+      volumes:
+        - name: init-script
+          configMap:
+            name: flight-init-script
+      restartPolicy: OnFailure

@@ -1,51 +1,34 @@
-# Gateway API — Envoy Proxy as the underlying data plane
-#
-# The Gateway resource defines WHAT ports we listen on.
-# Envoy is the actual proxy that handles the traffic.
-# HTTPRoute resources in other namespaces reference this Gateway.
-#
-# Prerequisites — install Envoy Gateway:
-#   kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/
-#     main/site/content/en/latest/tasks/install/install.yaml
-#
-# Then label the Gateway namespace to accept HTTPRoutes from other namespaces:
-#   kubectl label namespace apollo11-apps gateway.envoyproxy.io/owning-gateway-name=apollo11-gateway
-#   kubectl label namespace apollo11-ui gateway.envoyproxy.io/owning-gateway-name=apollo11-gateway
-
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: apollo11-gateway
-  namespace: apollo11-apps
-  labels:
-    app.kubernetes.io/name: apollo11-gateway
-    app.kubernetes.io/component: gateway
+  name: gateway
+  namespace: apollo-airlines-apps
 spec:
-  # gatewayClassName must match the installed GatewayClass resource.
-  # "envoy" is the standard class name when installing Envoy Gateway.
-  gatewayClassName: envoy
-
-  # Listeners — what ports/protocols this gateway accepts
+  gatewayClassName: traefik
   listeners:
-    # HTTP listener — port 80, all HTTP traffic
     - name: http
-      port: 80
       protocol: HTTP
+      port: 80
       allowedRoutes:
-        # HTTPRoutes can be in the same namespace only.
-        # For cross-namespace binding, use ReferenceGrant (shown in httproute-catalog.yaml)
         namespaces:
-          from: same
-
-    # HTTPS listener — port 443, TLS terminated at Envoy.
-    # Uncomment and add a TLS secret reference when you have a certificate.
-    # - name: https
-    #   port: 443
-    #   protocol: HTTPS
-    #   tls:
-    #     mode: Terminate
-    #     certificateRefs:
-    #       - name: apollo11-tls   # must exist in apollo11-apps namespace
-    #   allowedRoutes:
-    #     namespaces:
-    #       from: same
+          from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: flight-route
+  namespace: apollo-airlines-apps
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: apollo-airlines-apps
+  hostnames:
+    - "flight.apolloairlines.local"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/
+      backendRefs:
+        - name: flight
+          port: 8081

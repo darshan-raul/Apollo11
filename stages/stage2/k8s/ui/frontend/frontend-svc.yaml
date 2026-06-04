@@ -2,13 +2,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: frontend
-  namespace: apollo11-ui
+  namespace: apollo-airlines-ui
 spec:
   selector:
     app: frontend
   ports:
-    # nginx (sidecar) is the public-facing container on port 80
-    - port: 80
-      targetPort: 80
-      nodePort: 30080
-  type: NodePort
+    - port: 3000
+      targetPort: 3000

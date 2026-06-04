@@ -1,34 +1,29 @@
-# Stage 1: Build Go binary
-FROM golang:1.21-alpine AS builder
+# Stage 1: Build React app
+FROM node:20-alpine AS builder
 
-WORKDIR /src
+WORKDIR /app
 
-COPY go.mod go.sum ./
-RUN go mod download
+COPY package.json ./
+RUN npm install
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/frontend .
+RUN npm run build
 
-# Stage 2: Build nginx static assets
-FROM nginx:alpine AS assets
+# Stage 2: Serve with NGINX
+FROM nginx:alpine
 
-COPY static/* /usr/share/nginx/html/static/
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Stage 3: Runtime — Go binary + nginx
-FROM alpine:3.19
+RUN cat > /etc/nginx/conf.d/default.conf << 'EOF'
+server {
+    listen 3000;
+    location / {
+        root /usr/share/nginx/html;
+        try_files $uri $uri/ /index.html;
+    }
+}
+EOF
 
-RUN apk add --no-cache nginx
+EXPOSE 3000
 
-# Copy Go binary
-COPY --from=builder /bin/frontend /bin/frontend
-
-# Copy nginx config
-COPY nginx.conf /etc/nginx/nginx.conf
-
-# Copy static assets
-COPY --from=assets /usr/share/nginx/html/static/ /usr/share/nginx/html/static/
-
-EXPOSE 80 3000
-
-# Start nginx in background, then run Go
-CMD ["sh", "-c", "nginx -c /etc/nginx/nginx.conf &> /dev/null & sleep 1 && /bin/frontend"]
+CMD ["nginx", "-g", "daemon off;"]

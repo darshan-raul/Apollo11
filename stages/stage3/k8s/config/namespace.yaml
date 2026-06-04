@@ -1,28 +1,23 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: apollo11-infra
+  name: apollo-airlines-infra
   labels:
-    name: apollo11-infra
-    app.kubernetes.io/component: infrastructure
-    kubernetes.io/metadata.name: apollo11-infra
-
+    app.kubernetes.io/name: apollo-airlines
+    app.kubernetes.io/component: infra
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: apollo11-apps
+  name: apollo-airlines-apps
   labels:
-    name: apollo11-apps
-    app.kubernetes.io/component: applications
-    kubernetes.io/metadata.name: apollo11-apps
-
+    app.kubernetes.io/name: apollo-airlines
+    app.kubernetes.io/component: apps
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: apollo11-ui
+  name: apollo-airlines-ui
   labels:
-    name: apollo11-ui
+    app.kubernetes.io/name: apollo-airlines
     app.kubernetes.io/component: ui
-    kubernetes.io/metadata.name: apollo11-ui

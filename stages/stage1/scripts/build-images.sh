@@ -1,9 +1,8 @@
 #!/bin/bash
-# Build all 6 Apollo11 service images and load into kind cluster
 set -e
 
 CLUSTER="${CLUSTER:-apollo11}"
-SERVICES="auth catalog circulation notification fines frontend"
+SERVICES="identity flight booking search notification frontend"
 REGISTRY="apollo11"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -25,13 +24,13 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "=== Building Apollo11 service images ==="
+echo "=== Building Apollo Airlines service images ==="
 
 for svc in $SERVICES; do
     echo "Building $svc..."
     docker build -t "${REGISTRY}/${svc}:latest" \
-        -f "${PROJECT_ROOT}/code/${svc}/Dockerfile" \
-        "${PROJECT_ROOT}/code/${svc}/"
+        -f "${PROJECT_ROOT}/launchpad/code/${svc}/Dockerfile" \
+        "${PROJECT_ROOT}/launchpad/code/${svc}/"
 done
 
 if [[ "$SKIP_KIND" == "true" ]]; then
@@ -45,7 +44,6 @@ if [[ "$SKIP_KIND" == "true" ]]; then
     exit 0
 fi
 
-# Check if kind cluster exists
 if ! kind get clusters | grep -q "^${CLUSTER}$"; then
     echo ""
     echo "kind cluster '${CLUSTER}' not found. Skipping image load."

@@ -1,19 +1,29 @@
-# Build stage
-FROM golang:1.21-alpine AS builder
+# Stage 1: Build React app
+FROM node:20-alpine AS builder
 
-WORKDIR /src
+WORKDIR /app
 
-COPY go.mod go.sum ./
-RUN go mod download
+COPY package.json ./
+RUN npm install
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/frontend .
+RUN npm run build
 
-# Runtime stage
-FROM scratch
+# Stage 2: Serve with NGINX
+FROM nginx:alpine
 
-COPY --from=builder /bin/frontend /bin/frontend
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+RUN cat > /etc/nginx/conf.d/default.conf << 'EOF'
+server {
+    listen 3000;
+    location / {
+        root /usr/share/nginx/html;
+        try_files $uri $uri/ /index.html;
+    }
+}
+EOF
 
 EXPOSE 3000
 
-ENTRYPOINT ["/bin/frontend"]
+CMD ["nginx", "-g", "daemon off;"]

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: notification
-  namespace: apollo11-apps
+  namespace: apollo-airlines-apps
 spec:
   replicas: 2
   selector:
@@ -19,22 +19,21 @@ spec:
           image: apollo11/notification:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8083
+            - containerPort: 8084
           env:
             - name: REDIS_URL
-              value: "redis://notification-redis.apollo11-infra.svc.cluster.local:6380"
-          envFrom:
-            - configMapRef:
-                name: apollo11-config
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8083
-            initialDelaySeconds: 5
-            periodSeconds: 5
+              value: "redis://redis.apollo-airlines-infra.svc.cluster.local:6379"
+            - name: PORT
+              value: "8084"
           livenessProbe:
             httpGet:
-              path: /health
-              port: 8083
+              path: /healthz
+              port: 8084
             initialDelaySeconds: 10
             periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8084
+            initialDelaySeconds: 5
+            periodSeconds: 5

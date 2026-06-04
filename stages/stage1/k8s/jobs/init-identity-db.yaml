@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-identity-db
+  namespace: apollo-airlines
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: init-identity-db
+    spec:
+      containers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h identity-db -U postgres; do echo "Waiting for identity-db..."; sleep 2; done
+              psql -h identity-db -U postgres -d identity -f /init/init.sql || true
+              echo "identity DB init done"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: init-script
+              mountPath: /init
+      volumes:
+        - name: init-script
+          configMap:
+            name: identity-init-script
+      restartPolicy: OnFailure

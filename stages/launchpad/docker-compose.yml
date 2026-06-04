@@ -4,119 +4,172 @@ services:
     build:
       context: ./code/frontend
       dockerfile: Dockerfile
-    develop:
-      watch:
-        - path: ./code/frontend
-          action: rebuild
     restart: always
     ports:
       - "3000:3000"
     environment:
       - PORT=3000
-      - AUTH_SERVICE_URL=http://auth:8080
-      - CATALOG_SERVICE_URL=http://catalog:8081
-      - CIRCULATION_SERVICE_URL=http://circulation:8082
-    depends_on:
-      auth:
-        condition: service_started
-      catalog:
-        condition: service_started
-      circulation:
-        condition: service_started
     networks:
-      - apollo-network
+      - apollo-airlines
 
-  # ─── Auth Service ───────────────────────────────────────────────────────────
-  auth:
+  # ─── Identity Service ───────────────────────────────────────────────────────
+  identity:
     build:
-      context: ./code/auth
+      context: ./code/identity
       dockerfile: Dockerfile
-    develop:
-      watch:
-        - path: ./code/auth
-          action: rebuild
     restart: always
     ports:
       - "8080:8080"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@auth-postgres:5432/auth
-      - JWT_SECRET=apollo11-dev-secret
+      - DATABASE_URL=postgresql://postgres:postgres@identity-db:5432/identity
+      - JWT_SECRET=apollo-airlines-dev-secret
       - PORT=8080
-    depends_on:
-      auth-postgres:
-        condition: service_healthy
     volumes:
       - type: bind
-        source: ./code/auth/init.sql
+        source: ./code/identity/init.sql
         target: /docker-entrypoint-initdb.d/init.sql
+    depends_on:
+      identity-db:
+        condition: service_healthy
     networks:
-      - apollo-network
+      - apollo-airlines
 
-  auth-postgres:
+  identity-db:
     image: postgres:15-alpine
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d auth"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d identity"]
       interval: 5s
       timeout: 5s
       retries: 10
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=auth
+      - POSTGRES_DB=identity
     volumes:
       - type: volume
-        source: auth-postgres-data
+        source: identity-db-data
         target: /var/lib/postgresql/data
     networks:
-      - apollo-network
+      - apollo-airlines
 
-  # ─── Catalog Service ────────────────────────────────────────────────────────
-  catalog:
+  # ─── Flight Service ─────────────────────────────────────────────────────────
+  flight:
     build:
-      context: ./code/catalog
+      context: ./code/flight
       dockerfile: Dockerfile
-    develop:
-      watch:
-        - path: ./code/catalog
-          action: rebuild
     restart: always
     ports:
       - "8081:8081"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@catalog-postgres:5432/catalog
-      - REDIS_URL=redis://catalog-redis:6379
+      - DATABASE_URL=postgresql://postgres:postgres@flight-db:5432/flight
+      - JWT_SECRET=apollo-airlines-dev-secret
       - PORT=8081
-    depends_on:
-      catalog-postgres:
-        condition: service_healthy
-      catalog-redis:
-        condition: service_healthy
     volumes:
       - type: bind
-        source: ./code/catalog/init.sql
+        source: ./code/flight/init.sql
         target: /docker-entrypoint-initdb.d/init.sql
+    depends_on:
+      flight-db:
+        condition: service_healthy
     networks:
-      - apollo-network
+      - apollo-airlines
 
-  catalog-postgres:
+  flight-db:
     image: postgres:15-alpine
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d catalog"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d flight"]
       interval: 5s
       timeout: 5s
       retries: 10
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=catalog
+      - POSTGRES_DB=flight
     volumes:
       - type: volume
-        source: catalog-postgres-data
+        source: flight-db-data
         target: /var/lib/postgresql/data
     networks:
-      - apollo-network
+      - apollo-airlines
 
-  catalog-redis:
+  # ─── Booking Service ────────────────────────────────────────────────────────
+  booking:
+    build:
+      context: ./code/booking
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8082:8082"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@booking-db:5432/booking
+      - FLIGHT_SERVICE_URL=http://flight:8081
+      - IDENTITY_SERVICE_URL=http://identity:8080
+      - NOTIFICATION_SERVICE_URL=http://notification:8084
+      - JWT_SECRET=apollo-airlines-dev-secret
+      - PORT=8082
+    volumes:
+      - type: bind
+        source: ./code/booking/init.sql
+        target: /docker-entrypoint-initdb.d/init.sql
+    depends_on:
+      booking-db:
+        condition: service_healthy
+    networks:
+      - apollo-airlines
+
+  booking-db:
+    image: postgres:15-alpine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d booking"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=booking
+    volumes:
+      - type: volume
+        source: booking-db-data
+        target: /var/lib/postgresql/data
+    networks:
+      - apollo-airlines
+
+  # ─── Search Service ─────────────────────────────────────────────────────────
+  search:
+    build:
+      context: ./code/search
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8083:8083"
+    environment:
+      - FLIGHT_SERVICE_URL=http://flight:8081
+      - PORT=8083
+    depends_on:
+      - flight
+    networks:
+      - apollo-airlines
+
+  # ─── Notification Service ────────────────────────────────────────────────────
+  notification:
+    build:
+      context: ./code/notification
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8084:8084"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - PORT=8084
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - apollo-airlines
+
+  # ─── Redis ──────────────────────────────────────────────────────────────────
+  redis:
     image: redis:7-alpine
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping"]
@@ -124,116 +177,14 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - apollo-network
-
-  # ─── Circulation Service ────────────────────────────────────────────────────
-  circulation:
-    build:
-      context: ./code/circulation
-      dockerfile: Dockerfile
-    develop:
-      watch:
-        - path: ./code/circulation
-          action: rebuild
-    restart: always
-    ports:
-      - "8082:8082"
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@circulation-postgres:5432/circulation
-      - AUTH_SERVICE_URL=http://auth:8080
-      - CATALOG_SERVICE_URL=http://catalog:8081
-      - NOTIFICATION_SERVICE_URL=http://notification:8083
-      - FINES_SERVICE_URL=http://fines:8084
-      - PORT=8082
-    depends_on:
-      circulation-postgres:
-        condition: service_healthy
-    volumes:
-      - type: bind
-        source: ./code/circulation/init.sql
-        target: /docker-entrypoint-initdb.d/init.sql
-    networks:
-      - apollo-network
-
-  circulation-postgres:
-    image: postgres:15-alpine
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d circulation"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=circulation
-    volumes:
-      - type: volume
-        source: circulation-postgres-data
-        target: /var/lib/postgresql/data
-    networks:
-      - apollo-network
-
-  # ─── Notification Service ────────────────────────────────────────────────────
-  notification:
-    build:
-      context: ./code/notification
-      dockerfile: Dockerfile
-    develop:
-      watch:
-        - path: ./code/notification
-          action: rebuild
-    restart: always
-    ports:
-      - "8083:8083"
-    environment:
-      - REDIS_URL=redis://notification-redis:6380
-      - PORT=8083
-    depends_on:
-      notification-redis:
-        condition: service_healthy
-    networks:
-      - apollo-network
-
-  notification-redis:
-    image: redis:7-alpine
-    command: redis-server --port 6380
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli -p 6380 ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    networks:
-      - apollo-network
-
-  # ─── Fines Service ───────────────────────────────────────────────────────────
-  fines:
-    build:
-      context: ./code/fines
-      dockerfile: Dockerfile
-    develop:
-      watch:
-        - path: ./code/fines
-          action: rebuild
-    restart: always
-    ports:
-      - "8084:8084"
-    environment:
-      - DATABASE_PATH=/data/fines.db
-      - PORT=8084
-    volumes:
-      - type: volume
-        source: fines-data
-        target: /data
-    networks:
-      - apollo-network
+      - apollo-airlines
 
 # ─── Volumes ─────────────────────────────────────────────────────────────────
 volumes:
-  auth-postgres-data:
-  catalog-postgres-data:
-  circulation-postgres-data:
-  fines-data:
+  identity-db-data:
+  flight-db-data:
+  booking-db-data:
 
 networks:
-  apollo-network:
+  apollo-airlines:
     driver: bridge

@@ -1,17 +1,35 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-commonLabels:
-  app.kubernetes.io/name: apollo11
+namespace: apollo-airlines
 
 resources:
-  - config/kustomization.yaml
-  - infra/postgres/kustomization.yaml
-  - infra/redis/kustomization.yaml
-  - apps/auth/kustomization.yaml
-  - apps/catalog/kustomization.yaml
-  - apps/circulation/kustomization.yaml
-  - apps/notification/kustomization.yaml
-  - apps/fines/kustomization.yaml
-  - apps/frontend/kustomization.yaml
-  - jobs/kustomization.yaml
+  - config/namespace.yaml
+  - config/configmap.yaml
+  - config/secrets.yaml
+  - infra/identity-db/identity-db-dep.yaml
+  - infra/identity-db/identity-db-svc.yaml
+  - infra/flight-db/flight-db-dep.yaml
+  - infra/flight-db/flight-db-svc.yaml
+  - infra/booking-db/booking-db-dep.yaml
+  - infra/booking-db/booking-db-svc.yaml
+  - infra/redis/redis-dep.yaml
+  - infra/redis/redis-svc.yaml
+  - apps/identity/identity-dep.yaml
+  - apps/identity/identity-svc.yaml
+  - apps/flight/flight-dep.yaml
+  - apps/flight/flight-svc.yaml
+  - apps/booking/booking-dep.yaml
+  - apps/booking/booking-svc.yaml
+  - apps/search/search-dep.yaml
+  - apps/search/search-svc.yaml
+  - apps/notification/notification-dep.yaml
+  - apps/notification/notification-svc.yaml
+  - apps/frontend/frontend-dep.yaml
+  - apps/frontend/frontend-svc.yaml
+  - jobs/identity-init-configmap.yaml
+  - jobs/init-identity-db.yaml
+  - jobs/flight-init-configmap.yaml
+  - jobs/init-flight-db.yaml
+  - jobs/booking-init-configmap.yaml
+  - jobs/init-booking-db.yaml

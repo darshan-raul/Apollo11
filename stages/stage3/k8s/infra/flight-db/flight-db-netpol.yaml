@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: flight-db-allow-apps
+  namespace: apollo-airlines-infra
+spec:
+  podSelector:
+    matchLabels:
+      app: flight-db
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              app.kubernetes.io/name: apollo-airlines
+              app.kubernetes.io/component: apps
+      ports:
+        - protocol: TCP
+          port: 5432
+  policyTypes:
+    - Ingress
