@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apollo11-infra
+  labels:
+    name: apollo11-infra
+    app.kubernetes.io/component: infrastructure
+    kubernetes.io/metadata.name: apollo11-infra
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apollo11-apps
+  labels:
+    name: apollo11-apps
+    app.kubernetes.io/component: applications
+    kubernetes.io/metadata.name: apollo11-apps
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apollo11-ui
+  labels:
+    name: apollo11-ui
+    app.kubernetes.io/component: ui
+    kubernetes.io/metadata.name: apollo11-ui

@@ -48,84 +48,111 @@ description: "Apollo11 app pods"
 value: 100000
 globalDefault: false
 
-{{- /* Auth init script ConfigMap */ -}}
+{{- /* Identity DB init script ConfigMap */ -}}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: auth-postgres-init-script
+  name: identity-db-init-script
   namespace: {{ .Values.namespaces.infra }}
 data:
   init.sql: |
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
     CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
-        full_name VARCHAR(255) NOT NULL,
-        role VARCHAR(50) NOT NULL DEFAULT 'patron',
-        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email            VARCHAR(255) UNIQUE NOT NULL,
+        password_hash    VARCHAR(255) NOT NULL,
+        first_name       VARCHAR(100),
+        last_name        VARCHAR(100),
+        passport_number  VARCHAR(50),
+        loyalty_tier     VARCHAR(20) DEFAULT 'STANDARD',
+        role             VARCHAR(20) DEFAULT 'PASSENGER',
+        is_active        BOOLEAN DEFAULT TRUE,
+        created_at       TIMESTAMP DEFAULT NOW(),
+        updated_at       TIMESTAMP DEFAULT NOW()
     );
-    CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+    INSERT INTO users (id, email, password_hash, first_name, last_name, passport_number, loyalty_tier, role, is_active)
+    VALUES
+        ('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'admin@apolloairlines.com', '$2b$12$LQv3c1yqBWVHxkdymLuf1H8h2P8V7R.lL2Z6F8xP3kJ5G9v0e1oL2', 'Admin', 'User', 'ADMIN123', 'PLATINUM', 'ADMIN', true),
+        ('b2c3d4e5-f6a7-8901-bcde-f12345678901', 'passenger@apolloairlines.com', '$2b$12$rY8xL9kJ6fLm2pQe4vN5uK1hB3aD0sTdW8cX2mZ7nO4pR1sU9tWv', 'Passenger', 'User', 'PASS123', 'STANDARD', 'PASSENGER', true)
+    ON CONFLICT (id) DO NOTHING;
 
-{{- /* Catalog init script ConfigMap */ -}}
+{{- /* Flight DB init script ConfigMap */ -}}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: catalog-postgres-init-script
+  name: flight-db-init-script
   namespace: {{ .Values.namespaces.infra }}
 data:
   init.sql: |
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-    CREATE TABLE IF NOT EXISTS authors (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        name VARCHAR(255) NOT NULL,
-        bio TEXT,
-        created_at TIMESTAMP DEFAULT NOW()
+    CREATE TABLE IF NOT EXISTS airports (
+        id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        code     VARCHAR(5) UNIQUE NOT NULL,
+        name     VARCHAR(100),
+        city     VARCHAR(100),
+        country  VARCHAR(100)
     );
-    CREATE TABLE IF NOT EXISTS books (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        isbn VARCHAR(20) UNIQUE NOT NULL,
-        title VARCHAR(255) NOT NULL,
-        author_id UUID REFERENCES authors(id),
-        genre VARCHAR(100),
-        copies_total INT DEFAULT 1,
-        copies_available INT DEFAULT 1,
-        created_at TIMESTAMP DEFAULT NOW()
+    CREATE TABLE IF NOT EXISTS flights (
+        id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        flight_number    VARCHAR(20) UNIQUE NOT NULL,
+        origin           VARCHAR(5) REFERENCES airports(code),
+        destination      VARCHAR(5) REFERENCES airports(code),
+        departure_time   TIMESTAMP NOT NULL,
+        arrival_time     TIMESTAMP NOT NULL,
+        total_capacity   INT NOT NULL,
+        available_seats  INT NOT NULL,
+        status           VARCHAR(20) DEFAULT 'SCHEDULED',
+        created_at       TIMESTAMP DEFAULT NOW(),
+        updated_at       TIMESTAMP DEFAULT NOW()
     );
-    CREATE INDEX IF NOT EXISTS idx_books_isbn ON books(isbn);
-    CREATE INDEX IF NOT EXISTS idx_books_author ON books(author_id);
+    INSERT INTO airports (id, code, name, city, country) VALUES
+        ('11111111-1111-1111-1111-111111111111', 'BOM', 'Chhatrapati Shivaji Maharaj International', 'Mumbai', 'India'),
+        ('22222222-2222-2222-2222-222222222222', 'DEL', 'Indira Gandhi International', 'New Delhi', 'India'),
+        ('33333333-3333-3333-3333-333333333333', 'SIN', 'Changi Airport', 'Singapore', 'Singapore'),
+        ('44444444-4444-4444-4444-444444444444', 'DXB', 'Dubai International', 'Dubai', 'UAE'),
+        ('55555555-5555-5555-5555-555555555555', 'LHR', 'Heathrow Airport', 'London', 'UK'),
+        ('66666666-6666-6666-6666-666666666666', 'JFK', 'John F. Kennedy International', 'New York', 'USA')
+    ON CONFLICT (code) DO NOTHING;
+    INSERT INTO flights (flight_number, origin, destination, departure_time, arrival_time, total_capacity, available_seats, status)
+    SELECT
+        f.flight_number,
+        f.origin,
+        f.destination,
+        (CURRENT_DATE + n * INTERVAL '1 day' + TIME f.dep_time)::timestamp,
+        (CURRENT_DATE + n * INTERVAL '1 day' + TIME f.arr_time)::timestamp,
+        f.total_capacity,
+        f.total_capacity,
+        'SCHEDULED'
+    FROM (VALUES
+        ('AA101', 'BOM', 'SIN', '08:00:00', '14:30:00', 180),
+        ('AA102', 'SIN', 'BOM', '20:00:00', '23:30:00', 180),
+        ('AA201', 'DEL', 'DXB', '09:30:00', '13:00:00', 220),
+        ('AA202', 'DXB', 'DEL', '22:00:00', '02:30:00', 220),
+        ('AA301', 'BOM', 'LHR', '01:00:00', '10:00:00', 300),
+        ('AA401', 'DEL', 'JFK', '02:00:00', '14:00:00', 280)
+    ) AS f(flight_number, origin, destination, dep_time, arr_time, total_capacity)
+    CROSS JOIN generate_series(0, 30) AS n
+    ON CONFLICT (flight_number) DO NOTHING;
 
-{{- /* Circulation init script ConfigMap */ -}}
+{{- /* Booking DB init script ConfigMap */ -}}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: circulation-postgres-init-script
+  name: booking-db-init-script
   namespace: {{ .Values.namespaces.infra }}
 data:
   init.sql: |
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-    CREATE TABLE IF NOT EXISTS loans (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        book_id UUID NOT NULL,
-        user_id UUID NOT NULL,
-        borrowed_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        due_date TIMESTAMP NOT NULL,
-        returned_at TIMESTAMP,
-        status VARCHAR(20) DEFAULT 'active',
-        created_at TIMESTAMP DEFAULT NOW()
+    CREATE TABLE IF NOT EXISTS bookings (
+        id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        booking_reference VARCHAR(20) UNIQUE NOT NULL,
+        user_id           UUID NOT NULL,
+        flight_id         UUID NOT NULL,
+        seat_number       VARCHAR(10),
+        status            VARCHAR(20) DEFAULT 'CONFIRMED',
+        created_at        TIMESTAMP DEFAULT NOW(),
+        updated_at        TIMESTAMP DEFAULT NOW()
     );
-    CREATE TABLE IF NOT EXISTS reservations (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        book_id UUID NOT NULL,
-        user_id UUID NOT NULL,
-        status VARCHAR(20) DEFAULT 'active',
-        expires_at TIMESTAMP NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-    );
-    CREATE INDEX IF NOT EXISTS idx_loans_user ON loans(user_id);
-    CREATE INDEX IF NOT EXISTS idx_loans_book ON loans(book_id);
-    CREATE INDEX IF NOT EXISTS idx_reservations_user ON reservations(user_id);

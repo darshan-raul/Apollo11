@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: booking-db-init
+  namespace: apollo11-infra
+spec:
+  template:
+    spec:
+      containers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - /bin/sh
+            - -c
+            - |
+              psql -h booking-db -U apollo11 -d booking_db -c "CREATE TABLE IF NOT EXISTS bookings (id UUID PRIMARY KEY, user_id UUID NOT NULL, flight_id UUID NOT NULL, seat_number VARCHAR(10), status VARCHAR(50) DEFAULT 'CONFIRMED', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+      restartPolicy: OnFailure

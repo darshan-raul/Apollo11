@@ -15,6 +15,11 @@ data:
   FLIGHT_DB: "flight"
   BOOKING_DB: "booking"
 
+  VITE_IDENTITY_URL: "http://identity:8080"
+  VITE_FLIGHT_URL: "http://flight:8081"
+  VITE_BOOKING_URL: "http://booking:8082"
+  VITE_SEARCH_URL: "http://search:8083"
+
   FLIGHT_SERVICE_URL: "http://flight:8081"
   IDENTITY_SERVICE_URL: "http://identity:8080"
   NOTIFICATION_SERVICE_URL: "http://notification:8084"

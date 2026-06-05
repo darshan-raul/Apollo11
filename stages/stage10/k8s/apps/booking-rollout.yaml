@@ -1,0 +1,107 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: booking
+  namespace: apollo11-apps
+spec:
+  replicas: 2
+  strategy:
+    canary:
+      steps:
+        - setWeight: 20
+        - pause: {}
+        - setWeight: 50
+        - pause: {}
+        - setWeight: 80
+        - pause: {}
+      canaryService: booking-canary
+      stableService: booking
+      trafficManagement:
+        - kubernetes:
+            - service: booking
+              port: 8082
+  selector:
+    matchLabels:
+      app: booking
+  template:
+    metadata:
+      labels:
+        app: booking
+        tier: backend
+      annotations:
+        config.linkerd.io/inject: enabled
+    spec:
+      containers:
+        - name: booking
+          image: apollo11/booking:latest
+          ports:
+            - containerPort: 8082
+          env:
+            - name: DATABASE_HOST
+              value: "booking-db.apollo11-infra.svc.cluster.local"
+            - name: DATABASE_PORT
+              value: "5432"
+            - name: DATABASE_NAME
+              value: "booking_db"
+            - name: DATABASE_USER
+              value: "apollo11"
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+            - name: IDENTITY_SERVICE_URL
+              value: "http://identity.apollo11-apps.svc.cluster.local:8080"
+            - name: FLIGHT_SERVICE_URL
+              value: "http://flight.apollo11-apps.svc.cluster.local:8081"
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification.apollo11-apps.svc.cluster.local:8084"
+            - name: LOG_LEVEL
+              value: "info"
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 8082
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 8082
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking
+  namespace: apollo11-apps
+spec:
+  ports:
+    - port: 8082
+      targetPort: 8082
+      name: http
+  selector:
+    app: booking
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-canary
+  namespace: apollo11-apps
+spec:
+  ports:
+    - port: 8082
+      targetPort: 8082
+      name: http
+  selector:
+    app: booking

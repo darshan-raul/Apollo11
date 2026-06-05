@@ -4,6 +4,11 @@ services:
     build:
       context: ./code/frontend
       dockerfile: Dockerfile
+      args:
+        VITE_IDENTITY_URL: http://identity:8080
+        VITE_FLIGHT_URL: http://flight:8081
+        VITE_BOOKING_URL: http://booking:8082
+        VITE_SEARCH_URL: http://search:8083
     restart: always
     ports:
       - "3000:3000"

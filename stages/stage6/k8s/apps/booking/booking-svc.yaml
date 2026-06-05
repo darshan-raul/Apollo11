@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking
+  namespace: apollo11-apps
+spec:
+  selector:
+    app: booking
+  ports:
+    - port: 8082
+      targetPort: 8082

@@ -1,19 +1,39 @@
-# Build stage
-FROM golang:1.21-alpine AS builder
+# Stage 1: Build React app
+FROM node:20-alpine AS builder
 
-WORKDIR /src
+ARG VITE_IDENTITY_URL
+ARG VITE_FLIGHT_URL
+ARG VITE_BOOKING_URL
+ARG VITE_SEARCH_URL
 
-COPY go.mod go.sum ./
-RUN go mod download
+ENV VITE_IDENTITY_URL=$VITE_IDENTITY_URL
+ENV VITE_FLIGHT_URL=$VITE_FLIGHT_URL
+ENV VITE_BOOKING_URL=$VITE_BOOKING_URL
+ENV VITE_SEARCH_URL=$VITE_SEARCH_URL
+
+WORKDIR /app
+
+COPY package.json ./
+RUN npm install
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/frontend .
+RUN npm run build
 
-# Runtime stage
-FROM scratch
+# Stage 2: Serve with NGINX
+FROM nginx:alpine
 
-COPY --from=builder /bin/frontend /bin/frontend
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+RUN cat > /etc/nginx/conf.d/default.conf << 'EOF'
+server {
+    listen 3000;
+    location / {
+        root /usr/share/nginx/html;
+        try_files $uri $uri/ /index.html;
+    }
+}
+EOF
 
 EXPOSE 3000
 
-ENTRYPOINT ["/bin/frontend"]
+CMD ["nginx", "-g", "daemon off;"]

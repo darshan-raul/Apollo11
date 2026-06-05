@@ -39,7 +39,7 @@ Apollo11 is a **13-phase Kubernetes/cloud-native learning bootstrap** using **Ap
 | booking | Go/Gin | 8082 | booking-db (PostgreSQL 15) | Reservations (flagship service) |
 | search | Go/Gin | 8083 | — | Optimised flight search (Redis from Stage 7) |
 | notification | Go/Gin | 8084 | — | Event fan-out (Redis from Launchpad) |
-| frontend | React/Node | 3000 | — | SPA, served via NGINX in Docker |
+| frontend | React/Tailwind | 3000 | — | SPA, served via NGINX in Docker |
 
 ### Infrastructure (4)
 
@@ -324,18 +324,18 @@ Apollo11/
 
 | Stage | Code additions |
 |---|---|
-| launchpad | Base stubs — all services return hardcoded JSON. `/healthz`, `/readyz`, `/metrics` implemented. Structured logging with trace_id/span_id fields. X-Request-ID propagation. |
+| launchpad | Base stubs — all services return hardcoded JSON. `/healthz`, `/readyz`, `/metrics` implemented. Structured logging with trace_id/span_id fields. X-Request-ID propagation. **Frontend upgraded to React/Tailwind CSS** (modern airline UI, VITE env vars for API URLs, multi-stage Docker build). |
 | stage1 | (no code change — k8s deployment layer only) |
 | stage2 | (no code change — networking layer only) |
 | stage3 | (no code change — storage layer only) |
-| stage4 | `/healthz/startup`, `/healthz/live`, `/healthz/ready` probe handlers. Graceful shutdown. |
+| stage4 | `/healthz/startup` probe handler (k8s sends requests during startup). `/healthz/live` probe handler (kubelet checks every 10s). `/healthz/ready` probe handler (kubelet checks before routing traffic). Graceful shutdown on SIGTERM. **Frontend: Go stub replaced with React/Tailwind app** (multi-stage Docker build). |
 | stage5 | (no code change — packaging layer only) |
-| stage6 | Full `/metrics` endpoint. OTEL SDK integrated. Trace context propagates through all calls. |
-| stage7 | Search Service: Redis caching. X-Cache: HIT/MISS header. Graceful shutdown fully implemented. |
-| stage8 | Non-root user in Dockerfiles. Service account annotations. |
+| stage6 | Full `/metrics` endpoint with all required Prometheus metrics. OTEL SDK integrated (traces + metrics). `trace_id` and `span_id` fields already present in logs since launchpad — now propagated through all calls. |
+| stage7 | Search Service: Redis caching (key: `search:{origin}:{destination}:{date}`, TTL 5min). `X-Cache: HIT/MISS` header on search responses. All Go services: graceful shutdown fully implemented. |
+| stage8 | Non-root user in all Dockerfiles. Service account annotations. Trace context propagation fully wired. |
 | stage9 | (no code change — cloud provisioning layer only) |
 | stage10 | (no code change — service mesh + progressive delivery only) |
-| stage11 | Flight status CRD operator. KEDA scaledobject. Graceful shutdown. |
+| stage11 | Flight status CRD operator. KEDA scaler trigger configured. Graceful shutdown fully implemented across all services. |
 
 ---
 
@@ -367,7 +367,7 @@ Needed but missing: kind, kustomize, k6, trivy, opa, kyverno, prometheus, grafan
 
 | Phase | Status | Details |
 |---|---|---|
-| Launchpad | 🔴 Pending | Apollo Airlines replacing library system |
+| Launchpad | ✅ Complete | React/Tailwind frontend, Docker Compose, 10 components |
 | Ignition | ✅ Complete | kind cluster, first Pod, kubectl basics |
 | Stage 1 | 🔴 Pending | Apollo Airlines k8s manifests |
 | Stage 2–11 | ⚠️ Pending | Scope defined in SPEC.md, not yet implemented |

@@ -1,5 +1,5 @@
 {{- /*
-Prod overlay — 3 replicas, resource limits enforced, pod disruption budget
+Prod overlay — 3 replicas, resource limits enforced
 */ -}}
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -10,11 +10,13 @@ commonLabels:
   environment: prod
 
 replicas:
-  - name: auth
+  - name: identity
     count: 3
-  - name: catalog
+  - name: flight
     count: 3
-  - name: circulation
+  - name: booking
+    count: 3
+  - name: search
     count: 3
   - name: notification
     count: 3
@@ -22,20 +24,83 @@ replicas:
     count: 3
 
 patches:
-  # Prod image tag
   - patch: |-
       apiVersion: apps/v1
       kind: Deployment
       metadata:
-        name: auth
+        name: identity
       spec:
         replicas: 3
       spec:
         template:
           spec:
             containers:
-              - name: auth
-                image: apollo11/auth:v1.0.0
+              - name: identity
+                image: apollo11/identity:v1.0.0
     target:
       kind: Deployment
-      name: auth
+      name: identity
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: flight
+      spec:
+        replicas: 3
+      spec:
+        template:
+          spec:
+            containers:
+              - name: flight
+                image: apollo11/flight:v1.0.0
+    target:
+      kind: Deployment
+      name: flight
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: booking
+      spec:
+        replicas: 3
+      spec:
+        template:
+          spec:
+            containers:
+              - name: booking
+                image: apollo11/booking:v1.0.0
+    target:
+      kind: Deployment
+      name: booking
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: search
+      spec:
+        replicas: 3
+      spec:
+        template:
+          spec:
+            containers:
+              - name: search
+                image: apollo11/search:v1.0.0
+    target:
+      kind: Deployment
+      name: search
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: notification
+      spec:
+        replicas: 3
+      spec:
+        template:
+          spec:
+            containers:
+              - name: notification
+                image: apollo11/notification:v1.0.0
+    target:
+      kind: Deployment
+      name: notification

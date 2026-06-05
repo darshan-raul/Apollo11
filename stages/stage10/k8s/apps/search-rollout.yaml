@@ -1,0 +1,94 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: search
+  namespace: apollo11-apps
+spec:
+  replicas: 2
+  strategy:
+    canary:
+      steps:
+        - setWeight: 20
+        - pause: {}
+        - setWeight: 50
+        - pause: {}
+        - setWeight: 80
+        - pause: {}
+      canaryService: search-canary
+      stableService: search
+      trafficManagement:
+        - kubernetes:
+            - service: search
+              port: 8083
+  selector:
+    matchLabels:
+      app: search
+  template:
+    metadata:
+      labels:
+        app: search
+        tier: backend
+      annotations:
+        config.linkerd.io/inject: enabled
+    spec:
+      containers:
+        - name: search
+          image: apollo11/search:latest
+          ports:
+            - containerPort: 8083
+          env:
+            - name: FLIGHT_SERVICE_URL
+              value: "http://flight.apollo11-apps.svc.cluster.local:8081"
+            - name: REDIS_HOST
+              value: "redis.apollo11-infra.svc.cluster.local"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: LOG_LEVEL
+              value: "info"
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 8083
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 8083
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search
+  namespace: apollo11-apps
+spec:
+  ports:
+    - port: 8083
+      targetPort: 8083
+      name: http
+  selector:
+    app: search
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search-canary
+  namespace: apollo11-apps
+spec:
+  ports:
+    - port: 8083
+      targetPort: 8083
+      name: http
+  selector:
+    app: search

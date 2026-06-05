@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-allow-apps
+  namespace: apollo11-infra
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: apollo11-apps
+      ports:
+        - protocol: TCP
+          port: 6379
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: apollo11-infra
+      ports:
+        - protocol: TCP
+          port: 6379
+  policyTypes:
+    - Ingress
+    - Egress

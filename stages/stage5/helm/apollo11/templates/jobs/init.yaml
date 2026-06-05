@@ -1,22 +1,23 @@
 {{- /*
 Init jobs — run once to seed databases
 */ -}}
+
+{{- /* Identity DB init job */ -}}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: init-auth-db
-  namespace: {{ .Values.namespaces.apps }}
+  name: init-identity-db
+  namespace: {{ .Values.namespaces.infra }}
   labels:
-    app: init-auth-db
+    app: init-identity-db
     stage: "5"
 spec:
   ttlSecondsAfterFinished: 300
   template:
     metadata:
       labels:
-        app: init-auth-db
+        app: init-identity-db
     spec:
-      serviceAccountName: {{ .Values.serviceAccounts.apps }}
       restartPolicy: OnFailure
       containers:
         - name: init
@@ -25,8 +26,8 @@ spec:
             - sh
             - -c
             - |
-              echo "Seeding auth DB..."
-              psql -h auth-postgres.{{ .Values.namespaces.infra }}.svc.cluster.local -U postgres -d auth -f /init/init.sql || echo "Auth DB init done or already exists"
+              echo "Seeding identity DB..."
+              psql -h identity-db.{{ .Values.namespaces.infra }}.svc.cluster.local -U postgres -d identity -f /init/init.sql || echo "Identity DB init done or already exists"
           env:
             - name: PGPASSWORD
               valueFrom:
@@ -39,25 +40,25 @@ spec:
       volumes:
         - name: init-script
           configMap:
-            name: auth-postgres-init-script
+            name: identity-db-init-script
 
+{{- /* Flight DB init job */ -}}
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: init-catalog-db
-  namespace: {{ .Values.namespaces.apps }}
+  name: init-flight-db
+  namespace: {{ .Values.namespaces.infra }}
   labels:
-    app: init-catalog-db
+    app: init-flight-db
     stage: "5"
 spec:
   ttlSecondsAfterFinished: 300
   template:
     metadata:
       labels:
-        app: init-catalog-db
+        app: init-flight-db
     spec:
-      serviceAccountName: {{ .Values.serviceAccounts.apps }}
       restartPolicy: OnFailure
       containers:
         - name: init
@@ -66,8 +67,8 @@ spec:
             - sh
             - -c
             - |
-              echo "Seeding catalog DB..."
-              psql -h catalog-postgres.{{ .Values.namespaces.infra }}.svc.cluster.local -U postgres -d catalog -f /init/init.sql || echo "Catalog DB init done or already exists"
+              echo "Seeding flight DB..."
+              psql -h flight-db.{{ .Values.namespaces.infra }}.svc.cluster.local -U postgres -d flight -f /init/init.sql || echo "Flight DB init done or already exists"
           env:
             - name: PGPASSWORD
               valueFrom:
@@ -80,25 +81,25 @@ spec:
       volumes:
         - name: init-script
           configMap:
-            name: catalog-postgres-init-script
+            name: flight-db-init-script
 
+{{- /* Booking DB init job */ -}}
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: init-circulation-db
-  namespace: {{ .Values.namespaces.apps }}
+  name: init-booking-db
+  namespace: {{ .Values.namespaces.infra }}
   labels:
-    app: init-circulation-db
+    app: init-booking-db
     stage: "5"
 spec:
   ttlSecondsAfterFinished: 300
   template:
     metadata:
       labels:
-        app: init-circulation-db
+        app: init-booking-db
     spec:
-      serviceAccountName: {{ .Values.serviceAccounts.apps }}
       restartPolicy: OnFailure
       containers:
         - name: init
@@ -107,8 +108,8 @@ spec:
             - sh
             - -c
             - |
-              echo "Seeding circulation DB..."
-              psql -h circulation-postgres.{{ .Values.namespaces.infra }}.svc.cluster.local -U postgres -d circulation -f /init/init.sql || echo "Circulation DB init done or already exists"
+              echo "Seeding booking DB..."
+              psql -h booking-db.{{ .Values.namespaces.infra }}.svc.cluster.local -U postgres -d booking -f /init/init.sql || echo "Booking DB init done or already exists"
           env:
             - name: PGPASSWORD
               valueFrom:
@@ -121,4 +122,4 @@ spec:
       volumes:
         - name: init-script
           configMap:
-            name: circulation-postgres-init-script
+            name: booking-db-init-script

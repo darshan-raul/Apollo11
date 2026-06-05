@@ -1,0 +1,72 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: flightstatuses.apollo11.io
+  labels:
+    app.kubernetes.io/name: flightstatus
+spec:
+  group: apollo11.io
+  names:
+    kind: FlightStatus
+    listKind: FlightStatusList
+    plural: flightstatuses
+    singular: flightstatus
+    shortNames:
+      - fs
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                flightId:
+                  type: string
+                status:
+                  type: string
+                  enum:
+                    - SCHEDULED
+                    - BOARDING
+                    - DELAYED
+                    - DEPARTED
+                    - ARRIVED
+                    - CANCELLED
+                delayMinutes:
+                  type: integer
+                  default: 0
+                reason:
+                  type: string
+              required:
+                - flightId
+                - status
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                lastUpdated:
+                  type: string
+              required:
+                - phase
+                - lastUpdated
+      additionalPrinterColumns:
+        - name: FlightId
+          type: string
+          jsonPath: .spec.flightId
+        - name: Status
+          type: string
+          jsonPath: .spec.status
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Delay
+          type: integer
+          jsonPath: .spec.delayMinutes
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp

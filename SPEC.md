@@ -36,7 +36,7 @@ The application is simple enough for beginners at Launchpad but complex enough t
 | booking | Reservations (flagship service) | Go/Gin | PostgreSQL |
 | search | Optimised flight search | Go/Gin | None (Redis from Stage 7) |
 | notification | Event fan-out | Go/Gin | None (Redis from Launchpad) |
-| frontend | React SPA | React/Node | None |
+| frontend | React SPA (Tailwind CSS) | None | Served via NGINX, VITE env vars for API URLs |
 
 Infrastructure (auto-provisioned via Docker Compose init or k8s StatefulSets):
 
@@ -811,7 +811,9 @@ No email is sent. No external system is called.
 
 ## Frontend
 
-Technology: React (served via NGINX in Docker — no npm required on host machine).
+Technology: React with Tailwind CSS (served via NGINX in Docker — no npm required on host machine).
+
+Build-time environment variables via VITE_IDENTITY_URL, VITE_FLIGHT_URL, VITE_BOOKING_URL, VITE_SEARCH_URL allow the same image to work in Docker Compose (localhost-based URLs) and Kubernetes (service-based URLs) environments.
 
 Keep intentionally simple. The frontend is not the subject of the course. It must be functional enough that learners feel they are working with a real application.
 
@@ -979,11 +981,11 @@ This single trace demonstrates:
 
 | Stage | Code Changes |
 |---|---|
-| Launchpad | Stub code — all services return hardcoded JSON. `/healthz`, `/readyz`, `/metrics` implemented. Structured logging with trace_id/span_id fields. |
+| Launchpad | Stub code — all services return hardcoded JSON. `/healthz`, `/readyz`, `/metrics` implemented. Structured logging with trace_id/span_id fields. Frontend: React/Tailwind CSS with VITE env var configuration for API URLs. |
 | Stage 1 | (no code change — k8s deployment layer only) |
 | Stage 2 | (no code change — networking layer only) |
 | Stage 3 | (no code change — storage layer only) |
-| Stage 4 | `/healthz/startup`, `/healthz/live`, `/healthz/ready` probe handlers. Graceful shutdown on SIGTERM. |
+| Stage 4 | `/healthz/startup`, `/healthz/live`, `/healthz/ready` probe handlers. Graceful shutdown on SIGTERM. Frontend: Go stub replaced with React/Tailwind app (multi-stage Docker build). |
 | Stage 5 | (no code change — packaging layer only) |
 | Stage 6 | Full `/metrics` endpoint (Prometheus format). OTEL SDK integrated (traces + metrics). Trace context propagates through all calls. |
 | Stage 7 | Search Service: Redis caching (key: `search:{origin}:{destination}:{date}`, TTL 5min). `X-Cache: HIT/MISS` header. |

@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backstage
+  namespace: apollo11-infra
+  labels:
+    app: backstage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backstage
+  template:
+    metadata:
+      labels:
+        app: backstage
+    spec:
+      containers:
+        - name: backstage
+          image: node:20-alpine
+          ports:
+            - containerPort: 7000
+              name: http
+          command:
+            - /bin/sh
+            - -c
+            - |
+              npm install -g @backstage/cli && yarn install && yarn start
+          env:
+            - name: APP_CONFIG_baseUrl
+              value: "http://localhost:7000"
+            - name: APP_CONFIG_backend_baseUrl
+              value: "http://localhost:7000"
+          envFrom:
+            - configMapRef:
+                name: backstage-app-config
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          volumeMounts:
+            - name: backstage-data
+              mountPath: /app
+      volumes:
+        - name: backstage-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backstage
+  namespace: apollo11-infra
+spec:
+  ports:
+    - port: 7000
+      targetPort: 7000
+      name: http
+  selector:
+    app: backstage

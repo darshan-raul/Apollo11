@@ -1,5 +1,5 @@
 {{- /*
-Dev overlay — small replicas, verbose logging
+Base overlay — common resources for all environments
 */ -}}
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -7,47 +7,69 @@ kind: Kustomization
 namespace: apollo11
 
 commonLabels:
-  environment: dev
+  app.kubernetes.io/name: apollo11
 
-replicas:
-  - name: auth
-    count: 1
-  - name: catalog
-    count: 1
-  - name: circulation
-    count: 1
-  - name: notification
-    count: 1
-  - name: frontend
-    count: 1
+resources:
+  - ../base/helm/apollo11
 
 patches:
-  # Dev image tag
   - patch: |-
       apiVersion: apps/v1
       kind: Deployment
       metadata:
-        name: auth
+        name: identity
       spec:
-        template:
-          spec:
-            containers:
-              - name: auth
-                image: apollo11/auth:dev
+        replicas: 1
     target:
       kind: Deployment
-      name: auth
+      name: identity
   - patch: |-
       apiVersion: apps/v1
       kind: Deployment
       metadata:
-        name: catalog
+        name: flight
       spec:
-        template:
-          spec:
-            containers:
-              - name: catalog
-                image: apollo11/catalog:dev
+        replicas: 1
     target:
       kind: Deployment
-      name: catalog
+      name: flight
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: booking
+      spec:
+        replicas: 1
+    target:
+      kind: Deployment
+      name: booking
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: search
+      spec:
+        replicas: 1
+    target:
+      kind: Deployment
+      name: search
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: notification
+      spec:
+        replicas: 1
+    target:
+      kind: Deployment
+      name: notification
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: frontend
+      spec:
+        replicas: 1
+    target:
+      kind: Deployment
+      name: frontend

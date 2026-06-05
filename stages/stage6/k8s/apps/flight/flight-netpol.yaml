@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: flight-allow-specific
+  namespace: apollo11-apps
+spec:
+  podSelector:
+    matchLabels:
+      app: flight
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: apollo11-apps
+      ports:
+        - protocol: TCP
+          port: 8081

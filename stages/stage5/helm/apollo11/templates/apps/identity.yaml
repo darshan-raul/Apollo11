@@ -1,0 +1,79 @@
+{{- /*
+Identity Deployment + Service
+*/ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    app: identity
+    stage: "5"
+spec:
+  replicas: {{ .Values.apps.identity.replicas }}
+  selector:
+    matchLabels:
+      app: identity
+  template:
+    metadata:
+      labels:
+        app: identity
+        stage: "5"
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.apps }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      containers:
+        - name: identity
+          image: {{ .Values.image.repository }}/identity:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.apps.identity.port }}
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:***@identity-db.{{ .Values.namespaces.infra }}.svc.cluster.local:5432/identity"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: JWT_SECRET
+            - name: PORT
+              value: "{{ .Values.apps.identity.port }}"
+          envFrom:
+            - configMapRef:
+                name: apollo11-config
+          startupProbe:
+            httpGet:
+              path: /healthz/startup
+              port: {{ .Values.apps.identity.port }}
+            initialDelaySeconds: 0
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: {{ .Values.apps.identity.port }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: {{ .Values.apps.identity.port }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.apps.identity.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity
+  namespace: {{ .Values.namespaces.apps }}
+spec:
+  selector:
+    app: identity
+  ports:
+    - port: 8080
+      targetPort: {{ .Values.apps.identity.port }}

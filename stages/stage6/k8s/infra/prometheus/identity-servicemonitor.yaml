@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: identity-monitor
+  namespace: apollo11-infra
+  labels:
+    app: identity
+spec:
+  selector:
+    matchLabels:
+      app: identity
+  endpoints:
+    - port: 8080
+      path: /metrics
+      interval: 15s

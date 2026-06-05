@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chaos-mesh
+  namespace: chaos-mesh
+  labels:
+    app: chaos-mesh
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chaos-mesh
+  template:
+    metadata:
+      labels:
+        app: chaos-mesh
+    spec:
+      containers:
+        - name: chaos-mesh
+          image: chaos-mesh/chaos-mesh:v2.1.0
+          ports:
+            - containerPort: 2333
+              name: grpc
+            - containerPort: 2334
+              name: http
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chaos-mesh
+  namespace: chaos-mesh
+spec:
+  ports:
+    - port: 2333
+      targetPort: 2333
+      name: grpc
+    - port: 2334
+      targetPort: 2334
+      name: http
+  selector:
+    app: chaos-mesh
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chaos-mesh
+  namespace: chaos-mesh
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: chaos-mesh
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/exec", "pods/log", "services", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["chaos-mesh.tekton.dev"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["批跑.tekton.dev"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["litmuschaos.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: chaos-mesh
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: chaos-mesh
+subjects:
+  - kind: ServiceAccount
+    name: chaos-mesh
+    namespace: chaos-mesh

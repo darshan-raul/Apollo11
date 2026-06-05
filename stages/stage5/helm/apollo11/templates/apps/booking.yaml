@@ -1,0 +1,85 @@
+{{- /*
+Booking Deployment + Service
+*/ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    app: booking
+    stage: "5"
+spec:
+  replicas: {{ .Values.apps.booking.replicas }}
+  selector:
+    matchLabels:
+      app: booking
+  template:
+    metadata:
+      labels:
+        app: booking
+        stage: "5"
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.apps }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      containers:
+        - name: booking
+          image: {{ .Values.image.repository }}/booking:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.apps.booking.port }}
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:***@booking-db.{{ .Values.namespaces.infra }}.svc.cluster.local:5432/booking"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: JWT_SECRET
+            - name: FLIGHT_SERVICE_URL
+              value: "http://flight.{{ .Values.namespaces.apps }}.svc.cluster.local:8081"
+            - name: IDENTITY_SERVICE_URL
+              value: "http://identity.{{ .Values.namespaces.apps }}.svc.cluster.local:8080"
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification.{{ .Values.namespaces.apps }}.svc.cluster.local:8084"
+            - name: PORT
+              value: "{{ .Values.apps.booking.port }}"
+          envFrom:
+            - configMapRef:
+                name: apollo11-config
+          startupProbe:
+            httpGet:
+              path: /healthz/startup
+              port: {{ .Values.apps.booking.port }}
+            initialDelaySeconds: 0
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: {{ .Values.apps.booking.port }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: {{ .Values.apps.booking.port }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.apps.booking.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking
+  namespace: {{ .Values.namespaces.apps }}
+spec:
+  selector:
+    app: booking
+  ports:
+    - port: 8082
+      targetPort: {{ .Values.apps.booking.port }}

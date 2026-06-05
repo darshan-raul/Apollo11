@@ -21,6 +21,30 @@ spec:
       priorityClassName: apollo11-app-critical
       terminationGracePeriodSeconds: 30
       containers:
+        - name: nginx
+          image: nginx:alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 8085
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 8085
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
         - name: frontend
           image: apollo11/frontend:latest
           imagePullPolicy: IfNotPresent
@@ -29,27 +53,18 @@ spec:
           envFrom:
             - configMapRef:
                 name: apollo11-config
-          startupProbe:
-            httpGet:
-              path: /healthz/startup
-              port: 3000
-            initialDelaySeconds: 0
-            periodSeconds: 5
-            failureThreshold: 6
           livenessProbe:
             httpGet:
               path: /healthz/live
-              port: 3000
-            initialDelaySeconds: 15
+              port: 8085
+            initialDelaySeconds: 5
             periodSeconds: 10
-            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /healthz/ready
-              port: 3000
+              port: 8085
             initialDelaySeconds: 5
             periodSeconds: 5
-            failureThreshold: 3
           resources:
             requests:
               cpu: 50m

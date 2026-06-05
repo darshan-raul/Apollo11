@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: search-allow-specific
+  namespace: apollo11-apps
+spec:
+  podSelector:
+    matchLabels:
+      app: search
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: apollo11-ui
+      ports:
+        - protocol: TCP
+          port: 8083
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: apollo11-infra
+        - namespaceSelector:
+            matchLabels:
+              name: apollo11-apps
+      ports:
+        - protocol: TCP
+          port: 6379
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 8081
+        - protocol: TCP
+          port: 8082
+        - protocol: TCP
+          port: 8083
+        - protocol: TCP
+          port: 8084

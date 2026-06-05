@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: identity-db
-  namespace: apollo-airlines-infra
+  namespace: apollo11-infra
 spec:
   serviceName: identity-db-headless
   replicas: 1
@@ -28,7 +28,7 @@ spec:
             - name: PGPASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: apollo-airlines-secrets
+                  name: apollo11-secrets
                   key: POSTGRES_PASSWORD
           volumeMounts:
             - name: init-script
@@ -46,7 +46,7 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: apollo-airlines-secrets
+                  name: apollo11-secrets
                   key: POSTGRES_PASSWORD
             - name: POSTGRES_DB
               value: "identity"

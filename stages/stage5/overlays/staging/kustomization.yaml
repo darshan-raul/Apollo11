@@ -10,11 +10,13 @@ commonLabels:
   environment: staging
 
 replicas:
-  - name: auth
+  - name: identity
     count: 2
-  - name: catalog
+  - name: flight
     count: 2
-  - name: circulation
+  - name: booking
+    count: 2
+  - name: search
     count: 2
   - name: notification
     count: 2

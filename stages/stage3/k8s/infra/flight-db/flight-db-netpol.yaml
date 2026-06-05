@@ -2,7 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: flight-db-allow-apps
-  namespace: apollo-airlines-infra
+  namespace: apollo11-infra
 spec:
   podSelector:
     matchLabels:

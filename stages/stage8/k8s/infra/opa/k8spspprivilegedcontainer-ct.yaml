@@ -1,0 +1,24 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8spspprivilegedcontainer
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPSPPrivilegedContainer
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8spspprivilegedcontainer
+
+        violation[msg] {
+            container := input.review.object.spec.containers[_]
+            container.securityContext.privileged == true
+            msg := sprintf("Container %v is privileged", [container.name])
+        }
+
+        violation[msg] {
+            container := input.review.object.spec.containers[_]
+            container.securityContext.privileged == false
+        }

@@ -1,26 +1,26 @@
 {{- /*
-PostgreSQL StatefulSets — auth, catalog, circulation
+PostgreSQL StatefulSets — identity-db, flight-db, booking-db
 */ -}}
 
-{{- /* Auth PostgreSQL */ -}}
+{{- /* Identity PostgreSQL */ -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: auth-postgres
+  name: identity-db
   namespace: {{ .Values.namespaces.infra }}
   labels:
-    app: auth-postgres
+    app: identity-db
     stage: "5"
 spec:
-  serviceName: auth-postgres-headless
-  replicas: {{ .Values.postgres.auth.replicas }}
+  serviceName: identity-db-headless
+  replicas: {{ .Values.postgres.identity.replicas }}
   selector:
     matchLabels:
-      app: auth-postgres
+      app: identity-db
   template:
     metadata:
       labels:
-        app: auth-postgres
+        app: identity-db
         stage: "5"
     spec:
       serviceAccountName: {{ .Values.serviceAccounts.infra }}
@@ -32,10 +32,10 @@ spec:
             - sh
             - -c
             - |
-              echo "Waiting for auth-postgres..."
-              until pg_isready -h auth-postgres -U postgres; do sleep 1; done
-              psql -h auth-postgres -U postgres -d auth -f /init/init.sql || true
-              echo "auth DB init complete"
+              echo "Waiting for identity-db..."
+              until pg_isready -h identity-db -U postgres; do sleep 1; done
+              psql -h identity-db -U postgres -d identity -f /init/init.sql || true
+              echo "identity DB init complete"
           env:
             - name: PGPASSWORD
               valueFrom:
@@ -66,7 +66,7 @@ spec:
                   name: apollo11-secrets
                   key: POSTGRES_PASSWORD
             - name: POSTGRES_DB
-              value: "auth"
+              value: "identity"
           volumeMounts:
             - name: pg-data
               mountPath: /var/lib/postgresql/data
@@ -85,11 +85,11 @@ spec:
             periodSeconds: 10
             failureThreshold: 3
           resources:
-            {{- toYaml .Values.postgres.auth.resources | nindent 10 }}
+            {{- toYaml .Values.postgres.identity.resources | nindent 10 }}
       volumes:
         - name: init-script
           configMap:
-            name: auth-postgres-init-script
+            name: identity-db-init-script
   volumeClaimTemplates:
     - metadata:
         name: pg-data
@@ -97,38 +97,38 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            storage: {{ .Values.postgres.auth.storage }}
+            storage: {{ .Values.postgres.identity.storage }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: auth-postgres-headless
+  name: identity-db-headless
   namespace: {{ .Values.namespaces.infra }}
 spec:
   clusterIP: None
   selector:
-    app: auth-postgres
+    app: identity-db
 
-{{- /* Catalog PostgreSQL */ -}}
+{{- /* Flight PostgreSQL */ -}}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: catalog-postgres
+  name: flight-db
   namespace: {{ .Values.namespaces.infra }}
   labels:
-    app: catalog-postgres
+    app: flight-db
     stage: "5"
 spec:
-  serviceName: catalog-postgres-headless
-  replicas: {{ .Values.postgres.catalog.replicas }}
+  serviceName: flight-db-headless
+  replicas: {{ .Values.postgres.flight.replicas }}
   selector:
     matchLabels:
-      app: catalog-postgres
+      app: flight-db
   template:
     metadata:
       labels:
-        app: catalog-postgres
+        app: flight-db
         stage: "5"
     spec:
       serviceAccountName: {{ .Values.serviceAccounts.infra }}
@@ -140,10 +140,10 @@ spec:
             - sh
             - -c
             - |
-              echo "Waiting for catalog-postgres..."
-              until pg_isready -h catalog-postgres -U postgres; do sleep 1; done
-              psql -h catalog-postgres -U postgres -d catalog -f /init/init.sql || true
-              echo "catalog DB init complete"
+              echo "Waiting for flight-db..."
+              until pg_isready -h flight-db -U postgres; do sleep 1; done
+              psql -h flight-db -U postgres -d flight -f /init/init.sql || true
+              echo "flight DB init complete"
           env:
             - name: PGPASSWORD
               valueFrom:
@@ -174,7 +174,7 @@ spec:
                   name: apollo11-secrets
                   key: POSTGRES_PASSWORD
             - name: POSTGRES_DB
-              value: "catalog"
+              value: "flight"
           volumeMounts:
             - name: pg-data
               mountPath: /var/lib/postgresql/data
@@ -193,11 +193,11 @@ spec:
             periodSeconds: 10
             failureThreshold: 3
           resources:
-            {{- toYaml .Values.postgres.catalog.resources | nindent 10 }}
+            {{- toYaml .Values.postgres.flight.resources | nindent 10 }}
       volumes:
         - name: init-script
           configMap:
-            name: catalog-postgres-init-script
+            name: flight-db-init-script
   volumeClaimTemplates:
     - metadata:
         name: pg-data
@@ -205,38 +205,38 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            storage: {{ .Values.postgres.catalog.storage }}
+            storage: {{ .Values.postgres.flight.storage }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: catalog-postgres-headless
+  name: flight-db-headless
   namespace: {{ .Values.namespaces.infra }}
 spec:
   clusterIP: None
   selector:
-    app: catalog-postgres
+    app: flight-db
 
-{{- /* Circulation PostgreSQL */ -}}
+{{- /* Booking PostgreSQL */ -}}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: circulation-postgres
+  name: booking-db
   namespace: {{ .Values.namespaces.infra }}
   labels:
-    app: circulation-postgres
+    app: booking-db
     stage: "5"
 spec:
-  serviceName: circulation-postgres-headless
-  replicas: {{ .Values.postgres.circulation.replicas }}
+  serviceName: booking-db-headless
+  replicas: {{ .Values.postgres.booking.replicas }}
   selector:
     matchLabels:
-      app: circulation-postgres
+      app: booking-db
   template:
     metadata:
       labels:
-        app: circulation-postgres
+        app: booking-db
         stage: "5"
     spec:
       serviceAccountName: {{ .Values.serviceAccounts.infra }}
@@ -248,10 +248,10 @@ spec:
             - sh
             - -c
             - |
-              echo "Waiting for circulation-postgres..."
-              until pg_isready -h circulation-postgres -U postgres; do sleep 1; done
-              psql -h circulation-postgres -U postgres -d circulation -f /init/init.sql || true
-              echo "circulation DB init complete"
+              echo "Waiting for booking-db..."
+              until pg_isready -h booking-db -U postgres; do sleep 1; done
+              psql -h booking-db -U postgres -d booking -f /init/init.sql || true
+              echo "booking DB init complete"
           env:
             - name: PGPASSWORD
               valueFrom:
@@ -282,7 +282,7 @@ spec:
                   name: apollo11-secrets
                   key: POSTGRES_PASSWORD
             - name: POSTGRES_DB
-              value: "circulation"
+              value: "booking"
           volumeMounts:
             - name: pg-data
               mountPath: /var/lib/postgresql/data
@@ -301,11 +301,11 @@ spec:
             periodSeconds: 10
             failureThreshold: 3
           resources:
-            {{- toYaml .Values.postgres.circulation.resources | nindent 10 }}
+            {{- toYaml .Values.postgres.booking.resources | nindent 10 }}
       volumes:
         - name: init-script
           configMap:
-            name: circulation-postgres-init-script
+            name: booking-db-init-script
   volumeClaimTemplates:
     - metadata:
         name: pg-data
@@ -313,14 +313,14 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            storage: {{ .Values.postgres.circulation.storage }}
+            storage: {{ .Values.postgres.booking.storage }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: circulation-postgres-headless
+  name: booking-db-headless
   namespace: {{ .Values.namespaces.infra }}
 spec:
   clusterIP: None
   selector:
-    app: circulation-postgres
+    app: booking-db

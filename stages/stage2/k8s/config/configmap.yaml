@@ -15,6 +15,11 @@ data:
   FLIGHT_DB: "flight"
   BOOKING_DB: "booking"
 
+  VITE_IDENTITY_URL: "http://identity.apollo-airlines-apps.svc.cluster.local:8080"
+  VITE_FLIGHT_URL: "http://flight.apollo-airlines-apps.svc.cluster.local:8081"
+  VITE_BOOKING_URL: "http://booking.apollo-airlines-apps.svc.cluster.local:8082"
+  VITE_SEARCH_URL: "http://search.apollo-airlines-apps.svc.cluster.local:8083"
+
   IDENTITY_SERVICE_URL: "http://identity.apollo-airlines-apps.svc.cluster.local:8080"
   FLIGHT_SERVICE_URL: "http://flight.apollo-airlines-apps.svc.cluster.local:8081"
   NOTIFICATION_SERVICE_URL: "http://notification.apollo-airlines-apps.svc.cluster.local:8084"

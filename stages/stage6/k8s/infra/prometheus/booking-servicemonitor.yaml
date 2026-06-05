@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: booking-monitor
+  namespace: apollo11-infra
+  labels:
+    app: booking
+spec:
+  selector:
+    matchLabels:
+      app: booking
+  endpoints:
+    - port: 8082
+      path: /metrics
+      interval: 15s

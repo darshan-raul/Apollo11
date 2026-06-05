@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: flight-monitor
+  namespace: apollo11-infra
+  labels:
+    app: flight
+spec:
+  selector:
+    matchLabels:
+      app: flight
+  endpoints:
+    - port: 8081
+      path: /metrics
+      interval: 15s

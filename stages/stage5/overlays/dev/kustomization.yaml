@@ -10,29 +10,29 @@ commonLabels:
   environment: dev
 
 replicas:
-  - name: auth
+  - name: identity
     count: 1
-  - name: catalog
+  - name: flight
     count: 1
-  - name: circulation
+  - name: booking
+    count: 1
+  - name: search
     count: 1
   - name: notification
-    count: 1
-  - name: fines
     count: 1
   - name: frontend
     count: 1
 
 images:
-  - name: apollo11/catalog
+  - name: apollo11/identity
     newTag: dev
-  - name: apollo11/auth
+  - name: apollo11/flight
     newTag: dev
-  - name: apollo11/circulation
+  - name: apollo11/booking
+    newTag: dev
+  - name: apollo11/search
     newTag: dev
   - name: apollo11/notification
-    newTag: dev
-  - name: apollo11/fines
     newTag: dev
   - name: apollo11/frontend
     newTag: dev

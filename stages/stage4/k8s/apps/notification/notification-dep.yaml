@@ -25,31 +25,31 @@ spec:
           image: apollo11/notification:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8083
+            - containerPort: 8084
           env:
             - name: REDIS_URL
-              value: "redis://notification-redis.apollo11-infra.svc.cluster.local:6380"
+              value: "redis://redis.apollo11-infra.svc.cluster.local:6379"
           envFrom:
             - configMapRef:
                 name: apollo11-config
           startupProbe:
             httpGet:
               path: /healthz/startup
-              port: 8083
+              port: 8084
             initialDelaySeconds: 0
             periodSeconds: 5
             failureThreshold: 6
           livenessProbe:
             httpGet:
               path: /healthz/live
-              port: 8083
+              port: 8084
             initialDelaySeconds: 15
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /healthz/ready
-              port: 8083
+              port: 8084
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 3

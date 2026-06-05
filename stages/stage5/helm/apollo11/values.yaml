@@ -1,34 +1,25 @@
 ---
-# Default values for apollo11 Helm chart
-
-# Global image settings
 image:
   repository: apollo11
   pullPolicy: IfNotPresent
   tag: latest
 
-# Namespace configuration
 namespace: apollo11
 
-# 3-namespace structure
 namespaces:
   infra: apollo11-infra
   apps: apollo11-apps
   ui: apollo11-ui
 
-# Service account names
 serviceAccounts:
   infra: apollo11-infra
   apps: apollo11-apps
   ui: apollo11-ui
 
-# Priority class (from priorityclass.yaml)
 priorityClassName: apollo11-app-critical
 
-# Image pull secret (for prod — leave empty for dev)
 imagePullSecrets: []
 
-# Ingress configuration
 ingress:
   enabled: true
   className: traefik
@@ -36,9 +27,8 @@ ingress:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web
 
-# PostgreSQL infra StatefulSets
 postgres:
-  auth:
+  identity:
     replicas: 1
     storage: 1Gi
     resources:
@@ -48,7 +38,7 @@ postgres:
       limits:
         cpu: 500m
         memory: 512Mi
-  catalog:
+  flight:
     replicas: 1
     storage: 1Gi
     resources:
@@ -58,7 +48,7 @@ postgres:
       limits:
         cpu: 500m
         memory: 512Mi
-  circulation:
+  booking:
     replicas: 1
     storage: 1Gi
     resources:
@@ -69,33 +59,19 @@ postgres:
         cpu: 500m
         memory: 512Mi
 
-# Redis infra StatefulSets
 redis:
-  catalog:
-    replicas: 1
-    storage: 1Gi
-    resources:
-      requests:
-        cpu: 20m
-        memory: 32Mi
-      limits:
-        cpu: 200m
-        memory: 128Mi
-  notification:
-    replicas: 1
-    storage: 1Gi
-    port: 6380
-    resources:
-      requests:
-        cpu: 20m
-        memory: 32Mi
-      limits:
-        cpu: 200m
-        memory: 128Mi
+  replicas: 1
+  storage: 1Gi
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
 
-# App service Deployments
 apps:
-  auth:
+  identity:
     replicas: 2
     port: 8080
     resources:
@@ -105,7 +81,7 @@ apps:
       limits:
         cpu: 500m
         memory: 256Mi
-  catalog:
+  flight:
     replicas: 2
     port: 8081
     resources:
@@ -115,7 +91,7 @@ apps:
       limits:
         cpu: 500m
         memory: 256Mi
-  circulation:
+  booking:
     replicas: 2
     port: 8082
     resources:
@@ -125,7 +101,7 @@ apps:
       limits:
         cpu: 500m
         memory: 256Mi
-  notification:
+  search:
     replicas: 2
     port: 8083
     resources:
@@ -135,10 +111,9 @@ apps:
       limits:
         cpu: 500m
         memory: 256Mi
-  fines:
-    replicas: 1
+  notification:
+    replicas: 2
     port: 8084
-    storage: 1Gi
     resources:
       requests:
         cpu: 50m
@@ -147,7 +122,6 @@ apps:
         cpu: 500m
         memory: 256Mi
 
-# UI (frontend) Deployment
 frontend:
   replicas: 2
   port: 3000
@@ -159,12 +133,10 @@ frontend:
       cpu: 200m
       memory: 128Mi
 
-# Termination grace periods
 terminationGracePeriod:
   apps: 30
   infra: 60
 
-# Probe configuration
 probes:
   startup:
     periodSeconds: 5

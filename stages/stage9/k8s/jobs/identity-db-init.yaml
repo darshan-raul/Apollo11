@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: identity-db-init
+  namespace: apollo11-infra
+spec:
+  template:
+    spec:
+      containers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - /bin/sh
+            - -c
+            - |
+              psql -h identity-db -U apollo11 -d identity_db -c "CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, role VARCHAR(50) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+      restartPolicy: OnFailure

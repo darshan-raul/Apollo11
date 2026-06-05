@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: apollo11-ui
+  labels:
+    app: frontend
+    tier: ui
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        tier: ui
+    spec:
+      containers:
+        - name: frontend
+          image: apollo11/frontend:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: IDENTITY_SERVICE_URL
+              value: "http://identity.apollo11-apps.svc.cluster.local:8080"
+            - name: FLIGHT_SERVICE_URL
+              value: "http://flight.apollo11-apps.svc.cluster.local:8081"
+            - name: BOOKING_SERVICE_URL
+              value: "http://booking.apollo11-apps.svc.cluster.local:8082"
+            - name: SEARCH_SERVICE_URL
+              value: "http://search.apollo11-apps.svc.cluster.local:8083"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: apollo11-ui
+spec:
+  ports:
+    - port: 80
+      targetPort: 3000
+      name: http
+  selector:
+    app: frontend

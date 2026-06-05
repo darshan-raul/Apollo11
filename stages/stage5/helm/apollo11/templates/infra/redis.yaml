@@ -1,30 +1,28 @@
 {{- /*
-Redis StatefulSets — catalog-redis, notification-redis
+Redis StatefulSet — single redis instance for Apollo Airlines
 */ -}}
-
-{{- /* Catalog Redis */ -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: catalog-redis
+  name: redis
   namespace: {{ .Values.namespaces.infra }}
   labels:
-    app: catalog-redis
+    app: redis
     stage: "5"
 spec:
-  serviceName: catalog-redis-headless
-  replicas: {{ .Values.redis.catalog.replicas }}
+  serviceName: redis-headless
+  replicas: {{ .Values.redis.replicas }}
   selector:
     matchLabels:
-      app: catalog-redis
+      app: redis
   template:
     metadata:
       labels:
-        app: catalog-redis
+        app: redis
         stage: "5"
     spec:
       serviceAccountName: {{ .Values.serviceAccounts.infra }}
-      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.infra }}
       containers:
         - name: redis
           image: redis:7-alpine
@@ -47,7 +45,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 3
           resources:
-            {{- toYaml .Values.redis.catalog.resources | nindent 10 }}
+            {{- toYaml .Values.redis.resources | nindent 10 }}
   volumeClaimTemplates:
     - metadata:
         name: redis-data
@@ -55,80 +53,27 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            storage: {{ .Values.redis.catalog.storage }}
+            storage: {{ .Values.redis.storage }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: catalog-redis-headless
+  name: redis-headless
   namespace: {{ .Values.namespaces.infra }}
 spec:
   clusterIP: None
   selector:
-    app: catalog-redis
-
-{{- /* Notification Redis (port 6380) */ -}}
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: notification-redis
-  namespace: {{ .Values.namespaces.infra }}
-  labels:
-    app: notification-redis
-    stage: "5"
-spec:
-  serviceName: notification-redis-headless
-  replicas: {{ .Values.redis.notification.replicas }}
-  selector:
-    matchLabels:
-      app: notification-redis
-  template:
-    metadata:
-      labels:
-        app: notification-redis
-        stage: "5"
-    spec:
-      serviceAccountName: {{ .Values.serviceAccounts.infra }}
-      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
-      containers:
-        - name: redis
-          image: redis:7-alpine
-          ports:
-            - containerPort: {{ .Values.redis.notification.port }}
-          command: ["redis-server"]
-          volumeMounts:
-            - name: redis-data
-              mountPath: /data
-          readinessProbe:
-            exec:
-              command: ["redis-cli", "-p", "{{ .Values.redis.notification.port }}", "ping"]
-            initialDelaySeconds: 5
-            periodSeconds: 5
-            failureThreshold: 3
-          livenessProbe:
-            exec:
-              command: ["redis-cli", "-p", "{{ .Values.redis.notification.port }}", "ping"]
-            initialDelaySeconds: 15
-            periodSeconds: 10
-            failureThreshold: 3
-          resources:
-            {{- toYaml .Values.redis.notification.resources | nindent 10 }}
-  volumeClaimTemplates:
-    - metadata:
-        name: redis-data
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: {{ .Values.redis.notification.storage }}
+    app: redis
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: notification-redis-headless
+  name: redis
   namespace: {{ .Values.namespaces.infra }}
 spec:
-  clusterIP: None
+  type: ClusterIP
   selector:
-    app: notification-redis
+    app: redis
+  ports:
+    - port: 6379
+      targetPort: 6379

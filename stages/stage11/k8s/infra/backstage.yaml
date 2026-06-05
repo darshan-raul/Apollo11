@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backstage-app-config
+  namespace: apollo11-infra
+data:
+  app-config.yaml: |
+    app:
+      title: Apollo11 Dev Portal
+      baseUrl: http://localhost:7000
+      support:
+        url: http://localhost:7000
+        email: support@apollo11.io
+
+    organization:
+      name: Apollo11 Airlines
+      title: Apollo11 Airlines Developer Portal
+
+    backend:
+      baseUrl: http://localhost:7000
+      listen:
+        port: 7000
+
+    lighthouse:
+      baseUrl: http://lighthouse-service.default.svc.cluster.local:7000
+
+    catalog:
+      import:
+        entityFilename: catalog-info.yaml
+        pullRequestBranchName: backstage-integration
+      rules:
+        - allow:
+            - Component
+            - API
+            - Resource
+            - System
+            - Domain
+            - Location
+            - Template

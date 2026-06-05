@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: flight-db-init
+  namespace: apollo11-infra
+spec:
+  template:
+    spec:
+      containers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - /bin/sh
+            - -c
+            - |
+              psql -h flight-db -U apollo11 -d flight_db -c "CREATE TABLE IF NOT EXISTS flights (id UUID PRIMARY KEY, flight_number VARCHAR(50) NOT NULL, origin VARCHAR(10) NOT NULL, destination VARCHAR(10) NOT NULL, departure_time TIMESTAMP NOT NULL, arrival_time TIMESTAMP NOT NULL, aircraft VARCHAR(100), status VARCHAR(50) DEFAULT 'SCHEDULED', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+      restartPolicy: OnFailure

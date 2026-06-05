@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-db
+  namespace: apollo11-infra
+  labels:
+    app: booking-db
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking-db
+  template:
+    metadata:
+      labels:
+        app: booking-db
+        tier: database
+      annotations:
+        config.linkerd.io/inject: enabled
+    spec:
+      containers:
+        - name: booking-db
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_USER
+              value: "apollo11"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "booking_db"
+          ports:
+            - containerPort: 5432
+              name: postgres
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: booking-db-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: booking-db-pvc
+  namespace: apollo11-infra
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-db
+  namespace: apollo11-infra
+spec:
+  clusterIP: None
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgres
+  selector:
+    app: booking-db

@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: apollo11-viewer-binding
+  namespace: apollo11-apps
+subjects:
+  - kind: ServiceAccount
+    name: apollo11-apps
+    namespace: apollo11-apps
+roleRef:
+  kind: Role
+  name: apollo11-viewer
+  apiGroup: rbac.authorization.k8s.io

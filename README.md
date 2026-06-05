@@ -19,7 +19,7 @@ A flight reservation platform with 6 services and 4 infrastructure components:
 | booking | Go/Gin | Reservations (flagship workflow) |
 | search | Go/Gin | Flight search |
 | notification | Go/Gin | Event fan-out |
-| frontend | React | SPA |
+| frontend | React (Tailwind CSS) | SPA |
 
 **Infrastructure:** 3 PostgreSQL databases + 1 Redis
 
@@ -45,6 +45,7 @@ Frontend → Booking Service → Identity Service
 * ☑️ Use **Docker Compose** to run and wire together multiple containers locally.
 * ☑️ Learn **YAML** syntax and structure as the foundation for Kubernetes configuration files.
 * ☑️ Verify all services have `/healthz`, `/readyz`, `/metrics` endpoints
+* ☑️ Modern React/Tailwind CSS frontend with environment-based API configuration
 
 ---
 
@@ -271,9 +272,9 @@ Each stage is independently runnable. Each stage's `code/` directory is a self-c
 
 | Stage | What Changes |
 |---|---|
-| Launchpad | Stub code with `/healthz`, `/readyz`, `/metrics`, structured logging |
+| Launchpad | Stub code with `/healthz`, `/readyz`, `/metrics`, structured logging. Frontend: React/Tailwind CSS with VITE env vars for API URLs. |
 | Stage 1–3 | k8s manifest evolution only, code unchanged |
-| Stage 4 | Add `/healthz/startup`, `/healthz/live`, `/healthz/ready` handlers + SIGTERM graceful shutdown |
+| Stage 4 | Add `/healthz/startup`, `/healthz/live`, `/healthz/ready` handlers + SIGTERM graceful shutdown. Frontend: Go stub replaced with React/Tailwind app. |
 | Stage 5 | Packaging only, code unchanged |
 | Stage 6 | Full `/metrics` + OTEL SDK integrated |
 | Stage 7 | Search gets Redis caching (X-Cache header) |
@@ -300,6 +301,7 @@ Each stage is independently runnable. Each stage's `code/` directory is a self-c
 
 | Category | Tools |
 |---|---|
+| Frontend | React, Tailwind CSS, Vite |
 | Backend API | Golang, Python |
 | SQL Database | PostgreSQL |
 | NoSQL Database | Redis |

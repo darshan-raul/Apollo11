@@ -31,7 +31,7 @@ spec:
             - containerPort: {{ .Values.apps.notification.port }}
           env:
             - name: REDIS_URL
-              value: "redis://notification-redis.{{ .Values.namespaces.infra }}.svc.cluster.local:6380"
+              value: "redis://redis.{{ .Values.namespaces.infra }}.svc.cluster.local:6379"
           envFrom:
             - configMapRef:
                 name: apollo11-config
@@ -68,5 +68,5 @@ spec:
   selector:
     app: notification
   ports:
-    - port: 8083
+    - port: 8084
       targetPort: {{ .Values.apps.notification.port }}

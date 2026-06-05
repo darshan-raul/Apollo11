@@ -1,0 +1,79 @@
+{{- /*
+Flight Deployment + Service
+*/ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flight
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    app: flight
+    stage: "5"
+spec:
+  replicas: {{ .Values.apps.flight.replicas }}
+  selector:
+    matchLabels:
+      app: flight
+  template:
+    metadata:
+      labels:
+        app: flight
+        stage: "5"
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.apps }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      containers:
+        - name: flight
+          image: {{ .Values.image.repository }}/flight:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.apps.flight.port }}
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:***@flight-db.{{ .Values.namespaces.infra }}.svc.cluster.local:5432/flight"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apollo11-secrets
+                  key: JWT_SECRET
+            - name: PORT
+              value: "{{ .Values.apps.flight.port }}"
+          envFrom:
+            - configMapRef:
+                name: apollo11-config
+          startupProbe:
+            httpGet:
+              path: /healthz/startup
+              port: {{ .Values.apps.flight.port }}
+            initialDelaySeconds: 0
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: {{ .Values.apps.flight.port }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: {{ .Values.apps.flight.port }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.apps.flight.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flight
+  namespace: {{ .Values.namespaces.apps }}
+spec:
+  selector:
+    app: flight
+  ports:
+    - port: 8081
+      targetPort: {{ .Values.apps.flight.port }}
