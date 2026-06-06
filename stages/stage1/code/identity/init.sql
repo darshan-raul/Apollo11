@@ -16,11 +16,11 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Seed users (passwords are bcrypt hashes of the plain text values below)
--- admin123  →  $2b$12$LQv3c1yqBWVHxkdymLuf1H8h2P8V7R.lL2Z6F8xP3kJ5G9v0e1oL2
--- pass123    →  $2b$12$rY8xL9kJ6fLm2pQe4vN5uK1hB3aD0sTdW8cX2mZ7nO4pR1sU9tWv
+-- admin123  →  $2b$12$kflBUCuS6Lagf1HRHUX8c.R68u93qgg7CRQ9exm8/x5IhA3s9eT3i
+-- pass123    →  $2b$12$YK9qpQ28hFUSICvWuiLm5OLjiibWe.zXXDsLiHl7YNrT6adahZ8Gu
 
 INSERT INTO users (id, email, password_hash, first_name, last_name, passport_number, loyalty_tier, role, is_active)
 VALUES
-    ('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'admin@apolloairlines.com', '$2b$12$LQv3c1yqBWVHxkdymLuf1H8h2P8V7R.lL2Z6F8xP3kJ5G9v0e1oL2', 'Admin', 'User', 'ADMIN123', 'PLATINUM', 'ADMIN', true),
-    ('b2c3d4e5-f6a7-8901-bcde-f12345678901', 'passenger@apolloairlines.com', '$2b$12$rY8xL9kJ6fLm2pQe4vN5uK1hB3aD0sTdW8cX2mZ7nO4pR1sU9tWv', 'Passenger', 'User', 'PASS123', 'STANDARD', 'PASSENGER', true)
+    ('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'admin@apolloairlines.com', '$2b$12$kflBUCuS6Lagf1HRHUX8c.R68u93qgg7CRQ9exm8/x5IhA3s9eT3i', 'Admin', 'User', 'ADMIN123', 'PLATINUM', 'ADMIN', true),
+    ('b2c3d4e5-f6a7-8901-bcde-f12345678901', 'passenger@apolloairlines.com', '$2b$12$YK9qpQ28hFUSICvWuiLm5OLjiibWe.zXXDsLiHl7YNrT6adahZ8Gu', 'Passenger', 'User', 'PASS123', 'STANDARD', 'PASSENGER', true)
 ON CONFLICT (id) DO NOTHING;

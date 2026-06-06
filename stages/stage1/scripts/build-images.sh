@@ -27,10 +27,21 @@ done
 echo "=== Building Apollo Airlines service images ==="
 
 for svc in $SERVICES; do
-    echo "Building $svc..."
-    docker build -t "${REGISTRY}/${svc}:latest" \
-        -f "${PROJECT_ROOT}/launchpad/code/${svc}/Dockerfile" \
-        "${PROJECT_ROOT}/launchpad/code/${svc}/"
+    if [[ "$svc" == "frontend" ]]; then
+        echo "Building $svc (with VITE_* build args for k8s)..."
+        docker build -t "${REGISTRY}/${svc}:latest" \
+            --build-arg VITE_IDENTITY_URL=http://identity:8080 \
+            --build-arg VITE_FLIGHT_URL=http://flight:8081 \
+            --build-arg VITE_BOOKING_URL=http://booking:8082 \
+            --build-arg VITE_SEARCH_URL=http://search:8083 \
+            -f "${PROJECT_ROOT}/launchpad/code/${svc}/Dockerfile" \
+            "${PROJECT_ROOT}/launchpad/code/${svc}/"
+    else
+        echo "Building $svc..."
+        docker build -t "${REGISTRY}/${svc}:latest" \
+            -f "${PROJECT_ROOT}/launchpad/code/${svc}/Dockerfile" \
+            "${PROJECT_ROOT}/launchpad/code/${svc}/"
+    fi
 done
 
 if [[ "$SKIP_KIND" == "true" ]]; then

@@ -5,10 +5,10 @@ services:
       context: ./code/frontend
       dockerfile: Dockerfile
       args:
-        VITE_IDENTITY_URL: http://identity:8080
-        VITE_FLIGHT_URL: http://flight:8081
-        VITE_BOOKING_URL: http://booking:8082
-        VITE_SEARCH_URL: http://search:8083
+        VITE_IDENTITY_URL: http://localhost:8080
+        VITE_FLIGHT_URL: http://localhost:8081
+        VITE_BOOKING_URL: http://localhost:8082
+        VITE_SEARCH_URL: http://localhost:8083
     restart: always
     ports:
       - "3000:3000"
@@ -29,10 +29,6 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@identity-db:5432/identity
       - JWT_SECRET=apollo-airlines-dev-secret
       - PORT=8080
-    volumes:
-      - type: bind
-        source: ./code/identity/init.sql
-        target: /docker-entrypoint-initdb.d/init.sql
     depends_on:
       identity-db:
         condition: service_healthy
@@ -54,6 +50,9 @@ services:
       - type: volume
         source: identity-db-data
         target: /var/lib/postgresql/data
+      - type: bind
+        source: ./code/identity/init.sql
+        target: /docker-entrypoint-initdb.d/init.sql
     networks:
       - apollo-airlines
 
@@ -181,6 +180,20 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - apollo-airlines
+
+  # ─── Dozzle Log Viewer ──────────────────────────────────────────────────────
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: always
+    ports:
+      - "8085:8080"
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
     networks:
       - apollo-airlines
 
