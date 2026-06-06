@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
@@ -7,6 +8,101 @@ import Search from './pages/Search'
 import Flights from './pages/Flights'
 import Bookings from './pages/Bookings'
 import BookingDetail from './pages/BookingDetail'
+import Logo from './components/Logo'
+
+function NavLink({ to, children }) {
+  const location = useLocation()
+  const isActive = location.pathname === to
+  return (
+    <Link
+      to={to}
+      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
+        ? 'text-white bg-white/10'
+        : 'text-slate-300 hover:text-white hover:bg-white/5'
+      }`}
+    >
+      {children}
+    </Link>
+  )
+}
+
+function Navbar({ token, mobileOpen, setMobileOpen, handleLogout }) {
+  return (
+    <nav className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-white/5">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="flex items-center justify-between h-16">
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <Logo size="sm" className="group-hover:scale-105 transition-transform" />
+            <span className="text-white font-semibold tracking-tight">Apollo Airlines</span>
+          </Link>
+
+          <div className="hidden md:flex items-center gap-1">
+            {token ? (
+              <>
+                <NavLink to="/dashboard">Dashboard</NavLink>
+                <NavLink to="/search">Search</NavLink>
+                <NavLink to="/bookings">Bookings</NavLink>
+                <button
+                  onClick={handleLogout}
+                  className="ml-3 inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-rose-500/20"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                  </svg>
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <NavLink to="/login">Sign In</NavLink>
+                <Link
+                  to="/register"
+                  className="ml-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-rose-600 text-white text-sm font-semibold rounded-lg hover:opacity-90 hover:-translate-y-0.5 transition-all duration-200 shadow-lg shadow-blue-500/20"
+                >
+                  Register
+                </Link>
+              </>
+            )}
+          </div>
+
+          <button
+            className="md:hidden p-2 text-slate-300 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {mobileOpen && (
+          <div className="md:hidden pb-4 pt-2 space-y-1 border-t border-white/5 animate-fade-in">
+            {token ? (
+              <>
+                <NavLink to="/dashboard"><span className="block py-2">Dashboard</span></NavLink>
+                <NavLink to="/search"><span className="block py-2">Search</span></NavLink>
+                <NavLink to="/bookings"><span className="block py-2">Bookings</span></NavLink>
+                <button onClick={handleLogout} className="w-full mt-3 py-2.5 bg-rose-600 text-white font-semibold rounded-lg">Logout</button>
+              </>
+            ) : (
+              <>
+                <NavLink to="/login"><span className="block py-2">Sign In</span></NavLink>
+                <Link to="/register" className="block mt-3 py-2.5 bg-gradient-to-r from-blue-600 to-rose-600 text-white font-semibold rounded-lg text-center">Register</Link>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </nav>
+  )
+}
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '')
@@ -24,82 +120,55 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-slate-50">
-        <nav className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-white/5">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="flex items-center justify-between h-16">
-              <a href="/" className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-rose-500 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-                  </svg>
-                </div>
-                <span className="text-white font-semibold">Apollo Airlines</span>
-              </a>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3500,
+          style: {
+            borderRadius: '12px',
+            background: '#fff',
+            color: '#1e293b',
+            boxShadow: '0 10px 30px -5px rgba(0,0,0,0.15), 0 4px 6px -2px rgba(0,0,0,0.05)',
+            border: '1px solid #e2e8f0',
+            padding: '12px 16px',
+            fontSize: '14px',
+            fontWeight: '500',
+          },
+          success: { iconTheme: { primary: '#3b82f6', secondary: '#fff' } },
+          error: { iconTheme: { primary: '#f43f5e', secondary: '#fff' } },
+        }}
+      />
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Navbar token={token} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} handleLogout={handleLogout} />
 
-              <div className="hidden md:flex items-center gap-1">
-                {token ? (
-                  <>
-                    <a href="/dashboard" className="px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg text-sm font-medium transition-all">Dashboard</a>
-                    <a href="/search" className="px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg text-sm font-medium transition-all">Search</a>
-                    <a href="/bookings" className="px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg text-sm font-medium transition-all">Bookings</a>
-                    <button onClick={handleLogout} className="ml-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold rounded-lg transition-all">Logout</button>
-                  </>
-                ) : (
-                  <>
-                    <a href="/login" className="px-4 py-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg text-sm font-medium transition-all">Sign In</a>
-                    <a href="/register" className="px-4 py-2 bg-gradient-to-r from-blue-600 to-rose-600 text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-all">Register</a>
-                  </>
-                )}
-              </div>
-
-              <button className="md:hidden p-2 text-slate-300 hover:text-white" onClick={() => setMobileOpen(!mobileOpen)}>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </div>
-
-            {mobileOpen && (
-              <div className="md:hidden pb-4 space-y-1">
-                {token ? (
-                  <>
-                    <a href="/dashboard" className="block py-2 px-3 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg">Dashboard</a>
-                    <a href="/search" className="block py-2 px-3 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg">Search</a>
-                    <a href="/bookings" className="block py-2 px-3 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg">Bookings</a>
-                    <button onClick={handleLogout} className="w-full mt-2 py-2 bg-rose-600 text-white font-semibold rounded-lg">Logout</button>
-                  </>
-                ) : (
-                  <>
-                    <a href="/login" className="block py-2 px-3 text-slate-300 hover:text-white hover:bg-white/5 rounded-lg">Sign In</a>
-                    <a href="/register" className="block py-2 px-3 bg-gradient-to-r from-blue-600 to-rose-600 text-white font-semibold rounded-lg text-center mt-2">Register</a>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </nav>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-10">
           <Routes>
             <Route path="/" element={token ? <Navigate to="/dashboard" /> : (
-              <div className="relative bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 rounded-2xl overflow-hidden py-20">
-                <div className="absolute inset-0">
-                  <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
-                  <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-rose-500/20 rounded-full blur-3xl" />
+              <div className="relative bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 rounded-2xl overflow-hidden py-16 sm:py-24 animate-fade-in">
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
+                  <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-rose-500/20 rounded-full blur-3xl animate-pulse" />
                 </div>
-                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 text-center">
-                  <h1 className="text-5xl sm:text-6xl font-bold text-white mb-6 tracking-tight">
+                <div className="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
+                  <div className="inline-flex mb-6 animate-scale-in">
+                    <Logo size="xl" />
+                  </div>
+                  <h1 className="text-4xl sm:text-6xl font-bold text-white mb-6 tracking-tight animate-fade-in-up">
                     Fly Beyond <span className="bg-gradient-to-r from-blue-400 to-rose-400 bg-clip-text text-transparent">Horizons</span>
                   </h1>
-                  <p className="text-xl text-slate-400 mb-10 max-w-2xl mx-auto">Experience premium air travel with seamless booking and exceptional service across global destinations.</p>
-                  <a href="/search" className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-rose-600 text-white px-8 py-4 rounded-xl font-semibold hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-lg shadow-blue-500/30">
-                    Book Your Flight
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  <p className="text-lg sm:text-xl text-slate-400 mb-10 max-w-2xl mx-auto animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                    Experience premium air travel with seamless booking and exceptional service across global destinations.
+                  </p>
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-rose-600 text-white px-8 py-4 rounded-xl font-semibold hover:opacity-90 hover:-translate-y-0.5 transition-all duration-200 shadow-lg shadow-blue-500/30 animate-fade-in-up"
+                    style={{ animationDelay: '200ms' }}
+                  >
+                    Get started
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                     </svg>
-                  </a>
+                  </Link>
                 </div>
               </div>
             )} />
@@ -111,7 +180,17 @@ function App() {
             <Route path="/bookings" element={token ? <Bookings /> : <Navigate to="/login" />} />
             <Route path="/bookings/:id" element={token ? <BookingDetail /> : <Navigate to="/login" />} />
           </Routes>
-        </div>
+        </main>
+
+        <footer className="border-t border-slate-200 bg-white mt-auto">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Logo size="sm" />
+              <span className="text-sm font-semibold text-slate-700">Apollo Airlines</span>
+            </div>
+            <p className="text-xs text-slate-500">© {new Date().getFullYear()} Apollo Airlines. All rights reserved.</p>
+          </div>
+        </footer>
       </div>
     </BrowserRouter>
   )
