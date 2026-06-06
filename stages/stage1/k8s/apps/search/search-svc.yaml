@@ -4,8 +4,10 @@ metadata:
   name: search
   namespace: apollo-airlines
 spec:
+  type: NodePort
   selector:
     app: search
   ports:
     - port: 8083
       targetPort: 8083
+      nodePort: 30083

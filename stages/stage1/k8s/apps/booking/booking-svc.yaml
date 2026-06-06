@@ -4,8 +4,10 @@ metadata:
   name: booking
   namespace: apollo-airlines
 spec:
+  type: NodePort
   selector:
     app: booking
   ports:
     - port: 8082
       targetPort: 8082
+      nodePort: 30082

@@ -21,7 +21,7 @@ spec:
             - containerPort: 8081
           env:
             - name: DATABASE_URL
-              value: "postgresql://postgres:postgres@flight-db:5432/flight"
+              value: "postgresql://postgres:postgres@flight-db:5432/flight?sslmode=disable"
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:

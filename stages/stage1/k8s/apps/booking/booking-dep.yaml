@@ -21,7 +21,7 @@ spec:
             - containerPort: 8082
           env:
             - name: DATABASE_URL
-              value: "postgresql://postgres:postgres@booking-db:5432/booking"
+              value: "postgresql://postgres:postgres@booking-db:5432/booking?sslmode=disable"
             - name: FLIGHT_SERVICE_URL
               value: "http://flight:8081"
             - name: IDENTITY_SERVICE_URL

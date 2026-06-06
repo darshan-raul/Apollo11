@@ -21,7 +21,7 @@ spec:
             - containerPort: 8080
           env:
             - name: DATABASE_URL
-              value: "postgresql://postgres:postgres@identity-db:5432/identity"
+              value: "postgresql://postgres:postgres@identity-db:5432/identity?sslmode=disable"
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:

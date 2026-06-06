@@ -6,7 +6,6 @@ SERVICES="identity flight booking search notification frontend"
 REGISTRY="apollo11"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-LAUNCHPAD_ROOT="$(dirname "$PROJECT_ROOT")/launchpad"
 
 usage() {
     echo "Usage: $0 [--cluster NAME] [--skip-kind-load]"
@@ -29,19 +28,19 @@ echo "=== Building Apollo Airlines service images ==="
 
 for svc in $SERVICES; do
     if [[ "$svc" == "frontend" ]]; then
-        echo "Building $svc (with VITE_* build args for k8s)..."
+        echo "Building $svc (NodePort URLs for kind)..."
         docker build -t "${REGISTRY}/${svc}:latest" \
-            --build-arg VITE_IDENTITY_URL=http://identity:8080 \
-            --build-arg VITE_FLIGHT_URL=http://flight:8081 \
-            --build-arg VITE_BOOKING_URL=http://booking:8082 \
-            --build-arg VITE_SEARCH_URL=http://search:8083 \
-            -f "${LAUNCHPAD_ROOT}/code/${svc}/Dockerfile" \
-            "${LAUNCHPAD_ROOT}/code/${svc}/"
+            --build-arg VITE_IDENTITY_URL=http://localhost:30080 \
+            --build-arg VITE_FLIGHT_URL=http://localhost:30081 \
+            --build-arg VITE_BOOKING_URL=http://localhost:30082 \
+            --build-arg VITE_SEARCH_URL=http://localhost:30083 \
+            -f "${PROJECT_ROOT}/code/${svc}/Dockerfile" \
+            "${PROJECT_ROOT}/code/${svc}/"
     else
         echo "Building $svc..."
         docker build -t "${REGISTRY}/${svc}:latest" \
-            -f "${LAUNCHPAD_ROOT}/code/${svc}/Dockerfile" \
-            "${LAUNCHPAD_ROOT}/code/${svc}/"
+            -f "${PROJECT_ROOT}/code/${svc}/Dockerfile" \
+            "${PROJECT_ROOT}/code/${svc}/"
     fi
 done
 

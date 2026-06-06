@@ -151,7 +151,7 @@ Apply order: namespace → config → secrets → infra → apps → jobs
 ### 1. Build the container images
 
 ```bash
-cd /home/darshan/projects/Apollo11/stages/stage1
+cd stages/stage1
 ./scripts/build-images.sh
 ```
 

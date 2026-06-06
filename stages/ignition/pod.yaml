@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: apollo-shell
+  labels:
+    app: shell
+    stage: ignition
+spec:
+  containers:
+    - name: shell
+      image: alpine:latest
+      command: ["sh", "-c", "echo 'hello from k8s' && sleep 3600"]
