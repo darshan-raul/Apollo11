@@ -2,9 +2,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - init-auth-db.yaml
-  - init-catalog-db.yaml
-  - init-circulation-db.yaml
-  - auth-init-configmap.yaml
-  - catalog-init-configmap.yaml
-  - circulation-init-configmap.yaml
+  - identity-init-configmap.yaml
+  - init-identity-db.yaml
+  - flight-init-configmap.yaml
+  - init-flight-db.yaml
+  - booking-init-configmap.yaml
+  - init-booking-db.yaml

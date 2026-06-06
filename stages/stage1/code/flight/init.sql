@@ -39,10 +39,10 @@ ON CONFLICT (code) DO NOTHING;
 -- AA301: BOM→LHR 01:00, AA401: DEL→JFK 02:00
 INSERT INTO flights (id, flight_number, origin, destination, departure_time, arrival_time, total_capacity, available_seats, status) VALUES
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'AA101', 'BOM', 'SIN', (CURRENT_DATE + INTERVAL '0 hour' + TIME '08:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '14:30:00')::timestamp, 180, 180, 'SCHEDULED'),
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaabbb', 'AA102', 'SIN', 'BOM', (CURRENT_DATE + INTERVAL '0 hour' + TIME '20:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '23:30:00')::timestamp, 180, 180, 'SCHEDULED'),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb', 'AA201', 'DEL', 'DXB', (CURRENT_DATE + INTERVAL '0 hour' + TIME '09:30:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '13:00:00')::timestamp, 220, 220, 'SCHEDULED'),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbcc', 'AA202', 'DXB', 'DEL', (CURRENT_DATE + INTERVAL '0 hour' + TIME '22:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '02:30:00')::timestamp, 220, 220, 'SCHEDULED'),
-    ('cccccccc-cccc-cccc-cccc-cccccccccc', 'AA301', 'BOM', 'LHR', (CURRENT_DATE + INTERVAL '0 hour' + TIME '01:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '10:00:00')::timestamp, 300, 300, 'SCHEDULED'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaabb', 'AA102', 'SIN', 'BOM', (CURRENT_DATE + INTERVAL '0 hour' + TIME '20:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '23:30:00')::timestamp, 180, 180, 'SCHEDULED'),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'AA201', 'DEL', 'DXB', (CURRENT_DATE + INTERVAL '0 hour' + TIME '09:30:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '13:00:00')::timestamp, 220, 220, 'SCHEDULED'),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbcc', 'AA202', 'DXB', 'DEL', (CURRENT_DATE + INTERVAL '0 hour' + TIME '22:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '02:30:00')::timestamp, 220, 220, 'SCHEDULED'),
+    ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'AA301', 'BOM', 'LHR', (CURRENT_DATE + INTERVAL '0 hour' + TIME '01:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '10:00:00')::timestamp, 300, 300, 'SCHEDULED'),
     ('cccccccc-cccc-cccc-cccc-ccccccccccdd', 'AA401', 'DEL', 'JFK', (CURRENT_DATE + INTERVAL '0 hour' + TIME '02:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '14:00:00')::timestamp, 280, 280, 'SCHEDULED')
 ON CONFLICT (flight_number) DO NOTHING;
 

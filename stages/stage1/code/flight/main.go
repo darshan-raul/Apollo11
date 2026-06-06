@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -73,19 +74,35 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
+func addSSLMode(dsn string) string {
+	if strings.Contains(dsn, "sslmode=") {
+		return dsn
+	}
+	return dsn + "?sslmode=disable"
+}
+
 func initDB() {
-	dbURL := getEnv("DATABASE_URL", "postgresql://postgres:postgres@flight-db:5432/flight")
+	dbURL := getEnv("DATABASE_URL", "postgresql://postgres:***@flight-db:5432/flight")
 	var err error
-	db, err = sql.Open("postgres", dbURL)
+	db, err = sql.Open("postgres", addSSLMode(dbURL))
 	if err != nil {
 		logJSON("ERROR", "flight-service", fmt.Sprintf("Failed to open DB: %v", err), "", "", nil)
+		return
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
 	for {
-		err = db.Ping()
+		err = db.PingContext(ctx)
 		if err == nil {
 			break
 		}
-		time.Sleep(1 * time.Second)
+		logJSON("ERROR", "flight-service", fmt.Sprintf("DB not ready (will retry): %v", err), "", "", nil)
+		select {
+		case <-ctx.Done():
+			logJSON("ERROR", "flight-service", fmt.Sprintf("DB connection timeout: %v", ctx.Err()), "", "", nil)
+			return
+		case <-time.After(2 * time.Second):
+		}
 	}
 	logJSON("INFO", "flight-service", "Connected to flight DB", "", "", nil)
 }
@@ -99,6 +116,18 @@ func main() {
 	defer db.Close()
 
 	r := gin.Default()
+
+	r.Use(func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
+		c.Header("Access-Control-Expose-Headers", "X-Request-ID")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
 
 	r.Use(func(c *gin.Context) {
 		requestID := c.GetHeader("X-Request-ID")
@@ -333,8 +362,11 @@ func main() {
 	})
 
 	port := getEnv("PORT", "8081")
-	log.Printf("Flight service starting on :%s", port)
-	r.Run(":" + port)
+	fmt.Printf("Flight service starting on 0.0.0.0:%s\n", port)
+	httpServer := &http.Server{Addr: fmt.Sprintf("0.0.0.0:%s", port), Handler: r}
+	if err := httpServer.ListenAndServe(); err != nil {
+		fmt.Printf("Server error: %v\n", err)
+	}
 }
 
 func authRequired(requiredRole string) gin.HandlerFunc {

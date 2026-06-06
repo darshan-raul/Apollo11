@@ -10,6 +10,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, HTTPException, Header, Depends, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from passlib.context import CryptContext
 from jose import jwt, JWTError
@@ -54,13 +55,18 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="identity-service", version="1.0.0", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 class RegisterRequest(BaseModel):
     email: str
     password: str
-    firstName: str
-    lastName: str
-    passportNumber: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -148,10 +154,10 @@ async def register(body: RegisterRequest, request: Request):
             raise HTTPException(status_code=409, detail="Email already registered")
         password_hash = pwd_context.hash(body.password)
         cur.execute(
-            """INSERT INTO users (email, password_hash, first_name, last_name, passport_number)
-               VALUES (%s, %s, %s, %s, %s)
-               RETURNING id, email, first_name, last_name, loyalty_tier, role""",
-            (body.email, password_hash, body.firstName, body.lastName, body.passportNumber)
+            """INSERT INTO users (email, password_hash)
+               VALUES (%s, %s)
+               RETURNING id, email, loyalty_tier, role""",
+            (body.email, password_hash)
         )
         user = cur.fetchone()
         conn.commit()
@@ -161,8 +167,6 @@ async def register(body: RegisterRequest, request: Request):
         return {
             "id": str(user["id"]),
             "email": user["email"],
-            "firstName": user["first_name"],
-            "lastName": user["last_name"],
             "loyaltyTier": user["loyalty_tier"],
             "role": user["role"]
         }
@@ -300,6 +304,39 @@ async def get_user_by_id(user_id: str, authorization: str = Header(None), reques
         "passportNumber": user["passport_number"],
         "loyaltyTier": user["loyalty_tier"],
         "role": user["role"]
+    }
+
+
+@app.get("/api/admin/users")
+async def get_all_users(authorization: str = Header(None), request: Request = None):
+    trace_id = getattr(request.state, "request_id", "")
+    payload = verify_jwt(authorization)
+    if payload.get("role") != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute(
+        """SELECT id, email, first_name, last_name, loyalty_tier, role, is_active, created_at
+           FROM users ORDER BY created_at DESC"""
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    log_json("INFO", "identity-service", "Admin fetched all users", trace_id=trace_id, count=len(rows))
+    return {
+        "users": [
+            {
+                "id": str(u["id"]),
+                "email": u["email"],
+                "firstName": u["first_name"],
+                "lastName": u["last_name"],
+                "loyaltyTier": u["loyalty_tier"],
+                "role": u["role"],
+                "isActive": u["is_active"],
+                "createdAt": u["created_at"].isoformat() + "Z" if u["created_at"] else None,
+            }
+            for u in rows
+        ]
     }
 
 

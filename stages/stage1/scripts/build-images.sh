@@ -6,6 +6,7 @@ SERVICES="identity flight booking search notification frontend"
 REGISTRY="apollo11"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+LAUNCHPAD_ROOT="$(dirname "$PROJECT_ROOT")/launchpad"
 
 usage() {
     echo "Usage: $0 [--cluster NAME] [--skip-kind-load]"
@@ -34,13 +35,13 @@ for svc in $SERVICES; do
             --build-arg VITE_FLIGHT_URL=http://flight:8081 \
             --build-arg VITE_BOOKING_URL=http://booking:8082 \
             --build-arg VITE_SEARCH_URL=http://search:8083 \
-            -f "${PROJECT_ROOT}/launchpad/code/${svc}/Dockerfile" \
-            "${PROJECT_ROOT}/launchpad/code/${svc}/"
+            -f "${LAUNCHPAD_ROOT}/code/${svc}/Dockerfile" \
+            "${LAUNCHPAD_ROOT}/code/${svc}/"
     else
         echo "Building $svc..."
         docker build -t "${REGISTRY}/${svc}:latest" \
-            -f "${PROJECT_ROOT}/launchpad/code/${svc}/Dockerfile" \
-            "${PROJECT_ROOT}/launchpad/code/${svc}/"
+            -f "${LAUNCHPAD_ROOT}/code/${svc}/Dockerfile" \
+            "${LAUNCHPAD_ROOT}/code/${svc}/"
     fi
 done
 

@@ -2,7 +2,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - catalog-redis-dep.yaml
-  - catalog-redis-svc.yaml
-  - notification-redis-dep.yaml
-  - notification-redis-svc.yaml
+  - redis-dep.yaml
+  - redis-svc.yaml
