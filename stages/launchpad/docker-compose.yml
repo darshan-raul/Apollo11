@@ -72,6 +72,7 @@ services:
       - type: bind
         source: ./code/flight/init.sql
         target: /docker-entrypoint-initdb.d/init.sql
+    command: sh -c 'DATABASE_URL="postgresql://postgres:postgres@flight-db:5432/flight" /app/flight-service'
     depends_on:
       flight-db:
         condition: service_healthy
@@ -115,6 +116,7 @@ services:
       - type: bind
         source: ./code/booking/init.sql
         target: /docker-entrypoint-initdb.d/init.sql
+    command: sh -c 'DATABASE_URL="postgresql://postgres:postgres@booking-db:5432/booking" /app/booking-service'
     depends_on:
       booking-db:
         condition: service_healthy

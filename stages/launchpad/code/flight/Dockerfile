@@ -17,6 +17,8 @@ WORKDIR /app
 
 COPY --from=builder /flight-service /app/flight-service
 
+ENV DATABASE_URL=postgresql://postgres:postgres@flight-db:5432/flight
+
 EXPOSE 8081
 
 CMD ["/app/flight-service"]

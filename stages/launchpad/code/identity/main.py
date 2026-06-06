@@ -307,6 +307,39 @@ async def get_user_by_id(user_id: str, authorization: str = Header(None), reques
     }
 
 
+@app.get("/api/admin/users")
+async def get_all_users(authorization: str = Header(None), request: Request = None):
+    trace_id = getattr(request.state, "request_id", "")
+    payload = verify_jwt(authorization)
+    if payload.get("role") != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute(
+        """SELECT id, email, first_name, last_name, loyalty_tier, role, is_active, created_at
+           FROM users ORDER BY created_at DESC"""
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    log_json("INFO", "identity-service", "Admin fetched all users", trace_id=trace_id, count=len(rows))
+    return {
+        "users": [
+            {
+                "id": str(u["id"]),
+                "email": u["email"],
+                "firstName": u["first_name"],
+                "lastName": u["last_name"],
+                "loyaltyTier": u["loyalty_tier"],
+                "role": u["role"],
+                "isActive": u["is_active"],
+                "createdAt": u["created_at"].isoformat() + "Z" if u["created_at"] else None,
+            }
+            for u in rows
+        ]
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)

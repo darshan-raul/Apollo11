@@ -126,6 +126,9 @@ Apollo11/
 - `/metrics` — Prometheus-compatible (`http_requests_total`, `http_request_duration_ms`, `db_connections_active` for stateful services)
 - Structured JSON logging: `{"timestamp","level","service","trace_id","span_id","message",...}`
 - `X-Request-ID` header propagation (generate if not present, forward on all downstream calls)
+- **CORS middleware** on all services (Go and Python) — `Access-Control-Allow-Origin: *`, all methods/headers, 204 for OPTIONS
+- **DB connection: always append `?sslmode=disable`** — Go `lib/pq` driver defaults to SSL; PostgreSQL containers in dev have no SSL
+- **Graceful `initDB()` with timeout** — use `context.WithTimeout` + `PingContext`; never use infinite retry loops; log errors during retry
 - Stub implementations — return hardcoded but valid-appearing JSON
 
 **Seed data (present from first `docker compose up`):**
@@ -324,7 +327,7 @@ Apollo11/
 
 | Stage | Code additions |
 |---|---|
-| launchpad | Base stubs — all services return hardcoded JSON. `/healthz`, `/readyz`, `/metrics` implemented. Structured logging with trace_id/span_id fields. X-Request-ID propagation. **Frontend upgraded to React/Tailwind CSS** (modern airline UI, VITE env vars for API URLs, multi-stage Docker build). |
+| launchpad | Base stubs — all services return hardcoded JSON. `/healthz`, `/readyz`, `/metrics` implemented. Structured logging with trace_id/span_id fields. X-Request-ID propagation. CORS middleware on all Go services. `addSSLMode()` helper for PostgreSQL connections (`?sslmode=disable`). `initDB()` uses `context.WithTimeout(15s)` + `PingContext` + error logging (no more infinite retry loops). `sql.NullString` for nullable DB columns. **Frontend upgraded to React/Tailwind CSS** (modern airline UI, VITE env vars for API URLs, multi-stage Docker build). Admin panel pages (Dashboard, Flights CRUD, Bookings view). |
 | stage1 | (no code change — k8s deployment layer only) |
 | stage2 | (no code change — networking layer only) |
 | stage3 | (no code change — storage layer only) |

@@ -17,6 +17,8 @@ WORKDIR /app
 
 COPY --from=builder /booking-service /app/booking-service
 
+ENV DATABASE_URL=postgresql://postgres:postgres@booking-db:5432/booking
+
 EXPOSE 8082
 
 CMD ["/app/booking-service"]

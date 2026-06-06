@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Login from './pages/Login'
@@ -8,7 +8,23 @@ import Search from './pages/Search'
 import Flights from './pages/Flights'
 import Bookings from './pages/Bookings'
 import BookingDetail from './pages/BookingDetail'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminFlights from './pages/admin/AdminFlights'
+import AdminFlightForm from './pages/admin/AdminFlightForm'
+import AdminBookings from './pages/admin/AdminBookings'
+import ProtectedRoute from './components/ProtectedRoute'
 import Logo from './components/Logo'
+
+function decodeJWT(token) {
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return payload
+  } catch {
+    return null
+  }
+}
 
 function NavLink({ to, children }) {
   const location = useLocation()
@@ -26,7 +42,7 @@ function NavLink({ to, children }) {
   )
 }
 
-function Navbar({ token, mobileOpen, setMobileOpen, handleLogout }) {
+function Navbar({ user, mobileOpen, setMobileOpen, handleLogout }) {
   return (
     <nav className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-white/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -37,11 +53,12 @@ function Navbar({ token, mobileOpen, setMobileOpen, handleLogout }) {
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
-            {token ? (
+            {user ? (
               <>
                 <NavLink to="/dashboard">Dashboard</NavLink>
                 <NavLink to="/search">Search</NavLink>
                 <NavLink to="/bookings">Bookings</NavLink>
+                {user.role === 'ADMIN' && <NavLink to="/admin">Admin</NavLink>}
                 <button
                   onClick={handleLogout}
                   className="ml-3 inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-rose-500/20"
@@ -84,11 +101,12 @@ function Navbar({ token, mobileOpen, setMobileOpen, handleLogout }) {
 
         {mobileOpen && (
           <div className="md:hidden pb-4 pt-2 space-y-1 border-t border-white/5 animate-fade-in">
-            {token ? (
+            {user ? (
               <>
                 <NavLink to="/dashboard"><span className="block py-2">Dashboard</span></NavLink>
                 <NavLink to="/search"><span className="block py-2">Search</span></NavLink>
                 <NavLink to="/bookings"><span className="block py-2">Bookings</span></NavLink>
+                {user.role === 'ADMIN' && <NavLink to="/admin"><span className="block py-2">Admin</span></NavLink>}
                 <button onClick={handleLogout} className="w-full mt-3 py-2.5 bg-rose-600 text-white font-semibold rounded-lg">Logout</button>
               </>
             ) : (
@@ -105,17 +123,21 @@ function Navbar({ token, mobileOpen, setMobileOpen, handleLogout }) {
 }
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem('token') || '')
+  const [user, setUser] = useState(() => {
+    const token = localStorage.getItem('token') || ''
+    return token ? decodeJWT(token) : null
+  })
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleLogin = (newToken) => {
     localStorage.setItem('token', newToken)
-    setToken(newToken)
+    const payload = decodeJWT(newToken)
+    setUser(payload)
   }
 
   const handleLogout = () => {
     localStorage.removeItem('token')
-    setToken('')
+    setUser(null)
   }
 
   return (
@@ -139,11 +161,11 @@ function App() {
         }}
       />
       <div className="min-h-screen bg-slate-50 flex flex-col">
-        <Navbar token={token} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} handleLogout={handleLogout} />
+        <Navbar user={user} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} handleLogout={handleLogout} />
 
         <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-10">
           <Routes>
-            <Route path="/" element={token ? <Navigate to="/dashboard" /> : (
+            <Route path="/" element={user ? <Navigate to="/dashboard" /> : (
               <div className="relative bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 rounded-2xl overflow-hidden py-16 sm:py-24 animate-fade-in">
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
@@ -174,11 +196,16 @@ function App() {
             )} />
             <Route path="/login" element={<Login onLogin={handleLogin} />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/dashboard" element={token ? <Dashboard /> : <Navigate to="/login" />} />
-            <Route path="/search" element={token ? <Search /> : <Navigate to="/login" />} />
-            <Route path="/flights/:id" element={token ? <Flights /> : <Navigate to="/login" />} />
-            <Route path="/bookings" element={token ? <Bookings /> : <Navigate to="/login" />} />
-            <Route path="/bookings/:id" element={token ? <BookingDetail /> : <Navigate to="/login" />} />
+            <Route path="/dashboard" element={<ProtectedRoute user={user}><Dashboard /></ProtectedRoute>} />
+            <Route path="/search" element={<ProtectedRoute user={user}><Search /></ProtectedRoute>} />
+            <Route path="/flights/:id" element={<ProtectedRoute user={user}><Flights /></ProtectedRoute>} />
+            <Route path="/bookings" element={<ProtectedRoute user={user}><Bookings /></ProtectedRoute>} />
+            <Route path="/bookings/:id" element={<ProtectedRoute user={user}><BookingDetail /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute user={user} requiredRole="ADMIN"><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/flights" element={<ProtectedRoute user={user} requiredRole="ADMIN"><AdminFlights /></ProtectedRoute>} />
+            <Route path="/admin/flights/new" element={<ProtectedRoute user={user} requiredRole="ADMIN"><AdminFlightForm /></ProtectedRoute>} />
+            <Route path="/admin/flights/:id" element={<ProtectedRoute user={user} requiredRole="ADMIN"><AdminFlightForm /></ProtectedRoute>} />
+            <Route path="/admin/bookings" element={<ProtectedRoute user={user} requiredRole="ADMIN"><AdminBookings /></ProtectedRoute>} />
           </Routes>
         </main>
 
