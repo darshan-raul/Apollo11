@@ -1,0 +1,14 @@
+# Headless Service: clusterIP: None — DNS returns pod IPs directly.
+# Used by StatefulSets (Stage 3) and clients that need stable per-pod addressing.
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity-db-headless
+  namespace: apollo-airlines-apps
+spec:
+  clusterIP: None
+  selector:
+    app: identity-db
+  ports:
+    - port: 5432
+      targetPort: 5432

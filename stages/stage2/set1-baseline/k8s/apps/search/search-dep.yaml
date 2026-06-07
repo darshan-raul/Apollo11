@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search
+  namespace: apollo-airlines-apps
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: search
+  template:
+    metadata:
+      labels:
+        app: search
+        tier: public
+    spec:
+      serviceAccountName: search
+      containers:
+        - name: search
+          image: apollo11/search:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+          env:
+            - name: FLIGHT_SERVICE_URL
+              value: "http://flight.apollo-airlines-apps.svc.cluster.local:8081"
+            - name: PORT
+              value: "8083"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8083
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8083
+            initialDelaySeconds: 5
+            periodSeconds: 5

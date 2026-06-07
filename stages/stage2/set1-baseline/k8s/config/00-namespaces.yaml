@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apollo-airlines-apps
+  labels:
+    app.kubernetes.io/part-of: apollo-airlines
+    app.kubernetes.io/component: apps
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apollo-airlines-ui
+  labels:
+    app.kubernetes.io/part-of: apollo-airlines
+    app.kubernetes.io/component: ui

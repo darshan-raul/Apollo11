@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-booking-app-to-booking-db
+  namespace: apollo-airlines-apps
+spec:
+  podSelector:
+    matchLabels:
+      app: booking-db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: apollo-airlines-apps
+          podSelector:
+            matchLabels:
+              app: booking
+      ports:
+        - protocol: TCP
+          port: 5432

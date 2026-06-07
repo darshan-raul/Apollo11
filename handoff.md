@@ -1,295 +1,461 @@
-# Apollo11 - Handoff Notes (Session: 2026-06-06)
+---
+title: "Apollo11 Stage 2 — Handoff Notes"
+description: "Plan, current state, and active error for the next agent picking up Stage 2 work."
+---
 
-## Goal
-Fix broken Go services (flight, booking) in launchpad — admin portal couldn't reach them. All 10 services should be up and responding.
+# Stage 2 Handoff — 4-Set Manifest Structure
+
+## TL;DR for the next agent
+
+**Goal:** Build Stage 2 as **4 self-contained manifest sets** under `stages/stage2/setN-*/`. Each set has the same 6 services + 4 infra, but exposes them differently. The learner tears down one set and applies the next.
+
+**Sets:**
+
+| # | Name | Access |
+|---|------|--------|
+| 1 | `set1-baseline` | NodePort (no controller) — **~90% built, blocked on a NetworkPolicy bug** |
+| 2 | `set2-ingress` | Traefik Ingress (DaemonSet on control-plane, NodePort 30443) — **not started** |
+| 3 | `set3-gateway-nodeport` | Traefik + Gateway API (HTTPRoute, NodePort 30443) — **not started** |
+| 4 | `set4-metallb-gateway` | MetalLB L2 + Traefik LoadBalancer + Gateway — **not started** |
+
+**Active blocker (read this first):** Set 1 has a NetworkPolicy model error that is preventing app pods from becoming Ready. See **"Active Error"** below.
 
 ---
 
-## What Was Done
+## What was decided and approved in this session
 
-###1. Backend Admin Endpoints
+User sign-off (verbatim intent):
 
-#### Identity Service (`stages/launchpad/code/identity/main.py`)
-- **Added `GET /api/admin/users`** (lines ~310-334)
-  - Protected by `verify_jwt` + ADMIN role check
-  - Returns all users with: id, email, firstName, lastName, loyaltyTier, role, isActive, createdAt
-  - Uses `RealDictCursor` for dict-style row access
-  - **Status: WORKING**
+> "go got all except envoy for gateway api. give detailed instructions in readme to run everything"
 
-#### Booking Service (`stages/launchpad/code/booking/main.go`)
-- **Added `GET /api/admin/bookings`**
-  - Protected by `adminRequired()` middleware
-  - Returns all bookings with user email (calls identity `/api/admin/users` to build userMap)
-  - Returns: id, bookingReference, flightId, userId, userEmail, seatNumber, status, createdAt
-  - **Status: WORKING**
+This means the plan below was approved. **Do not re-debate these decisions** unless the user changes their mind:
 
-#### Flight Service (`stages/launchpad/code/flight/main.go`)
-- **Status: WORKING**
-
----
-
-### 2. Frontend Admin Panel
-
-#### New Components
-- **`src/components/ProtectedRoute.jsx`** - Wraps protected routes, redirects to `/dashboard` if role doesn't match `requiredRole`
-- **`src/components/AdminStatCard.jsx`** - Stat card with icon, iconBg, iconColor, label, value (supports AnimatedNumber), delay for staggered animation
-
-#### New Admin Pages (`src/pages/admin/`)
-- **`AdminDashboard.jsx`** - Stats grid (flights/users/bookings count via parallel axios calls), quick action cards (Manage Flights, All Bookings), recent bookings table
-- **`AdminFlights.jsx`** - Table of all flights with flight number, route, departure, arrival, capacity, available seats, status, edit/delete buttons, "+ New Flight" button
-- **`AdminFlightForm.jsx`** - Create/edit flight form (flightNumber, origin, destination, departureTime, arrivalTime, totalCapacity, status for edit). Fetches existing flight via `GET /api/flights/:id` when editing
-- **`AdminBookings.jsx`** - Table of all bookings with reference, user email, flight ID, seat, status, date, cancel action
-
-#### App.jsx Changes
-- Added imports for AdminDashboard, AdminFlights, AdminFlightForm, AdminBookings, ProtectedRoute
-- Added `decodeJWT()` helper to parse JWT token and extract user info (id, email, role, tier)
-- Changed `token` state to `user` state (stores decoded JWT payload)
-- Navbar now receives `user` prop instead of `token`
-- Admin nav item visible when `user.role === 'ADMIN'` (both desktop and mobile menus)
-- All protected routes wrapped with `ProtectedRoute user={user}`
-- New routes:
-  - `/admin` → AdminDashboard
-  - `/admin/flights` → AdminFlights
-  - `/admin/flights/new` → AdminFlightForm
-  - `/admin/flights/:id` → AdminFlightForm
-  - `/admin/bookings` → AdminBookings
+| Decision | Value |
+|---|---|
+| Number of manifest sets | **4** |
+| Ingress controller | **Traefik v3** (DaemonSet on control-plane) |
+| Gateway API implementation | **Traefik** (built-in support, not Envoy / not NGINX Gateway Fabric) |
+| MetalLB | v0.14+ native speaker mode, L2 advertisement |
+| Routing strategy | **Host-based** (5 hostnames, no path stripping) |
+| TLS in Stage 2 | **Skip** — defer to Stage 5 |
+| Frontend code changes | **None** — VITE_* URLs are baked at build time per set |
+| NetworkPolicies | **In all 4 sets** |
+| ServiceAccounts | In all 4 sets |
+| Headless Services | In all 4 sets (even though StatefulSets are Stage 3) |
+| Service type in Sets 2-4 | **ClusterIP** (Traefik routes via cluster IP) |
+| Traefik port (Sets 2-3) | **NodePort 30443** |
+| Set 4 | Traefik **Service type: LoadBalancer** with MetalLB IP pool |
+| Hostnames | `frontend.apollo.local`, `identity.apollo.local`, `flight.apollo.local`, `booking.apollo.local`, `search.apollo.local` |
+| DNS for Sets 2-3 | `/etc/hosts` → `127.0.0.1` (5 entries) |
+| DNS for Set 4 | nip.io fallback OR dnsmasq (not yet chosen) |
+| Directory layout | **4 separate `setN-*/` directories**, each with full self-contained manifests |
 
 ---
 
-### 3. Infrastructure Fixes
+## Repo context
 
-#### Flight Service `init.sql` UUIDs Fixed
-- `AA102` had invalid UUID `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaabbb` (35 chars) → `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaabb` (36 chars)
-- `AA201` had invalid UUID `bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb` (35 chars) → `bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb` (36 chars)
-- `AA301` had invalid UUID `cccccccc-cccc-cccc-cccc-cccccccccc` (34 chars) → `cccccccc-cccc-cccc-cccc-cccccccccccc` (36 chars)
-
-#### `init.sql` Mount Locations Fixed (docker-compose.yml)
-The `init.sql` files were incorrectly mounted on the **app services** (Python/Go) instead of the **database services** (PostgreSQL). PostgreSQL only runs init scripts on first boot when mounted on the database container.
-- Removed `init.sql` volume mounts from `flight` and `booking` app services
-- Added `init.sql` volume mounts to `flight-db` and `booking-db` services
-
-#### Identity Service init.sql Email Fixed
-- Admin user email was `'  '` (whitespace) → `admin@apolloairlines.com`
-- Rebuilt identity-db volume to re-run init scripts
+- Repo: `/home/darshan/projects/Apollo11`
+- Stage 1 was reviewed and 3 critical bugs were fixed in commit `1a7e33d`:
+  - NodePort conflict (identity vs search both on 30083) — search moved to 30084
+  - `VITE_IDENTITY_URL` in build script pointed to wrong port (30080 → 30083)
+  - Invalid bcrypt hashes in `identity-init-configmap.yaml` (replaced with verified hashes)
+- Stage 1 README was updated to reflect new NodePort layout
+- Stage 1 commit pushed to `origin/main` (verified `c3f68ed..1a7e33d main -> main`)
+- Cluster: `apollo11` (3 nodes: 1 control-plane + 2 workers) is currently running
+- Image registry convention: `apollo11/<service>:latest`, loaded into kind via `kind load docker-image`
 
 ---
 
-### 4. Critical Bug Fixes (Session 2026-06-06 Afternoon)
-
-#### Bug1: Go Services Completely Silent — `initDB()` Infinite Retry Loop
-**Symptom:** Flight (8081) and booking (8082) services not responding — `curl localhost:8081/healthz` returned empty reply. No error logs.
-
-**Root Cause:** `initDB()` had an infinite retry loop:
-```go
-for {
-    err = db.Ping()
-    if err == nil { break }
-    time.Sleep(1 * time.Second)
-}
-```
-If the DB wasn't ready on first attempt, the loop blocked **forever** — the HTTP server never started, and no logs were written because logging wasn't initialized before `initDB()` ran.
-
-**Fix:** Replaced with `context.WithTimeout(15s)` + `db.PingContext(ctx)` + error logging:
-```go
-ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-defer cancel()
-for {
-    err = db.PingContext(ctx)
-    if err == nil { break }
-    logJSON("ERROR", ..., fmt.Sprintf("DB not ready (will retry): %v", err), ...)
-    select {
-    case <-ctx.Done():
-        logJSON("ERROR", ..., fmt.Sprintf("DB connection timeout: %v", ctx.Err()), ...)
-        return
-    case <-time.After(2 * time.Second):
-    }
-}
-```
-
-**Files:** `flight/main.go`, `booking/main.go`
-
----
-
-#### Bug 2: PostgreSQL SSL Mode Error — `pq: SSL is not enabled on the server`
-**Symptom:** Services started and logged routes correctly, but `GET /api/flights` returned `500` with error `pq: SSL is not enabled on the server`.
-
-**Root Cause:** Go's `lib/pq` driver defaults to `sslmode=require`. PostgreSQL containers don't have SSL configured, so the driver tried TLS handshake and failed on every query.
-
-**Fix:** Added `addSSLMode()` helper that appends `?sslmode=disable` if no `sslmode=` is present in the DSN:
-```go
-func addSSLMode(dsn string) string {
-    if strings.Contains(dsn, "sslmode=") {
-        return dsn
-    }
-    return dsn + "?sslmode=disable"
-}
-```
-Called as `sql.Open("postgres", addSSLMode(dbURL))`.
-
-**Files:** `flight/main.go`, `booking/main.go`
-
----
-
-#### Bug 3: CORS Missing on Go Services
-**Symptom:** Browser admin portal making cross-origin requests to flight/booking services — CORS preflight (OPTIONS) failed.
-
-**Root Cause:** Only the Python `identity` service had CORS middleware. All4 Go services (flight, booking, search, notification) had none.
-
-**Fix:** Added CORS middleware to all4 Go services:
-```go
-func corsMiddleware() gin.HandlerFunc {
-    return func(c *gin.Context) {
-        c.Header("Access-Control-Allow-Origin", "*")
-        c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-        c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, X-Request-ID")
-        c.Header("Access-Control-Expose-Headers", "X-Request-ID")
-        if c.Request.Method == "OPTIONS" {
-            c.AbortWithStatus(204)
-            return
-        }
-        c.Next()
-    }
-}
-```
-Registered as `r.Use(corsMiddleware())` before the routes.
-
-**Files:** `flight/main.go`, `booking/main.go`, `search/main.go`, `notification/main.go`
-
----
-
-#### Bug 4: Booking Service — `sql.NullString` Crash on Nullable `seat_number`
-**Symptom:** `GET /api/bookings` and `GET /api/admin/bookings` returned `500` when scanning rows with nullable `seat_number` into a `string` field.
-
-**Root Cause:** 3 query handlers scanned `seat_number` (nullable VARCHAR) directly into a `string` variable. PostgreSQL NULL can't scan into a Go `string`.
-
-**Fix:** Replaced direct `&bk.SeatNumber` scan with `sql.NullString`:
-```go
-var seatNumber sql.NullString
-err := row.Scan(..., &seatNumber, ...)
-if seatNumber.Valid {
-    bk.SeatNumber = seatNumber.String
-}
-```
-
-**Files:** `booking/main.go` (3 handlers: user bookings, admin bookings, single booking fetch)
-
----
-
-#### Bug 5: Booking Service — Missing `UserEmail` Field
-**Symptom:** Admin bookings endpoint couldn't populate `userEmail` because the `Booking` struct lacked the field.
-
-**Fix:** Added `UserEmail string` field to `Booking` struct.
-
-**Files:** `booking/main.go`
-
----
-
-### 5. Frontend Multi-Stage Dockerfile Fix (All 11 Stages)
-Previously fixed heredoc nginx config issue in all stage Dockerfiles (replaced broken `cat << EOF` heredoc with single-line echo).
-
----
-
-## Files Modified
-
-| File | Change |
-|------|--------|
-| `stages/launchpad/code/identity/main.py` | Added `GET /api/admin/users` endpoint |
-| `stages/launchpad/code/identity/init.sql` | Fixed admin email (whitespace → `admin@apolloairlines.com`) |
-| `stages/launchpad/code/booking/main.go` | Added `GET /api/admin/bookings` + `adminRequired()` middleware; added `addSSLMode()`; fixed `initDB()` timeout; fixed3x `sql.NullString` scans; added `UserEmail` field |
-| `stages/launchpad/code/flight/main.go` | Added `addSSLMode()`; fixed `initDB()` timeout with `context.WithTimeout`; added CORS middleware |
-| `stages/launchpad/code/flight/init.sql` | Fixed invalid UUIDs for AA102, AA201, AA301 |
-| `stages/launchpad/code/search/main.go` | Added CORS middleware |
-| `stages/launchpad/code/notification/main.go` | Added CORS middleware |
-| `stages/launchpad/docker-compose.yml` | Fixed init.sql mount locations (moved from app services to db services) |
-| `stages/launchpad/code/frontend/src/App.jsx` | Admin nav, protected routes, JWT decode |
-| `stages/launchpad/code/frontend/src/components/ProtectedRoute.jsx` | New file |
-| `stages/launchpad/code/frontend/src/components/AdminStatCard.jsx` | New file |
-| `stages/launchpad/code/frontend/src/pages/admin/AdminDashboard.jsx` | New file |
-| `stages/launchpad/code/frontend/src/pages/admin/AdminFlights.jsx` | New file |
-| `stages/launchpad/code/frontend/src/pages/admin/AdminFlightForm.jsx` | New file |
-| `stages/launchpad/code/frontend/src/pages/admin/AdminBookings.jsx` | New file |
-
----
-
-## Admin Credentials
-- **Email:** admin@apolloairlines.com
-- **Password:** admin123
-- **Role:** ADMIN
-- **Loyalty Tier:** PLATINUM
-
-## Passenger Credentials
-- **Email:** passenger@apolloairlines.com
-- **Password:** pass123
-- **Role:** PASSENGER
-- **Loyalty Tier:** STANDARD
-
----
-
-## API Endpoints Reference
-
-### Identity Service (Port 8080)
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/users/login` | No | Login, returns JWT |
-| POST | `/api/users/register` | No | Register new user |
-| GET | `/api/users/me` | Bearer | Get current user |
-| GET | `/api/admin/users` | Bearer (ADMIN) | Get all users |
-
-### Flight Service (Port 8081)
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/flights` | No | List flights |
-| GET | `/api/flights/:id` | No | Get flight |
-| POST | `/api/flights` | Bearer (ADMIN) | Create flight |
-| PUT | `/api/flights/:id` | Bearer (ADMIN) | Update flight |
-| PATCH | `/api/flights/:id/seats` | Bearer | Update seats |
-
-### Booking Service (Port 8082)
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/bookings` | Bearer | List my bookings |
-| POST | `/api/bookings` | Bearer | Create booking |
-| DELETE | `/api/bookings/:id` | Bearer | Cancel booking |
-| GET | `/api/admin/bookings` | Bearer (ADMIN) | List all bookings |
-
-### Search Service (Port 8083)
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/search` | No | Search flights |
-
-### Notification Service (Port 8084)
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/notify` | No | Send notification |
-
----
-
-## Docker Compose Services Status
+## Stage 2 directory structure (built so far)
 
 ```
-launchpad-frontend-1       WORKING  (port 3000)
-launchpad-identity-1       WORKING  (port 8080)
-launchpad-identity-db-1    HEALTHY
-launchpad-flight-1         WORKING  (port 8081) ✅ FIXED
-launchpad-flight-db-1      HEALTHY
-launchpad-booking-1        WORKING  (port 8082) ✅ FIXED
-launchpad-booking-db-1     HEALTHY
-launchpad-search-1         WORKING  (port 8083) ✅ FIXED
-launchpad-notification-1   WORKING  (port 8084) ✅ FIXED
-launchpad-redis-1          HEALTHY
-launchpad-dozzle-1         WORKING  (port 8085)
+stages/stage2/
+├── code/                          # Copied from stages/stage1/code (unchanged)
+├── set1-baseline/                 # ~90% built — see "Active Error" below
+│   ├── README.md                  # ✓ written
+│   ├── k8s/
+│   │   ├── config/                # ✓
+│   │   │   ├── 00-namespaces.yaml    # 3 namespaces
+│   │   │   ├── configmap.yaml        # apps + ui (ui has just VITE_*)
+│   │   │   └── secrets.yaml          # apps, infra, ui
+│   │   ├── serviceaccounts/        # ✓
+│   │   │   └── accounts.yaml          # 13 SAs (1 per workload + 3 init jobs)
+│   │   ├── networkpolicies/        # ⚠ see "Active Error"
+│   │   │   ├── infra-00-default-deny.yaml
+│   │   │   ├── infra-allow-dns-egress.yaml
+│   │   │   ├── infra-allow-{identity,flight,booking}-app.yaml
+│   │   │   ├── infra-allow-init-{identity,flight,booking}-db.yaml
+│   │   │   ├── infra-allow-notification-app.yaml
+│   │   │   ├── apps-00-default-deny.yaml
+│   │   │   ├── apps-allow-dns-egress.yaml
+│   │   │   ├── apps-allow-public-ingress.yaml
+│   │   │   ├── apps-allow-booking-to-{flight,identity,notification}.yaml
+│   │   │   ├── apps-allow-search-to-flight.yaml
+│   │   │   ├── ui-00-default-deny.yaml
+│   │   │   ├── ui-allow-dns-egress.yaml
+│   │   │   └── ui-allow-frontend-public.yaml
+│   │   ├── infra/                 # ✓
+│   │   │   ├── identity-db/{dep,svc,svc-headless}.yaml
+│   │   │   ├── flight-db/{dep,svc,svc-headless}.yaml
+│   │   │   ├── booking-db/{dep,svc,svc-headless}.yaml
+│   │   │   └── redis/{dep,svc,svc-headless}.yaml
+│   │   ├── apps/                  # ✓ — Services are NodePort
+│   │   │   ├── identity/{dep,svc}.yaml          # NodePort 30083
+│   │   │   ├── flight/{dep,svc}.yaml            # NodePort 30081
+│   │   │   ├── booking/{dep,svc}.yaml           # NodePort 30082
+│   │   │   ├── search/{dep,svc}.yaml            # NodePort 30084
+│   │   │   ├── notification/{dep,svc}.yaml      # ClusterIP
+│   │   │   └── frontend/{dep,svc}.yaml          # NodePort 30080
+│   │   └── jobs/                  # ✓
+│   │       ├── identity-init-configmap.yaml  # bcrypt hashes copied from stage1 (now valid)
+│   │       ├── init-identity-db.yaml
+│   │       ├── flight-init-configmap.yaml
+│   │       ├── init-flight-db.yaml
+│   │       ├── booking-init-configmap.yaml
+│   │       └── init-booking-db.yaml
+│   └── scripts/                   # ✓
+│       ├── apply.sh                 # builds + loads + applies layer-by-layer
+│       ├── teardown.sh              # deletes 3 namespaces
+│       └── verify.sh                # battery of checks
+├── set2-ingress/                 # NOT STARTED — empty subdirs
+├── set3-gateway-nodeport/        # NOT STARTED — empty subdirs
+└── set4-metallb-gateway/         # NOT STARTED — empty subdirs
 ```
+
+Total files written so far in Stage 2: **57** (`find stages/stage2 -type f -name "*.yaml" -o -name "*.md" -o -name "*.sh" | wc -l`).
 
 ---
 
-## Key Lessons Learned
+## Detailed per-set plan
 
-1. **`initDB()` must have a timeout** — infinite retry loops that block the HTTP server startup are a silent killer. Always wrap with `context.WithTimeout`.
+### Set 1: Baseline (NodePort) — current set, ~90% done
 
-2. **Go `lib/pq` defaults to SSL** — always append `?sslmode=disable` for local development. PostgreSQL containers in dev typically don't have SSL configured.
+**What it teaches:** Namespace isolation, FQDN service discovery, Headless Services, ServiceAccounts, NetworkPolicies (Ingress-only deny by default).
 
-3. **CORS is not automatic** — even if one service (Python/FastAPI) has it, Go services need their own CORS middleware.
+**Access pattern:** `http://localhost:30083/...` (NodePort, same as Stage 1).
 
-4. **PostgreSQL NULL vs Go `string`** — nullable columns must use `sql.NullString` (or `*string` with manual NULL checking). Direct scan into `string` panics.
+**Manifests (all written):** see tree above.
 
-5. **Docker layer ENV corruption** — when debugging why env vars appear correct in `docker inspect` but the running process uses different values, rebuild images from scratch (`--no-cache`).
+**What's missing:**
+- A top-level kustomization.yaml (intentionally skipped — apply.sh drives order)
+- Verification: pods are not all Ready (see Active Error)
+
+### Set 2: Traefik Ingress (ClusterIP + Ingress resources)
+
+**What it teaches:** Ingress resource, IngressController, host-based routing, controller selection.
+
+**Access pattern:** `http://identity.apollo.local:30443/...` (Traefik on NodePort 30443).
+
+**Layout:**
+
+```
+stages/stage2/set2-ingress/
+├── README.md
+├── k8s/
+│   ├── config/                    # copy of set1's config (3 ns, configmap, secrets)
+│   ├── serviceaccounts/           # copy of set1's
+│   ├── networkpolicies/           # copy of set1's
+│   │                              # but: apps-allow-public-ingress → apps-allow-ingress-from-traefik
+│   │                              #      ui-allow-frontend-public → ui-allow-frontend-from-traefik
+│   ├── infra/                     # copy of set1's
+│   ├── apps/                      # copy of set1's, BUT:
+│   │                              #   - identity/flight/booking/search Services are ClusterIP (no nodePort)
+│   │                              #   - frontend Service is ClusterIP
+│   │                              #   - VITE_* env vars in configmap now use http://*.apollo.local:30443
+│   ├── jobs/                      # copy of set1's
+│   ├── ingress/
+│   │   ├── traefik.yaml           # DaemonSet on control-plane, NodePort 30443, ServiceAccount in kube-system
+│   │   ├── clusterrolebinding.yaml
+│   │   └── ingress-{frontend,identity,flight,booking,search}.yaml
+│   └── scripts/{apply,teardown,verify}.sh
+```
+
+**Differences from Set 1:**
+1. All app Services drop `type: NodePort` → default ClusterIP
+2. VITE_* URLs in ConfigMap (ui namespace) become `http://<svc>.apollo.local:30443`
+3. NetworkPolicies: replace `allow-public-ingress` with a tight rule that allows ingress only from pods in `kube-system` with label `app.kubernetes.io/name: traefik` (or equivalent ServiceAccount selector)
+4. Add Traefik DaemonSet manifest. Suggested:
+   ```yaml
+   # Traefik v3 DaemonSet on control-plane, NodePort 30443
+   # ServiceAccount: traefik in kube-system
+   # args: --providers.kubernetesingress --entrypoints.websecure=false (HTTP only — TLS deferred to Stage 5)
+   # Image: traefik:v3.1
+   ```
+5. Add Ingress resources:
+   ```yaml
+   apiVersion: networking.k8s.io/v1
+   kind: Ingress
+   metadata:
+     name: identity
+     namespace: apollo-airlines-apps
+     annotations:
+       traefik.ingress.kubernetes.io/router.entrypoints: web
+   spec:
+     ingressClassName: traefik
+     rules:
+       - host: identity.apollo.local
+         http:
+           paths:
+             - path: /
+               pathType: Prefix
+               backend:
+                 service:
+                   name: identity
+                   port:
+                     number: 8080
+   ```
+6. Frontend image needs to be rebuilt with new VITE_* URLs before the set is runnable:
+   ```bash
+   docker build -t apollo11/frontend:latest \
+     --build-arg VITE_IDENTITY_URL=http://identity.apollo.local:30443 \
+     --build-arg VITE_FLIGHT_URL=http://flight.apollo.local:30443 \
+     --build-arg VITE_BOOKING_URL=http://booking.apollo.local:30443 \
+     --build-arg VITE_SEARCH_URL=http://search.apollo.local:30443 \
+     stages/stage2/code/frontend/
+   kind load docker-image apollo11/frontend:latest --name apollo11
+   ```
+
+### Set 3: Gateway API on NodePort
+
+**What it teaches:** GatewayClass, Gateway, HTTPRoute — the modern replacement for Ingress.
+
+**Access pattern:** same as Set 2 (`http://*.apollo.local:30443/...`), but the controller is configured via Gateway API CRDs.
+
+**Differences from Set 2:**
+1. Install Gateway API CRDs first:
+   ```bash
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
+   ```
+2. Replace `ingress/` directory with `gateway/`:
+   - `gatewayclass.yaml` — defines `traefik` GatewayClass
+   - `gateway.yaml` — Gateway with `listeners: [{name: web, port: 30443, protocol: HTTP}]`
+   - `httproutes.yaml` — one HTTPRoute per service, attached to the Gateway
+3. Traefik args change: `--providers.kubernetesgateway` instead of `--providers.kubernetesingress`
+4. HTTPRoute example:
+   ```yaml
+   apiVersion: gateway.networking.k8s.io/v1
+   kind: HTTPRoute
+   metadata:
+     name: identity
+     namespace: apollo-airlines-apps
+   spec:
+     parentRefs:
+       - name: apollo-gateway
+     hostnames: ["identity.apollo.local"]
+     rules:
+       - backendRefs:
+           - name: identity
+             port: 8080
+   ```
+
+### Set 4: MetalLB + Gateway API
+
+**What it teaches:** MetalLB (L2 mode), LoadBalancer Service, real cluster IPs, IP pool management.
+
+**Access pattern:** `http://*.apollo.local/...` (no port suffix — Traefik gets a real IP).
+
+**Differences from Set 3:**
+1. Install MetalLB:
+   ```bash
+   kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.5/config/manifests/metallb-native.yaml
+   ```
+2. Add `metallb/` directory:
+   - `ip-pool.yaml` — `IPAddressPool` named `apollo-pool`, e.g. `172.18.0.50-172.18.0.100`
+   - `l2-advertisement.yaml` — `L2Advertisement` for that pool
+3. Traefik Service changes from `type: NodePort` to `type: LoadBalancer`. Wait for MetalLB to assign an IP. That IP becomes the new "front door".
+4. VITE_* URLs drop the `:30443` port suffix.
+5. README explains how to discover the assigned IP (`kubectl get svc -n kube-system traefik`) and the two DNS options:
+   - **nip.io:** `frontend.172-18-0-50.nip.io` (no setup, ugly URLs)
+   - **dnsmasq wildcard:** `address=/apollo.local/172.18.0.50` (clean, needs dnsmasq in devbox.json)
+
+---
+
+## Active Error (READ THIS FIRST)
+
+### Symptom
+
+After applying Set 1 with `bash scripts/apply.sh`:
+
+```
+apollo-airlines-apps    booking-598d985b59-gf7vg    0/1   Running
+apollo-airlines-apps    flight-64476dcc5f-t6pwh     0/1   Running
+apollo-airlines-apps    identity-7ff7df698c-mnrg2   0/1   Running
+apollo-airlines-apps    notification-5b57c9f495-25pwd  0/1  Running
+apollo-airlines-apps    search-7b5dcdd58b-2pmjs     1/1   Running    ← only search works
+apollo-airlines-apps    search-7b5dcdd58b-r6vjt     1/1   Running    ← only search works
+```
+
+DB pods, redis, init jobs, search, and frontend all come up fine. But identity, flight, booking, and notification never become Ready.
+
+### Diagnosis
+
+I traced this down to a **NetworkPolicy model issue**. Quick background:
+
+- `identity-db` (infra ns) is reachable from `identity` (apps ns) via FQDN `identity-db.apollo-airlines-infra.svc.cluster.local`.
+- DNS works (verified: `python3 -c "import socket; print(socket.gethostbyname('identity-db.apollo-airlines-infra.svc.cluster.local'))"` returned `10.96.109.8`).
+- BUT the actual TCP connect from the identity pod times out:
+  ```python
+  socket.create_connection(('identity-db.apollo-airlines-infra.svc.cluster.local', 5432), timeout=5)
+  # → socket.timeout: timed out
+  ```
+- The TCP connection is being dropped somewhere.
+
+### What I tried
+
+1. **First attempt:** Default-deny on both Ingress AND Egress. Result: identity → identity-db blocked because the apps-ns default-deny blocked egress on the apps side. (Ingress rule on identity-db in infra ns was correct, but egress from identity pod in apps ns was blocked by the apps default-deny.)
+
+2. **Second attempt:** Changed all default-deny policies to Ingress-only (removed Egress from `policyTypes`). Expected the apps pods to be able to initiate outgoing connections.
+
+3. **Cleanup:** Deleted the leftover `default-deny-all` policies from the cluster (they were still there from the first apply).
+
+4. **Current state:** Old pods are in `CrashLoopBackOff`, new pods are `Running` but `0/1` (not Ready).
+
+### What I think is still wrong
+
+I did NOT verify the connectivity is fixed after step 3. The user aborted the verification command. The pods in the cluster are still showing the old state (old `CrashLoopBackOff` replicas + new `Running 0/1` replicas that may or may not have become Ready after the netpol cleanup).
+
+### Reproduction steps for the next agent
+
+```bash
+# 1. Confirm cluster is up
+kubectl get nodes
+
+# 2. Confirm set 1 is currently applied
+kubectl get ns | grep apollo-airlines
+
+# 3. Check current netpol state
+kubectl get netpol -A | grep apollo
+
+# 4. Confirm old default-deny-all is gone (should not appear in output above)
+kubectl get netpol -A | grep "default-deny-all"
+
+# 5. Force a fresh rollout of all app deployments
+kubectl rollout restart deployment -n apollo-airlines-apps
+kubectl rollout restart deployment -n apollo-airlines-ui
+
+# 6. Wait 30s and check status
+sleep 30
+kubectl get pods -A | grep apollo-airlines
+
+# 7. If identity still 0/1, exec in and test the DB connection
+POD=$(kubectl get pod -n apollo-airlines-apps -l app=identity -o name | grep -v CrashLoop | head -1)
+kubectl exec -n apollo-airlines-apps $POD -- python3 -c "
+import socket
+s = socket.create_connection(('identity-db.apollo-airlines-infra.svc.cluster.local', 5432), timeout=5)
+print('TCP OK')
+s.close()
+"
+
+# 8. If TCP times out, the issue is still network policy. Check:
+kubectl describe netpol -n apollo-airlines-infra allow-identity-app-to-identity-db
+# Make sure podSelector/namespaceSelector match exactly.
+```
+
+### What the fix likely is
+
+The most likely fix is one of:
+
+**A)** Add explicit egress allow rules on the apps side. The current setup has default-deny-ingress but no explicit egress allow, so by default egress should be allowed. But for some CNI implementations (Calico, Cilium), having a `default-deny-ingress` policy can implicitly affect egress. Worth confirming by testing with NO policies at all:
+
+```bash
+# Quick test: delete all netpols and see if connectivity works
+kubectl delete netpol --all -n apollo-airlines-apps
+kubectl delete netpol --all -n apollo-airlines-infra
+kubectl delete netpol --all -n apollo-airlines-ui
+# Then restart identity pod and test
+```
+
+If that fixes it, the next agent can re-add policies one at a time to find the bad one.
+
+**B)** The `from` clause in `allow-identity-app-to-identity-db` might be wrong. Specifically, the `namespaceSelector.matchLabels` might be matching too narrowly. Try replacing with just `podSelector`:
+
+```yaml
+ingress:
+  - from:
+      - podSelector:
+          matchLabels:
+            app: identity
+    ports:
+      - protocol: TCP
+        port: 5432
+```
+
+But that wouldn't work for cross-namespace (podSelector alone only matches pods in the same namespace as the policy).
+
+**C)** The DNS-based FQDN is somehow being resolved to the wrong IP. Test by running:
+
+```bash
+kubectl exec -n apollo-airlines-apps <identity-pod> -- python3 -c "
+import socket
+print(socket.gethostbyname('identity-db.apollo-airlines-infra.svc.cluster.local'))
+"
+# Should print 10.96.x.x (cluster IP of identity-db Service)
+# Then test TCP:
+kubectl exec -n apollo-airlines-apps <identity-pod> -- python3 -c "
+import socket
+s = socket.create_connection(('10.96.x.x', 5432), timeout=5)
+print('TCP OK')
+"
+```
+
+If FQDN resolves but TCP to cluster IP times out, it's the NetworkPolicy. If FQDN resolves AND TCP to cluster IP works, then there's a stale DNS or kube-proxy issue.
+
+---
+
+## Key file paths the next agent will need
+
+### Existing
+- `stages/stage1/README.md` — Stage 1 reference (NodePort pattern, working state)
+- `stages/stage1/k8s/apps/identity/identity-dep.yaml` — base identity deployment (no FQDN, single ns)
+- `stages/stage1/scripts/build-images.sh` — image build script
+- `stages/ignition/kind-config.yaml` — kind cluster config with extraPortMappings 30080-30084 (and now 30084)
+- `stages/ignition/kind-config-single.yaml` — single-node variant
+
+### Stage 2 in progress
+- `stages/stage2/set1-baseline/` — baseline set (90% done, see Active Error)
+- `stages/stage2/set2-ingress/`, `set3-gateway-nodeport/`, `set4-metallb-gateway/` — empty subdirs
+- `stages/stage2/code/` — code copy from stage 1 (unchanged)
+
+### Tools / external
+- Traefik v3 docs: https://doc.traefik.io/traefik/v3.1/
+- Traefik + Gateway API: https://doc.traefik.io/traefik/v3.1/providers/kubernetes-gateway/
+- Traefik + Ingress: https://doc.traefik.io/traefik/v3.1/providers/kubernetes-ingress/
+- Gateway API CRDs (standard channel): https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
+- MetalLB v0.14 native: https://raw.githubusercontent.com/metallb/metallb/v0.14.5/config/manifests/metallb-native.yaml
+
+---
+
+## How to pick up (suggested workflow)
+
+1. **Read the Active Error section above.** Confirm the current state of the cluster, then verify whether the fix landed after I deleted the stale `default-deny-all` policies.
+2. **Get Set 1 fully working** — pods Ready, smoke tests pass via `verify.sh`. This is the foundation for sets 2-4.
+3. **Tear down Set 1 cleanly** with `teardown.sh`.
+4. **Copy Set 1 → Set 2** (`cp -r set1-baseline/. set2-ingress/`).
+5. **Modify Set 2 to add Traefik + Ingress** per the Set 2 plan above.
+6. **Repeat for Sets 3 and 4.**
+7. **Write the master `stages/stage2/README.md`** with the progression guide and links to each set.
+
+---
+
+## Constraints to remember
+
+From AGENTS.md and the SPEC:
+
+- No emojis in files unless the user asks
+- No comments in code unless asked
+- YAML frontmatter on docs
+- Don't auto-commit; commit only when the user asks
+- 4 spaces of indentation, no tabs
+- k8s manifests use `app: <name>` and `app.kubernetes.io/part-of: apollo-airlines` labels where possible
+- Service type drops from NodePort → ClusterIP in Sets 2/3/4
+- Traefik runs as DaemonSet on the control-plane node (for Sets 2/3), so the hostPort on the DaemonSet is critical for kind's port mapping to work
+- The frontend SPA URLs are baked at build time — every set needs a fresh `docker build` with new `--build-arg VITE_*_URL=...` before being runnable
+- Traefik ServiceAccount needs ClusterRole + ClusterRoleBinding for ingress-class lookup (standard kube-system pattern)
+
+---
+
+## Last conversation context
+
+User's last action: "ill have to end this session, can you save the detailed plan and error you are facing in handoff.md for next agent to take up"
+
+User then said "continue" — interpreting this as "continue with the handoff" given the context. This file is the handoff.

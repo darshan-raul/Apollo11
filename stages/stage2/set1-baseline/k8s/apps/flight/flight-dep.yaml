@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flight
+  namespace: apollo-airlines-apps
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: flight
+  template:
+    metadata:
+      labels:
+        app: flight
+        tier: public
+    spec:
+      serviceAccountName: flight
+      containers:
+        - name: flight
+          image: apollo11/flight:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:postgres@flight-db.apollo-airlines-apps.svc.cluster.local:5432/flight?sslmode=disable"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: JWT_SECRET
+            - name: PORT
+              value: "8081"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 5

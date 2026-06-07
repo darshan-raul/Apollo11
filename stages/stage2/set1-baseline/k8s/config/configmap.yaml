@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apollo-airlines-config
+  namespace: apollo-airlines-apps
+data:
+  # Backend-to-backend FQDN
+  IDENTITY_DB_HOST:  "identity-db.apollo-airlines-apps.svc.cluster.local"
+  FLIGHT_DB_HOST:    "flight-db.apollo-airlines-apps.svc.cluster.local"
+  BOOKING_DB_HOST:   "booking-db.apollo-airlines-apps.svc.cluster.local"
+  REDIS_HOST:        "redis.apollo-airlines-apps.svc.cluster.local"
+
+  IDENTITY_SVC_FQDN: "identity.apollo-airlines-apps.svc.cluster.local"
+  FLIGHT_SVC_FQDN:   "flight.apollo-airlines-apps.svc.cluster.local"
+  BOOKING_SVC_FQDN:  "booking.apollo-airlines-apps.svc.cluster.local"
+  SEARCH_SVC_FQDN:   "search.apollo-airlines-apps.svc.cluster.local"
+  NOTIFY_SVC_FQDN:   "notification.apollo-airlines-apps.svc.cluster.local"
+
+  # Frontend (browser) URLs — Set 1 uses NodePort.
+  VITE_IDENTITY_URL:  "http://localhost:30083"
+  VITE_FLIGHT_URL:    "http://localhost:30081"
+  VITE_BOOKING_URL:   "http://localhost:30082"
+  VITE_SEARCH_URL:    "http://localhost:30084"
+---
+# Same ConfigMap in the UI namespace — the frontend (apollo-airlines-ui)
+# pulls VITE_* via envFrom. ConfigMaps are namespace-scoped.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apollo-airlines-config
+  namespace: apollo-airlines-ui
+data:
+  VITE_IDENTITY_URL:  "http://localhost:30083"
+  VITE_FLIGHT_URL:    "http://localhost:30081"
+  VITE_BOOKING_URL:   "http://localhost:30082"
+  VITE_SEARCH_URL:    "http://localhost:30084"
