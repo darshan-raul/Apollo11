@@ -75,21 +75,30 @@ the ReplicaSet rolls out a new version.
 ## All 10 Components
 
 ```
-┌─────────────────┬────────┬─────────────┬────────────────────────────┐
-│ Service          │  Port  │ Type        │ Backend                    │
-├─────────────────┼────────┼─────────────┼────────────────────────────┤
-│ identity-db    │  5432  │ ClusterIP   │ (PostgreSQL 15)            │
-│ flight-db      │  5432  │ ClusterIP   │ (PostgreSQL 15)            │
-│ booking-db     │  5432  │ ClusterIP   │ (PostgreSQL 15)            │
-│ redis          │  6379  │ ClusterIP   │ (Redis 7)                  │
-│ identity       │  8080  │ ClusterIP   │ identity-db (5432)          │
-│ flight         │  8081  │ ClusterIP   │ flight-db (5432)            │
-│ booking        │  8082  │ ClusterIP   │ booking-db (5432)           │
-│ search         │  8083  │ ClusterIP   │ flight service (8081)       │
-│ notification   │  8084  │ ClusterIP   │ redis (6379)                │
-│ frontend       │   80   │ NodePort    │ (nginx, port 30080)         │
-└─────────────────┴────────┴─────────────┴────────────────────────────┘
+┌─────────────────┬────────┬─────────────┬────────────────────────────────┐
+│ Service          │  Port  │ Type        │ Backend                         │
+├─────────────────┼────────┼─────────────┼────────────────────────────────┤
+│ identity-db    │  5432  │ ClusterIP   │ (PostgreSQL 15)                 │
+│ flight-db      │  5432  │ ClusterIP   │ (PostgreSQL 15)                 │
+│ booking-db     │  5432  │ ClusterIP   │ (PostgreSQL 15)                 │
+│ redis          │  6379  │ ClusterIP   │ (Redis 7)                       │
+│ identity       │  8080  │ NodePort    │ identity-db  →  :30083          │
+│ flight         │  8081  │ NodePort    │ flight-db    →  :30081          │
+│ booking        │  8082  │ NodePort    │ booking-db   →  :30082          │
+│ search         │  8083  │ NodePort    │ flight svc   →  :30084          │
+│ notification   │  8084  │ ClusterIP   │ redis (6379)                    │
+│ frontend       │  3000  │ NodePort    │ (nginx)      →  :30080          │
+└─────────────────┴────────┴─────────────┴────────────────────────────────┘
 ```
+
+**Why NodePort for backend services?** Stage 1 runs in a kind cluster with no
+cloud load balancer. NodePort lets you `curl http://localhost:30083/...` from
+the host without `kubectl port-forward`. Stage 2 replaces this with a Traefik
+Ingress — NodePort goes away.
+
+**Why is `notification` still ClusterIP?** Nothing outside the cluster calls
+notification directly — only the booking service does, via the in-cluster DNS
+name. Exposing it externally would be a security smell.
 
 ---
 
@@ -182,20 +191,35 @@ bash /home/darshan/projects/Apollo11/test/stage1_test.sh
 
 ## Access the Services
 
-**Frontend (NodePort, port 30080):**
+All five user-facing services are exposed via NodePort. Open the URLs below
+in a browser or `curl` them directly from the host (no `port-forward` needed):
+
+| Service        | URL                                            |
+|----------------|------------------------------------------------|
+| Frontend (UI)  | http://localhost:30080                          |
+| Identity (API) | http://localhost:30083                          |
+| Flight (API)   | http://localhost:30081                          |
+| Booking (API)  | http://localhost:30082                          |
+| Search (API)   | http://localhost:30084                          |
+
+> The NodePort range is mapped in `stages/ignition/kind-config.yaml` and
+> `kind-config-single.yaml` via `extraPortMappings`. If you created the
+> cluster with a different config, the host-side ports won't be reachable.
+
+**Quick smoke test:**
 
 ```bash
-kubectl get svc -n apollo-airlines frontend
-# Access: http://localhost:30080
+# Login
+curl -X POST http://localhost:30083/api/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@apolloairlines.com","password":"admin123"}'
+
+# List flights
+curl http://localhost:30081/api/flights
 ```
 
-**Port-forward internal services:**
-
-```bash
-kubectl port-forward -n apollo-airlines svc/identity 8080:8080
-kubectl port-forward -n apollo-airlines svc/flight 8081:8081
-kubectl port-forward -n apollo-airlines svc/booking 8082:8082
-```
+Cluster-internal services (DBs, Redis) are still ClusterIP — reach them
+via `kubectl port-forward` or `kubectl exec` if you need to poke around.
 
 **Login:**
 
