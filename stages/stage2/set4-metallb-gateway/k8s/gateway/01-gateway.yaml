@@ -1,0 +1,17 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: apollo-gateway
+  namespace: apollo-airlines-apps
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: web
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+  # NOTE: v1.2.x has no infrastructure.serviceOverride field. apply.sh
+  # patches the auto-created Service to NodePort after the controller
+  # creates it (see apply.sh step 7.5).

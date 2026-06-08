@@ -39,14 +39,17 @@ kubectl apply -f "$K8S_DIR/config/"
 step "3/6 ServiceAccounts"
 kubectl apply -f "$K8S_DIR/serviceaccounts/"
 
-step "4/6 NetworkPolicies (default-deny + per-service allow)"
-kubectl apply -f "$K8S_DIR/networkpolicies/"
+# NetworkPolicies are NOT applied automatically. The default kindnet CNI does
+# not enforce NetworkPolicy, so applying them is a no-op in this cluster.
+# The manifests under k8s/networkpolicies/ are kept as reference material —
+# apply them manually with `kubectl apply -f k8s/networkpolicies/` to study
+# the policy model, but expect a CNI upgrade (Calico/Cilium) for real
+# enforcement. See README for details.
 
-step "5/6 Infra (postgres x3 + redis)"
-kubectl apply -f "$K8S_DIR/infra/" --recursive
-
-step "6/6 Apps (6 services, NodePort) + init jobs"
+step "4/6 Apps + infra (10 components, NodePort)"
 kubectl apply -f "$K8S_DIR/apps/" --recursive
+
+step "5/6 Init jobs (3 DBs)"
 kubectl apply -f "$K8S_DIR/jobs/"
 
 ok "Set 1 applied. Wait ~30s then run ./scripts/verify.sh"

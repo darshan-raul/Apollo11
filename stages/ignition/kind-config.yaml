@@ -32,6 +32,10 @@ nodes:
       - containerPort: 30084
         hostPort: 30084
         protocol: TCP
+      # Stage 2 (Traefik/Envoy Gateway) NodePort — unused in Set 1, harmless.
+      - containerPort: 30443
+        hostPort: 30443
+        protocol: TCP
     extraMounts:
       - hostPath: /tmp/apollo11-artifacts
         containerPath: /tmp/artifacts

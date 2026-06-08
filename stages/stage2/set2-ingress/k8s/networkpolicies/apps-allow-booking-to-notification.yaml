@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-booking-to-notification
+  namespace: apollo-airlines-apps
+spec:
+  podSelector:
+    matchLabels:
+      app: notification
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: booking
+      ports:
+        - protocol: TCP
+          port: 8084

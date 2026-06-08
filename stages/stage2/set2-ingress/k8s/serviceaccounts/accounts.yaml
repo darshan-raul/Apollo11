@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: identity
+  namespace: apollo-airlines-apps
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flight
+  namespace: apollo-airlines-apps
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: booking
+  namespace: apollo-airlines-apps
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: search
+  namespace: apollo-airlines-apps
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: notification
+  namespace: apollo-airlines-apps
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: frontend
+  namespace: apollo-airlines-ui
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: identity-db
+  namespace: apollo-airlines-apps
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flight-db
+  namespace: apollo-airlines-apps
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: booking-db
+  namespace: apollo-airlines-apps
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: redis
+  namespace: apollo-airlines-apps
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: init-identity-db
+  namespace: apollo-airlines-apps
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: init-flight-db
+  namespace: apollo-airlines-apps
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: init-booking-db
+  namespace: apollo-airlines-apps

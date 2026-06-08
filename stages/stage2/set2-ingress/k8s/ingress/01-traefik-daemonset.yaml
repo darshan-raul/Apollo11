@@ -1,0 +1,38 @@
+# Traefik v3.1 IngressController — DaemonSet on the control-plane node.
+# Listens on 8000 (web entrypoint), exposed as NodePort 30443.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: traefik
+  namespace: kube-system
+  labels:
+    app: traefik
+spec:
+  selector:
+    matchLabels:
+      app: traefik
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      serviceAccountName: traefik
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: traefik
+          image: traefik:v3.1
+          args:
+            - --providers.kubernetesingress
+            - --entrypoints.web.address=:8000
+            - --log.level=INFO
+            - --accesslog=true
+          ports:
+            - name: web
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 50Mi

@@ -1,0 +1,16 @@
+# Public-tier services (identity, flight, booking, search) accept traffic
+# from any source. Used in Set 1 where these are reached via NodePort.
+# In Sets 2/3/4 this rule is replaced with a tighter "from traefik" rule.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-public-ingress
+  namespace: apollo-airlines-apps
+spec:
+  podSelector:
+    matchLabels:
+      tier: public
+  policyTypes:
+    - Ingress
+  ingress:
+    - {}
