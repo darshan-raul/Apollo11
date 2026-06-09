@@ -301,16 +301,89 @@ or MetalLB IP). `apply.sh` handles both build and kind load.
 
 **Location:** `stages/stage4/`
 
-**k8s manifest changes:**
-- All Deployments: `livenessProbe`, `readinessProbe`, `startupProbe`
-- All Deployments: `resources.requests` and `resources.limits`
-- PodDisruptionBudget for frontend and booking
+**Architecture:** Same 10 workloads as Stage 3 + same Envoy Gateway + MetalLB access stack. This stage adds **probes** (so the kubelet can detect and restart unhealthy pods) and **resource governance** (so pods can be scheduled efficiently and don't starve each other). App code is updated to expose 3 distinct health endpoints (`/healthz/{startup,live,ready}`) and to shut down gracefully on SIGTERM.
+
+| Group | Files | What |
+|---|---|---|
+| `k8s/config/` | 3 | Verbatim from stage 3 |
+| `k8s/serviceaccounts/` | 1 | 13 SAs (verbatim from stage 3) |
+| `k8s/networkpolicies/` | 16 | Reference only (verbatim from stage 3) |
+| `k8s/apps/{identity,flight,booking,search,notification,frontend}/` | 12 | Add `livenessProbe`, `readinessProbe`, `startupProbe`, `resources.requests`, `resources.limits` to each Deployment |
+| `k8s/apps/{identity-db,flight-db,booking-db,redis}/` | 7 | Add `resources.requests`, `resources.limits` (probes already present in stage 3) |
+| `k8s/pdb/` (new) | 2 | `frontend-pdb.yaml`, `booking-pdb.yaml` (PodDisruptionBudget) |
+| `k8s/jobs/` | 6 | Verbatim from stage 3 |
+| `k8s/gateway/` | 10 | Verbatim from stage 3 |
+| `k8s/metallb/` | 2 | Verbatim from stage 3 |
+| `scripts/` | 4 | `apply.sh` (10 steps, unchanged), `teardown.sh` (verbatim), `verify.sh` (~60 checks: stage 3's 53 + new probe/resource/PDB checks), `build-images.sh` |
+
+**Probes — what each does:**
+
+| Probe | Path | When it runs | On failure |
+|---|---|---|---|
+| `startupProbe` | `/healthz/startup` | During pod startup, before liveness kicks in | Doesn't kill the pod; just defers liveness |
+| `livenessProbe` | `/healthz/live` | Every 10s after startup | `kubelet` restarts the pod |
+| `readinessProbe` | `/healthz/ready` | Every 5–10s | Pod removed from Service endpoints (no traffic) |
+
+**Why `startupProbe`:** some apps take longer to bootstrap than the
+default 30s liveness window (e.g., opening DB connections, warming
+caches). A `startupProbe` with a higher `failureThreshold` gives the
+app time to come up before the kubelet starts checking liveness.
+
+**Resource requests vs limits:**
+
+| | Purpose | Effect |
+|---|---|---|
+| `requests.cpu` | Scheduler input | Pod gets at least this much CPU share |
+| `requests.memory` | Scheduler input | Pod gets at least this much memory |
+| `limits.cpu` | Hard cap | Throttled when exceeded |
+| `limits.memory` | Hard cap | OOMKilled when exceeded |
+
+Reasonable starting values for Apollo Airlines (per pod):
+- **identity** (FastAPI): `cpu: 100m/500m, memory: 128Mi/256Mi`
+- **flight** (Go/Gin): `cpu: 100m/500m, memory: 128Mi/256Mi`
+- **booking** (Go/Gin): `cpu: 200m/1000m, memory: 256Mi/512Mi` (highest load)
+- **search** (Go/Gin): `cpu: 100m/500m, memory: 128Mi/256Mi`
+- **notification** (Go/Gin): `cpu: 50m/200m, memory: 64Mi/128Mi` (lowest)
+- **frontend** (NGINX): `cpu: 50m/200m, memory: 64Mi/128Mi`
+- **DB StatefulSets**: `cpu: 200m/1000m, memory: 256Mi/512Mi`
+- **redis**: `cpu: 100m/500m, memory: 128Mi/256Mi`
+
+**PodDisruptionBudget:** `minAvailable: 1` for both `frontend` and
+`booking`. This means voluntary disruptions (node drains, autoscaler
+scale-downs) cannot reduce either below 1 ready pod.
+
+**Code changes (per service):**
+- 3 new health endpoints: `/healthz/startup`, `/healthz/live`, `/healthz/ready`
+- Old `/healthz` and `/readyz` keep returning 200 for backward compat
+  (so smoke tests still pass)
+- Graceful shutdown: `signal.NotifyContext` (Go) or FastAPI `lifespan` (Python)
+- Log "received SIGTERM, draining connections" before exit
 
 **Code changes vs stage3:**
-- `/healthz/startup` probe handler (k8s sends requests during startup)
-- `/healthz/live` probe handler (kubelet checks every 10s)
-- `/healthz/ready` probe handler (kubelet checks before routing traffic)
-- Graceful shutdown on SIGTERM
+- All 6 Go services: add the 3 new endpoints, refactor `/healthz` to
+  route by path, add signal handler
+- identity (Python/FastAPI): same, using `lifespan` context + signal handler
+- All Dockerfiles: no changes (binary entrypoint is the same)
+- `stages/stage4/code/` is a snapshot of `stages/stage3/code/` with
+  the above edits applied
+
+**Verify target:** ~60 checks (53 from stage 3 + 4–7 new ones for
+probes/resources/PDB):
+- Each app Deployment has `livenessProbe`, `readinessProbe`, `startupProbe` configured
+- Each StatefulSet has `resources.requests` and `resources.limits`
+- PDBs exist for `frontend` and `booking`
+- `kubectl describe pod` shows the probes are scheduled
+- `kubectl delete pod` triggers graceful-shutdown log lines (verify via
+  `kubectl logs --previous`)
+
+**Lessons from earlier stages to keep in mind:**
+- Don't add a `startupProbe` to the DB StatefulSets (Postgres initdb
+  can take 5–10s; the init container already gates the main container)
+- Frontend serves static NGINX — its `/healthz/startup` can be a
+  simple `nginx -t` or a `tcpSocket` probe on port 3000. No need to
+  add an app-level endpoint.
+- The teardown script from Stage 3 already handles the Gateway/MetalLB
+  ordering correctly. Reuse it verbatim.
 
 ---
 
