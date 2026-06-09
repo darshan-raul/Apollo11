@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: flight-db
+  namespace: apollo-airlines-apps
+spec:
+  serviceName: flight-db-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flight-db
+  template:
+    metadata:
+      labels:
+        app: flight-db
+        tier: data
+    spec:
+      serviceAccountName: flight-db
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "flight"
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "flight"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "flight"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: init-script
+          configMap:
+            name: flight-db-init-script
+  volumeClaimTemplates:
+    - metadata:
+        name: pg-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

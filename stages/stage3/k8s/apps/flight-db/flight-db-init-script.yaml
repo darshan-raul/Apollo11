@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flight-db-init-script
+  namespace: apollo-airlines-apps
+data:
+  init.sql: |
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+    CREATE TABLE IF NOT EXISTS airports (
+        id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        code     VARCHAR(5) UNIQUE NOT NULL,
+        name     VARCHAR(100),
+        city     VARCHAR(100),
+        country  VARCHAR(100)
+    );
+
+    CREATE TABLE IF NOT EXISTS flights (
+        id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        flight_number    VARCHAR(20) NOT NULL,
+        origin           VARCHAR(5) REFERENCES airports(code),
+        destination      VARCHAR(5) REFERENCES airports(code),
+        departure_time   TIMESTAMP NOT NULL,
+        arrival_time     TIMESTAMP NOT NULL,
+        total_capacity   INT NOT NULL,
+        available_seats  INT NOT NULL,
+        status           VARCHAR(20) DEFAULT 'SCHEDULED',
+        created_at       TIMESTAMP DEFAULT NOW(),
+        updated_at       TIMESTAMP DEFAULT NOW(),
+        -- Same flight_number flies every day, so the natural unique
+        -- key is the (flight_number, departure_time) pair. This lets
+        -- the seed INSERT 30+ rows for each flight_number across days.
+        UNIQUE (flight_number, departure_time)
+    );

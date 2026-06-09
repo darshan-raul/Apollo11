@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seed-booking-db
+  namespace: apollo-airlines-apps
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: seed-booking-db
+    spec:
+      serviceAccountName: init-booking-db
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              until pg_isready -h booking-db -U postgres; do echo "Waiting for booking-db..."; sleep 2; done
+              psql -h booking-db -U postgres -d booking -v ON_ERROR_STOP=1 -f /init/seed.sql
+              echo "booking DB seed done"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: seed-script
+              mountPath: /init
+      volumes:
+        - name: seed-script
+          configMap:
+            name: booking-db-seed

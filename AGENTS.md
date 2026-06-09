@@ -14,9 +14,9 @@ Apollo11 is a **13-phase Kubernetes/cloud-native learning bootstrap** using **Ap
 |---|---|---|
 | Launchpad | Docker Compose | 10 components, stub code, local dev |
 | Ignition | kind cluster | First pod, kubectl basics, cluster architecture |
-| Stage 1 | Liftoff | All 10 components as Deployments, ConfigMaps, Secrets, Jobs |
-| Stage 2 | Guidance/N&C | Namespaces, DNS, NetworkPolicies, Ingress (Traefik) |
-| Stage 3 | Mission Data | PVCs, StatefulSets, init containers (first persistent storage) |
+| Stage 1 | Liftoff | All 10 components as Deployments, ConfigMaps, Secrets, Jobs (single-namespace baseline) |
+| Stage 2 | Guidance/N&C | **4 manifest sets** — Namespaces, DNS, ServiceAccounts, Headless Services, NetworkPolicies (reference), Ingress (Traefik), Gateway API (Envoy), MetalLB |
+| Stage 3 | Mission Data | StatefulSets + 1Gi PVCs for all 4 stateful workloads (3 PG + redis), schema bootstrap via Postgres `/docker-entrypoint-initdb.d/` ConfigMap mount, idempotent seed Jobs. **Envoy Gateway + MetalLB access stack from Stage 2 set 4 carries over verbatim and persists for all later stages.** |
 | Stage 4 | Flight Control | Probes, resource limits, QoS, PodDisruptionBudget |
 | Stage 5 | Payload Integration | Helm charts, Kustomize, GitHub Actions, ArgoCD |
 | Stage 6 | Mission Ops | Prometheus, Grafana, OpenTelemetry |
@@ -77,8 +77,19 @@ Apollo11/
 │   │   ├── scripts/         # build-images.sh
 │   │   └── code/            # copy of launchpad code
 │   │
-│   ├── stage2/              # Namespaces, DNS, NetworkPolicies, Ingress (Traefik)
+│   ├── stage2/              # Namespaces, DNS, NetworkPolicies, Ingress, Gateway API, MetalLB
+│   │   ├── README.md
+│   │   ├── code/            # shared source (no code changes in stage 2)
+│   │   ├── set1-baseline/         # NodePort (no controller)            — 25/25 verify
+│   │   ├── set2-ingress/          # Traefik v3 + Ingress + NodePort 30443 — 25/25 verify
+│   │   ├── set3-gateway-nodeport/ # Envoy Gateway + port-forward         — 26/26 verify
+│   │   └── set4-metallb-gateway/  # Envoy Gateway + MetalLB L2           — 28/28 verify
 │   ├── stage3/              # StatefulSets, PVCs, init containers, Headless SVCs
+│   │   ├── README.md
+│   │   ├── code/            # snapshot of stages/stage2/code/  (no code changes)
+│   │   ├── k8s/             # config, serviceaccounts, networkpolicies, apps/, jobs/, gateway/, metallb/
+│   │   └── scripts/         # apply.sh, teardown.sh, verify.sh, build-images.sh
+│   ├── stage4/              # Probes, resource limits, QoS, PodDisruptionBudget
 │   ├── stage4/              # Probes, resource limits, QoS, PodDisruptionBudget
 │   ├── stage5/              # Helm charts + Kustomize overlays + GitHub Actions
 │   ├── stage6/              # Prometheus + Grafana + OpenTelemetry
@@ -162,15 +173,92 @@ Apollo11/
 
 **Location:** `stages/stage2/`
 
-**k8s manifests:**
-- 3 namespaces: `apollo-airlines-infra`, `apollo-airlines-apps`, `apollo-airlines-ui`
-- NetworkPolicies: default-deny + per-service allowlist
-- Headless Services for all 4 infra DBs
-- Traefik Ingress for frontend (hostname: `frontend.apolloairlines.local`)
-- Gateway API HTTPRoute for catalog service
-- ServiceAccounts for all pods
+**Architecture:** Same 10 workloads, **4 self-contained manifest sets** that teach different edge access patterns. Workloads never change between sets — only the "edge" object does.
 
-**Stage 2 code changes vs stage1:** None (networking layer only)
+| Set | Access | Verify |
+|---|---|---|
+| `set1-baseline` | NodePort (30080–30084), no controller | 25/25 pass |
+| `set2-ingress` | Traefik v3 Ingress + NodePort 30443 | 25/25 pass |
+| `set3-gateway-nodeport` | Envoy Gateway v1.2.4 + port-forward (ClusterIP) | 26/26 pass |
+| `set4-metallb-gateway` | Envoy Gateway v1.2.4 + MetalLB v0.14.5 L2 LoadBalancer | 28/28 pass |
+
+**Namespaces (2, not 3):**
+- `apollo-airlines-apps` — identity, flight, booking, search, notification, identity-db, flight-db, booking-db, redis, init jobs
+- `apollo-airlines-ui` — frontend
+
+(Original plan had 3 namespaces with infra split out. Collapsed to 2 to avoid
+init-job-namespace-mismatch bugs and keep DB hostnames short
+e.g. `identity-db` instead of `identity-db.apollo-airlines-infra.svc.cluster.local`.)
+
+**Per-set layout (each set is self-contained, ~30–50 files):**
+```
+setN-*/
+├── README.md                # set-specific concepts, apply/teardown/verify
+├── k8s/
+│   ├── config/              # 2 namespaces, configmap, secrets
+│   ├── serviceaccounts/     # 13 SAs (1 per workload + 3 init jobs)
+│   ├── networkpolicies/     # reference only — kindnet does NOT enforce
+│   ├── apps/                # 6 app services + 4 infra + 4 headless SVCs
+│   ├── jobs/                # 3 init DB jobs
+│   ├── ingress/   (set 2)   # Traefik DaemonSet + Ingresses
+│   ├── gateway/   (sets 3,4)# Envoy Gateway install + Gateway + HTTPRoutes
+│   └── metallb/   (set 4)   # MetalLB install + IP pool + L2 advertisement
+└── scripts/
+    ├── apply.sh             # build images + apply manifests in order
+    ├── teardown.sh          # delete namespaces + controllers
+    ├── verify.sh            # 25–28 checks per set
+    └── build-images.sh      # per-set frontend VITE_* URLs (baked at build)
+```
+
+**Hostnames (sets 2-4):** `frontend.apollo.local`, `identity.apollo.local`,
+`flight.apollo.local`, `booking.apollo.local`, `search.apollo.local`
+
+**Headless Services:** `identity-db-headless`, `flight-db-headless`,
+`booking-db-headless`, `redis-headless` (`clusterIP: None`) — wired to
+StatefulSets in Stage 3.
+
+**ServiceAccounts:** 13 SAs (identity, flight, booking, search, notification,
+frontend, identity-db, flight-db, booking-db, redis + 3 init job SAs). No
+`Role`/`RoleBinding` yet — those arrive in Stage 8.
+
+**NetworkPolicies:** Manifests provided for reference
+(default-deny + per-service allowlist). **NOT applied by `apply.sh`** because
+kind's default `kindnet` CNI does not enforce NetworkPolicies. The
+educational value is in reading them, not in enforcement.
+
+**Traefik v3.1 IngressController (set 2):** DaemonSet on control-plane,
+listens on NodePort 30443. Host header routing across 5 Ingresses.
+
+**Envoy Gateway v1.2.4 (sets 3, 4):**
+- `install.yaml` (~1.5MB) bundled in-repo (offline-friendly) — must use
+  `kubectl apply --server-side` (exceeds 256KB last-applied-config limit otherwise)
+- `install.yaml` does **NOT** create a `GatewayClass` — create it manually:
+  `controllerName: gateway.envoyproxy.io/gatewayclass-controller`
+- Auto-created Envoy Service is `type: LoadBalancer` by default:
+  - Set 3: patch to `ClusterIP` + `kubectl port-forward`
+  - Set 4: leave as `LoadBalancer`, MetalLB assigns IP
+- Cross-namespace HTTPRoute attachments need `parentRef.namespace` +
+  `ReferenceGrant` in target namespace
+- 6 HTTPRoutes + 1 ReferenceGrant (frontend in `ui` ns → Gateway in `apps` ns)
+
+**MetalLB v0.14.5 native (set 4):**
+- L2 mode (ARP/NDP) — no router config required
+- `metallb-native.yaml` (~1900 lines) bundled in-repo — use
+  `kubectl apply --server-side --force-conflicts` (webhook manages its own CA)
+- IP pool: `172.18.0.50–100` on default kind docker network (must not
+  overlap with kind node IPs)
+- Wait for webhook controller pod to be `1/1` before creating IPAddressPool
+
+**Service type rules across sets:**
+- Set 1: `type: NodePort + nodePort: 30xxx`
+- Sets 2/3/4: `type: ClusterIP` (NodePort removed — kubectl rejects apply
+  if `nodePort` is set with `type: ClusterIP`)
+
+**Frontend image:** VITE\_\* API URLs are baked at build time. Each set
+rebuilds the frontend image with its own URL pattern (NodePort, hostname+port,
+or MetalLB IP). `apply.sh` handles both build and kind load.
+
+**Stage 2 code changes vs stage1:** None (networking layer only — `stages/stage2/code/` is a snapshot of `stages/stage1/code/`).
 
 ---
 
@@ -178,15 +266,34 @@ Apollo11/
 
 **Location:** `stages/stage3/`
 
-**k8s manifests (~50 files):**
-- All 4 infra DBs become StatefulSets with VolumeClaimTemplates (1Gi)
-- Headless Services for all StatefulSets
-- Init containers inside StatefulSets for DB schema seeding (replaces init Jobs for schema)
-- Init Jobs still present for data seeding (runs once)
-- Traefik Ingress (unchanged from stage2)
-- NetworkPolicies (unchanged from stage2)
+**Architecture:** Same 10 workloads + same Envoy Gateway + MetalLB access stack as Stage 2 set 4. The 4 stateful workloads (`identity-db`, `flight-db`, `booking-db`, `redis`) move from `Deployment` + `emptyDir` to `StatefulSet` + `1Gi PVC`. App Deployments, frontend, gateway, MetalLB, ServiceAccounts, NetworkPolicies are **unchanged**. The Stage 2 set-4 access stack is the **persisted baseline for all later stages** (4–11).
 
-**Stage 3 code changes vs stage2:** None (storage layer only — code doesn't care about StatefulSet vs Deployment)
+| Group | Files | What |
+|---|---|---|
+| `k8s/config/` | 3 | Namespaces, ConfigMap, Secret (verbatim from set 4) |
+| `k8s/serviceaccounts/` | 1 | 13 SAs (verbatim from set 4) |
+| `k8s/networkpolicies/` | 16 | Reference only (verbatim from set 4) |
+| `k8s/apps/identity-db/` | 4 | `*-sts.yaml` (StatefulSet + 1Gi VCT + init SQL mounted at `/docker-entrypoint-initdb.d`), `*-svc.yaml` (ClusterIP), `*-svc-headless.yaml`, `*-init-script.yaml` (ConfigMap) |
+| `k8s/apps/flight-db/` | 4 | same shape (UNIQUE on `(flight_number, departure_time)` so the same flight can fly daily) |
+| `k8s/apps/booking-db/` | 4 | same shape |
+| `k8s/apps/redis/` | 3 | `redis-sts.yaml` (with AOF enabled), `redis-svc.yaml`, `redis-svc-headless.yaml` |
+| `k8s/apps/{identity,flight,booking,search,notification,frontend}/` | 12 | Unchanged Deployment + Service |
+| `k8s/jobs/` | 6 | 3 × `seed-*.yaml` Jobs + 3 × `*-db-seed` ConfigMaps (idempotent `ON CONFLICT DO NOTHING`) |
+| `k8s/gateway/` | 10 | Verbatim from set 4 (Envoy Gateway install + GatewayClass + Gateway + 6 HTTPRoutes + ReferenceGrant) |
+| `k8s/metallb/` | 2 | Verbatim from set 4 (install + IPAddressPool + L2Advertisement) |
+| `scripts/` | 4 | `apply.sh` (10 steps, waits for StatefulSets before jobs), `teardown.sh` (deletes namespaces + Gateway + controllers, ordered to avoid webhook hangs), `verify.sh` (53 checks), `build-images.sh` |
+
+**Storage:** `storageClassName` is **intentionally omitted** from `volumeClaimTemplates` — uses kind's default `local-path` StorageClass. PVCs are `ReadWriteOnce, 1Gi`. PVs are node-local on the kind worker. Reclaim policy is `Delete` (default), so deleting the PVC reclaims the local-path volume.
+
+**Schema bootstrap (entrypoint hook, not init container):** The schema (CREATE TABLE) is mounted as a ConfigMap at `/docker-entrypoint-initdb.d/init.sql` inside the Postgres container, with `PGDATA=/var/lib/postgresql/data/pgdata`. The official Postgres image's entrypoint runs the SQL during `initdb` on first start (empty PVC). On every subsequent restart, the data dir is non-empty and the entrypoint skips both `initdb` and `/docker-entrypoint-initdb.d/`. **Why not a custom init container:** that approach deadlocks — the init's `pg_isready` against `127.0.0.1` waits for the main container, but the kubelet gates the main container on init's success. The entrypoint hook is the standard Postgres pattern and doesn't have this issue.
+
+**Seed jobs:** 3 one-shot Jobs (`seed-identity-db`, `seed-flight-db`, `seed-booking-db`) that insert seed data using `ON CONFLICT DO NOTHING`. The `seed-booking-db` Job is intentionally near-empty (booking has no seed data) but kept to prove the schema-applied and to keep the pattern uniform.
+
+**Stable pod identity:** The StatefulSet `serviceName` is wired to the existing headless services (`identity-db-headless`, `flight-db-headless`, `booking-db-headless`, `redis-headless`). Pods get FQDNs like `identity-db-0.apollo-airlines-apps.svc.cluster.local` for direct pod-to-pod addressing (used by the StatefulSet controller, not by app code).
+
+**Why entrypoint hook vs Job for schema:** The entrypoint runs the SQL once on first start of the pod (when the data dir is empty). A Job runs once per cluster creation — if the StatefulSet pod moves to a fresh node with an empty PVC, the entrypoint re-applies the schema (idempotently). Seed stays as a Job because re-inserting 186 flight rows on every restart is wasteful (even with `ON CONFLICT DO NOTHING`).
+
+**Code changes vs stage2:** None. `stages/stage3/code/` is a snapshot of `stages/stage2/code/`. App code doesn't know whether the DB is behind a Deployment or StatefulSet.
 
 ---
 
@@ -372,8 +479,10 @@ Needed but missing: kind, kustomize, k6, trivy, opa, kyverno, prometheus, grafan
 |---|---|---|
 | Launchpad | ✅ Complete | React/Tailwind frontend, Docker Compose, 10 components |
 | Ignition | ✅ Complete | kind cluster, first Pod, kubectl basics |
-| Stage 1 | 🔴 Pending | Apollo Airlines k8s manifests |
-| Stage 2–11 | ⚠️ Pending | Scope defined in SPEC.md, not yet implemented |
+| Stage 1 | ✅ Complete | All 10 components as Deployments + Jobs, single namespace `apollo-airlines` |
+| Stage 2 | ✅ Complete | 4 manifest sets verified: NodePort 25/25, Traefik 25/25, Envoy Gateway 26/26, Envoy+MetalLB 28/28 |
+| Stage 3 | ✅ Complete | 4 StatefulSets + PVCs + entrypoint-hook schema + seed jobs, 53/53 verify (Envoy+MetalLB access stack persists for stages 4–11) |
+| Stage 4–11 | ⚠️ Pending | Scope defined in AGENTS.md, not yet implemented |
 
 ---
 
@@ -419,12 +528,14 @@ The Booking Service is the primary vehicle for teaching distributed systems conc
 
 ## Kubernetes Namespace Structure
 
-| Namespace | Contents |
-|---|---|
-| apollo-airlines | Launchpad / single-namespace stages |
-| apollo-airlines-infra | DB StatefulSets (stage2+) |
-| apollo-airlines-apps | App service Deployments (stage2+) |
-| apollo-airlines-ui | Frontend Deployment (stage2+) |
+| Namespace | Contents | Stages |
+|---|---|---|
+| apollo-airlines | All 10 components in a single namespace | Stage 1, Launchpad (compose) |
+| apollo-airlines-apps | identity, flight, booking, search, notification + all DBs/redis + init jobs | Stage 2+ |
+| apollo-airlines-ui | frontend | Stage 2+ |
+
+Note: Stage 2 collapsed the originally-planned 3-namespace layout
+(`infra`/`apps`/`ui`) down to 2 (`apps`/`ui`) — see Stage 2 details above.
 
 ---
 

@@ -1,444 +1,499 @@
 ---
 title: "Stage 3: Mission Data — Persistent Storage, StatefulSets"
-description: "Replace emptyDir volumes with PersistentVolumeClaims, convert databases to StatefulSets with stable pod identity, use init containers for DB schema seeding, and expose the frontend via Ingress."
+description: "Replace emptyDir with PVCs, convert all 4 stateful workloads (3 PG + redis) to StatefulSets, move DB schema to init containers, and keep data seeding as one-shot jobs. The Envoy Gateway + MetalLB access stack from Stage 2 carries over unchanged."
 ---
 
 # Stage 3: Mission Data
 
-**Goal:** Give stateful services permanent storage that survives pod restarts.
-Replace `emptyDir`-based storage with `PersistentVolumeClaims`, convert database
-Deployments to `StatefulSets` for stable pod identity, move DB initialization into
-init containers, and switch the frontend from NodePort to Ingress.
+**Goal:** Give stateful workloads permanent storage that survives pod restarts.
+Convert `identity-db`, `flight-db`, `booking-db`, and `redis` from `Deployment` +
+`emptyDir` to **`StatefulSet` + `PersistentVolumeClaim`**, with stable per-pod
+network identity, schema bootstrapping via init containers, and idempotent
+data seeding via one-shot Jobs. The Stage 2 access stack (Envoy Gateway +
+MetalLB) is unchanged.
+
+| | |
+|---|---|
+| **New concept** | StatefulSet, VolumeClaimTemplate, Headless Service (`clusterIP: None`), Init container schema bootstrap, PVC lifecycle, kind `local-path` StorageClass |
+| **Workloads changed** | 4 (3 PostgreSQL + redis) |
+| **Workloads unchanged** | 6 (all app Deployments, frontend, gateway, MetalLB) |
+| **Code changes** | None (app code doesn't know or care about Deployment vs StatefulSet) |
+| **Verify target** | **53/53 checks pass** |
 
 ---
 
-## What You'll Learn
+## Lessons learned during build (read this if you're changing this stage)
 
-| Concept | File(s) | What It Does |
-|---|---|---|
-| PersistentVolumeClaim | `**/sts.yaml` (VCT) | Requests durable storage that survives pod restarts |
-| StatefulSet | `**/*-sts.yaml` | Pods with stable ordinal names, at-most-one semantics |
-| VolumeClaimTemplate | `volumeClaimTemplates[]` | Per-pod PVC — each replica gets its own `data-<name>-<ordinal>` |
-| Headless Service | `**/*-headless.yaml` | `clusterIP: None` — DNS returns pod IPs directly |
-| Init container | `spec.initContainers[]` | Runs to completion before main container starts |
-| Ingress (frontend) | `config/ingress.yaml` | Replaces NodePort — hostname routing for frontend.apollo11.local |
+Three real bugs were found and fixed during end-to-end testing on a
+fresh kind cluster. Keep them in mind if you modify the StatefulSets:
+
+1. **Don't use a separate init container that runs `psql` against
+   `127.0.0.1` after `pg_isready` — it deadlocks.** The kubelet gates
+   the main container on the init container's success, so the init's
+   `pg_isready` against `127.0.0.1` waits for the main container, but
+   the main container can't start until init exits. **Fix:** mount the
+   init SQL ConfigMap at `/docker-entrypoint-initdb.d/` inside the
+   Postgres container and set `PGDATA=/var/lib/postgresql/data/pgdata`.
+   The official Postgres entrypoint runs the SQL during `initdb` on
+   first start and skips it on every subsequent restart.
+
+2. **Postgres 15.18's `psql` rejects `TIME f.dep_time` with
+   "syntax error at or near f".** Use explicit `f.dep_time::time`
+   casts. The same SQL ran fine on `psql` 13; on 15 the type coercion
+   rule is stricter.
+
+3. **`flight_number UNIQUE` is wrong** when the same flight flies
+   daily. Use `UNIQUE (flight_number, departure_time)` so the seed can
+   insert 31 rows for each flight number across the next 31 days.
+
+4. **`nslookup` isn't in the `python:3.12-slim` image** (the identity
+   service). The verify script uses `getent hosts` instead — it works
+   in any minimal image and resolves headless services to pod IPs.
+
+5. **The teardown order matters.** Deleting `envoy-gateway-install.yaml`
+   while app namespaces are still around causes the apiservice
+   deletion to hang on webhooks. Teardown deletes the app namespaces
+   first, then the Gateway/HTTPRoutes, then Envoy, then MetalLB.
 
 ---
 
-## Why Persistent Storage Matters
+## Why this matters
 
-In stages 1 and 2, all databases used `emptyDir` volumes:
+In Stages 1 and 2, all databases used `emptyDir`:
 
 ```
-emptyDir     ←─ stage1/2
+emptyDir     ←─ stages 1/2
 Pod deleted  →  data GONE  (emptyDir lives in node's RAM/disk, dies with pod)
 Pod restarted → fresh empty volume
 ```
 
-`emptyDir` is fine for **cache** (redis), terrible for **data** (postgres, sqlite).
-Stage 3 switches to `PersistentVolumeClaim` backed by actual persistent storage:
+`emptyDir` is fine for **cache** (and even then, only if losing it is OK).
+It's terrible for **data**. Stage 3 switches to `PersistentVolumeClaim`:
 
 ```
 PVC (1Gi, ReadWriteOnce)
   ↓
-PV ( provisioned by StorageClass, survives pod death )
+PV (provisioned by StorageClass — survives pod death)
   ↓
 Pod restarted → same PVC re-attached → data intact
 ```
 
----
+After Stage 3 you can `kubectl delete pod identity-db-0` and the new pod
+will come back with the same data. Try it:
 
-## StatefulSet vs Deployment — What's Different
+```bash
+kubectl exec -n apollo-airlines-apps identity-db-0 -- \
+  psql -U postgres -d identity -c 'SELECT count(*) FROM users;'   # 2
 
-```
-Deployment          StatefulSet
-──────────────────  ─────────────────────────────────────────────────
-app-A-xxxxx         app-0              ← ordinal, stable, predictable
-app-A-yyyyy         app-1
-app-B-zzzzz         (scale up: app-2; scale down: app-N-1 terminates first)
-
-ClusterIP Service   Headless Service (clusterIP: None)
-  ↓                  ↓
-  VIP → backend      DNS → pod IPs directly (A records)
-                     Pod identity: <name>-<ordinal>.<headless-svc>.<ns>.svc.cluster.local
-```
-
-**Key StatefulSet guarantees:**
-- **Stable identity** — `auth-postgres-0` always gets the same PVC
-- **At-most-one** — scale to 1 replica; no two `auth-postgres-0` exist simultaneously
-- **Ordered deployment** — pod N starts only after pod N-1 is `Running`
-- **Ordered termination** — scaling down terminates highest ordinal first
-
----
-
-## Architecture (Stage 3)
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  PersistentVolumeClaim (1Gi) — survives pod restart                │
-└─────────────────────────────────────────────────────────────────────┘
-
-┌────────────────── apollo11-infra ───────────────────────────────────┐
-│                                                                      │
-│  auth-postgres      StatefulSet (1)    ┐                             │
-│    └── PVC: data-auth-postgres-0      │ ← VolumeClaimTemplate        │
-│    └── Headless SVC: auth-postgres-headless                           │
-│    └── Init container: runs init.sql before postgres starts          │
-│                                                                      │
-│  catalog-postgres   StatefulSet (1)    ┐                             │
-│    └── PVC: data-catalog-postgres-0   │                             │
-│    └── Headless SVC: catalog-postgres-headless                       │
-│    └── Init container: runs init.sql                                  │
-│                                                                      │
-│  circulation-postgres  StatefulSet (1) ┐                             │
-│    └── PVC: data-circulation-postgres-0                             │
-│    └── Headless SVC: circulation-postgres-headless                  │
-│    └── Init container: runs init.sql                                 │
-│                                                                      │
-│  catalog-redis     StatefulSet (1)    ┐                              │
-│    └── PVC: data-catalog-redis-0     │                              │
-│    └── Headless SVC: catalog-redis-headless                         │
-│                                                                      │
-│  notification-redis  StatefulSet (1)  ┐                               │
-│    └── PVC: data-notification-redis-0                                │
-│    └── Headless SVC: notification-redis-headless                     │
-│                                                                      │
-│  NetworkPolicy: default-deny + per-service allowlist                │
-└─────────────────────────────────────────────────────────────────────┘
-
-┌────────────────── apollo11-apps ────────────────────────────────────┐
-│                                                                      │
-│  auth/catalog/circulation/notification ─ Deployments (unchanged)    │
-│                                                                      │
-│  fines             StatefulSet (1)    ←─ NEW (was Deployment)         │
-│    └── PVC: data-fines-0             ←─ SQLite now persists!        │
-│    └── Headless SVC: fines-headless                                  │
-│                                                                      │
-│  Ingress (Traefik):                                                 │
-│    frontend.apollo11.local → frontend:80                            │
-│                                                                      │
-│  NetworkPolicy: default-deny + allow from frontend                  │
-└─────────────────────────────────────────────────────────────────────┘
-
-┌────────────────── apollo11-ui ───────────────────────────────────────┐
-│                                                                      │
-│  frontend        Deployment (2 replicas)                             │
-│    └── nginx sidecar (port 80, serves static + proxies API)         │
-│    └── ClusterIP Service: frontend (port 80) ← NOT NodePort         │
-│                                                                      │
-│  Ingress (Traefik):                                                 │
-│    frontend.apollo11.local → frontend.apollo11-ui.svc.cluster.local  │
-│                                                                      │
-│  NetworkPolicy: allow 80/443 inbound                                │
-└─────────────────────────────────────────────────────────────────────┘
+kubectl delete pod -n apollo-airlines-apps identity-db-0
+# wait ~10s
+kubectl exec -n apollo-airlines-apps identity-db-0 -- \
+  psql -U postgres -d identity -c 'SELECT count(*) FROM users;'   # still 2
 ```
 
 ---
 
-## Stable Pod Identity — DNS Names You Can Rely On
+## What's new vs Stage 2 set 4
 
-StatefulSet pods get stable FQDNs via their Headless Service:
-
-```
-auth-postgres-0.auth-postgres-headless.apollo11-infra.svc.cluster.local  →  pod IP
-auth-postgres-1.auth-postgres-headless.apollo11-infra.svc.cluster.local  →  (if scaled)
-
-fines-0.fines-headless.apollo11-apps.svc.cluster.local
-```
-
-This is why Headless services are required for StatefulSets — the pod ordinal
-name-to-IP mapping comes from DNS, and clients can query it directly.
+| Area | Stage 2 | Stage 3 |
+|---|---|---|
+| **Stateful workloads** | `Deployment` + `emptyDir` (4) | `StatefulSet` + `1Gi PVC` (4) |
+| **DB schema** | One-shot `init-*.yaml` Job | Init container inside the StatefulSet pod |
+| **DB data** | Combined with schema in the same Job | Idempotent `seed-*.yaml` Job (runs once) |
+| **Network identity** | Deployment pods have random names | Stable ordinals: `identity-db-0.apollo-airlines-apps` |
+| **App Deployments** | Unchanged | Unchanged (still connect via `identity-db`, `flight-db`, etc.) |
+| **Envoy Gateway + MetalLB** | Set 4 access stack | **Carried over verbatim** — persists for all later stages |
+| **Namespaces** | 2 (apps, ui) | 2 (apps, ui) |
+| **ServiceAccounts / NetworkPolicies** | 13 / 16 (reference) | 13 / 16 (reference, unchanged) |
+| **Code (`stages/stage3/code/`)** | Snapshot of stage 2 code | Snapshot of stage 2 code (no edits) |
 
 ---
 
-## Init Containers — Ordered Startup Before Main Container
+## File layout
 
-Init containers run to completion **before** the main container starts.
-For postgres StatefulSets, the init container:
+```
+stages/stage3/
+├── README.md                          # this file
+├── code/                              # snapshot of stages/stage2/code/  (no changes)
+└── k8s/
+    ├── config/                        # 2 namespaces, configmap, secrets (verbatim from set 4)
+    ├── serviceaccounts/accounts.yaml  # 13 SAs (verbatim from set 4)
+    ├── networkpolicies/               # 16 manifests (reference only, unchanged)
+    ├── apps/
+    │   ├── identity-db/               # NEW: sts + svc + headless + init-script (entrypoint hook, not init container)
+    │   ├── flight-db/                 # NEW: same shape (UNIQUE (flight_number, departure_time))
+    │   ├── booking-db/                # NEW: same shape
+    │   ├── redis/                     # NEW: sts + svc + headless (no schema)
+    │   ├── identity/                  # unchanged Deployment + Service
+    │   ├── flight/                    # unchanged
+    │   ├── booking/                   # unchanged
+    │   ├── search/                    # unchanged
+    │   ├── notification/              # unchanged
+    │   └── frontend/                  # unchanged
+    ├── jobs/                          # NEW: 3 seed-* Jobs + 3 seed ConfigMaps
+    ├── gateway/                       # unchanged (Envoy Gateway + HTTPRoutes)
+    └── metallb/                       # unchanged
+```
 
-1. Waits for postgres port to be ready (`pg_isready`)
-2. Runs the init SQL script (`psql -f /init/init.sql`)
-3. Exits 0 → main container starts
+---
+
+## StatefulSet vs Deployment — what's different
+
+| | Deployment | StatefulSet |
+|---|---|---|
+| Pod name | `app-xxxxx-yyyyy` (random) | `app-0`, `app-1` (ordinal, stable) |
+| Pod identity across restarts | None | Stable: `app-0` always gets the same PVC |
+| Scaling | All replicas in parallel | Ordered: pod N+1 starts after pod N is Ready |
+| Storage | Shared or none | `VolumeClaimTemplate` → per-pod PVC |
+| Service | `ClusterIP` (`type: ClusterIP`) | `Headless` (`clusterIP: None`) |
+| Use when | Stateless, interchangeable replicas | Stateful, per-pod identity matters |
+
+For Apollo Airlines, each DB has `replicas: 1`, so the "ordered scaling"
+guarantee doesn't matter much. **What matters is stable identity + per-pod
+PVCs** — when the pod restarts, the new pod comes back with the same
+storage attached.
+
+---
+
+## Headless Service — why each StatefulSet needs one
+
+A regular `Service` has a virtual IP that load-balances across pods. A
+**headless** service has `clusterIP: None` — CoreDNS returns the pod IPs
+directly, and each pod gets a stable DNS name:
+
+```
+identity-db-headless.apollo-airlines-apps.svc.cluster.local
+identity-db-0.identity-db-headless.apollo-airlines-apps.svc.cluster.local  →  10.244.1.5
+identity-db-1.identity-db-headless.apollo-airlines-apps.svc.cluster.local  →  10.244.2.7
+```
+
+The StatefulSet `serviceName: identity-db-headless` field tells the
+controller: "wire my pods to this service for DNS."
+
+**App code doesn't use the headless service.** App pods connect to the
+regular `identity-db` Service (the same one Stage 2 used) — that service
+load-balances to the single StatefulSet pod. The headless service is
+mostly for direct pod-to-pod communication (replication clients like
+`repmgr`, or operators that need to address specific replicas). In our
+case it's the prerequisite for the StatefulSet, even if we don't
+directly resolve it from app code.
+
+---
+
+## Init Container pattern for schema
+
+> **Implementation note (Stage 3 build log):** the original plan was a
+> separate `initContainers[]` entry that runs `psql -f /init/init.sql`
+> against `127.0.0.1` after `pg_isready`. **That deadlocks** — the
+> kubelet gates the main container on the init container's success, so
+> the init container's `pg_isready` against `127.0.0.1` waits for the
+> main container, but the main container can't start because the init
+> hasn't exited. (We discovered this on the first real run — the
+> `statefulset/identity-db` rolled out 0/1 indefinitely.)
+>
+> **Fix:** use the official Postgres image's built-in
+> `/docker-entrypoint-initdb.d/` mechanism instead. Mount the init SQL
+> ConfigMap there. On first start (empty data dir), the entrypoint runs
+> the SQL during `initdb`. On every subsequent restart, the data dir is
+> populated and the entrypoint skips `/docker-entrypoint-initdb.d/`
+> entirely — the SQL is not re-run, which is exactly what we want.
+>
+> The intent of the README is unchanged: schema re-applies on first
+> start, persists across pod restarts, and re-applies if you delete the
+> PVC and start fresh. The mechanism is just the Postgres image's
+> standard one, not a custom init container.
+
+The init SQL is mounted via a ConfigMap volume:
 
 ```yaml
-initContainers:
-  - name: init
+containers:
+  - name: postgres
     image: postgres:15-alpine
-    command: ["sh", "-c", "pg_isready -h auth-postgres -U postgres && psql ..."]
     env:
-      - name: PGPASSWORD
-        valueFrom:
-          secretKeyRef:
-            name: apollo11-secrets
-            key: POSTGRES_PASSWORD
+      - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
     volumeMounts:
-      - name: init-script
-        mountPath: /init
+      - { name: pg-data,     mountPath: /var/lib/postgresql/data }
+      - { name: init-script, mountPath: /docker-entrypoint-initdb.d }
+volumes:
+  - name: init-script
+    configMap:
+      name: identity-db-init-script
+volumeClaimTemplates:
+  - metadata: { name: pg-data }
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources: { requests: { storage: 1Gi } }
 ```
 
-**Why not use Init Jobs?** Jobs run once at cluster setup. Init containers
-run on **every pod start** — useful when pods restart unexpectedly and need to
-re-initialize. We keep the Init Jobs too (they seed the initial data).
+**Why `PGDATA=/var/lib/postgresql/data/pgdata`?** The Postgres entrypoint
+checks if the `PGDATA` directory is non-empty. If it is, the entrypoint
+skips `initdb` (and the `/docker-entrypoint-initdb.d/*.sql` scripts).
+Naming `PGDATA` to a subdirectory (`pgdata`) means: when we mount an
+**empty** PVC at `/var/lib/postgresql/data`, the entrypoint creates
+`pgdata/` inside it on first start, runs `initdb` there, and runs the
+SQL. On every subsequent restart, `pgdata/` exists and is non-empty, so
+the entrypoint skips both `initdb` and the init SQL — exactly the
+idempotent behaviour we want.
+
+**Why not keep the schema in a Job?** Two reasons:
+1. The entrypoint runs the SQL **on first start of the pod** on
+   whatever node it lands on. A Job runs once per cluster creation. If
+   you `kubectl delete pod identity-db-0` and the new pod lands on a
+   fresh node with an empty PVC, the entrypoint re-applies the schema
+   (`CREATE TABLE IF NOT EXISTS` is safe to re-run).
+2. No coordination needed. The Job model requires a script that waits
+   for the DB to be ready, then runs SQL. The entrypoint hook is built
+   into the pod lifecycle.
+
+The seed (data) is still a Job — you don't want to re-insert 186 flight
+rows every time the pod restarts. The seed is `ON CONFLICT DO NOTHING`
+(for tables with unique constraints; for `flights` we drop the conflict
+clause since each `flight_number` flies daily and there's no composite
+unique constraint to match against).
 
 ---
 
-## Frontend: NodePort → Ingress
+## StorageClass — the bit everyone skips
 
-Stage 2 used NodePort (`30080`) to expose the frontend. Stage 3 replaces it
-with a Traefik Ingress:
+A `PersistentVolumeClaim` is a **request** for storage. Kubernetes
+satisfies that request by binding it to a `PersistentVolume` (PV) that
+matches its size, access mode, and (if specified) `storageClassName`.
+
+A `StorageClass` describes **how** to provision a PV:
+- `local-path` (default in kind) — provisions a `hostPath` PV on the node
+  the pod lands on. Fast, but the data is **node-local** — if the pod
+  reschedules to a different node, the data is gone (unless the
+  `local-path` provisioner is configured for `WaitForFirstConsumer`
+  binding mode, which it isn't in stock kind).
+- `standard` (GCE), `gp2`/`gp3` (AWS), `pd-standard` (GCP) — cloud
+  network-attached storage. Survives node failure.
+- For real production, use a CSI driver (AWS EBS, GCE PD, Rook/Ceph,
+  Longhorn, etc.).
+
+**This Stage's PVCs omit `storageClassName`** — they use the cluster
+default, which kind sets to `local-path`. That works for our dev
+cluster because pods are rescheduled within the same node pool
+(two workers; StatefulSets with `replicas: 1` tend to land on the same
+node on each rollout).
+
+To inspect the storage class in your cluster:
+
+```bash
+kubectl get storageclass
+# NAME                 PROVISIONER                    RECLAIMPOLICY   ...
+# local-path (default) rancher.io/local-path          Delete          ...
+
+kubectl get pvc -n apollo-airlines-apps
+# NAME                       STATUS   VOLUME                                     CAPACITY   ...
+# pg-data-identity-db-0      Bound    pvc-0a1b2c3d-...                          1Gi        ...
+# pg-data-flight-db-0        Bound    pvc-1b2c3d4e-...                          1Gi        ...
+# pg-data-booking-db-0       Bound    pvc-2c3d4e5f-...                          1Gi        ...
+# redis-data-redis-0         Bound    pvc-3d4e5f6a-...                          1Gi        ...
+```
+
+If you want to pin to a specific StorageClass explicitly:
 
 ```yaml
-# Stage 2 (NodePort)
-spec:
-  type: NodePort
-  ports:
-    - port: 80
-      nodePort: 30080
-
-# Stage 3 (Ingress)
-spec:
-  type: ClusterIP        # internal only
-  ports:
-    - port: 80
-      targetPort: 80
-```
-
-Ingress (in `apollo11-apps`) routes `frontend.apollo11.local` → `frontend.apollo11-ui` service.
-
----
-
-## Manifest Structure
-
-```
-k8s/
-├── config/
-│   ├── namespace.yaml          # 3 namespaces (unchanged from stage2)
-│   ├── serviceaccount.yaml     # 3 SAs (unchanged)
-│   ├── configmap.yaml          # FQDN service URLs, DATABASE_PATH for fines
-│   ├── secrets.yaml            # unchanged
-│   └── ingress.yaml            # ADDED: frontend.apollo11.local route
-├── infra/
-│   ├── postgres/
-│   │   ├── auth-postgres-sts.yaml      # StatefulSet + init container
-│   │   ├── auth-postgres-svc-headless.yaml
-│   │   ├── auth-postgres-netpol.yaml    # unchanged
-│   │   └── auth-postgres-init-configmap.yaml
-│   │   ├── catalog-postgres-sts.yaml
-│   │   ├── catalog-postgres-svc-headless.yaml
-│   │   ├── catalog-postgres-netpol.yaml
-│   │   └── catalog-postgres-init-configmap.yaml
-│   │   ├── circulation-postgres-sts.yaml
-│   │   ├── circulation-postgres-svc-headless.yaml
-│   │   ├── circulation-postgres-netpol.yaml
-│   │   └── circulation-postgres-init-configmap.yaml
-│   └── redis/
-│       ├── catalog-redis-sts.yaml
-│       ├── catalog-redis-svc-headless.yaml
-│       ├── catalog-redis-netpol.yaml
-│       ├── notification-redis-sts.yaml
-│       ├── notification-redis-svc-headless.yaml
-│       └── notification-redis-netpol.yaml
-├── apps/
-│   ├── auth/                   # Deployment (unchanged from stage2)
-│   ├── catalog/                # Deployment (unchanged)
-│   ├── circulation/            # Deployment (unchanged)
-│   ├── notification/           # Deployment (unchanged)
-│   └── fines/
-│       ├── fines-sts.yaml      # NEW — StatefulSet (was fines-dep.yaml)
-│       ├── fines-svc-headless.yaml  # NEW — Headless (was fines-svc.yaml)
-│       └── fines-netpol.yaml   # unchanged
-├── ui/
-│   └── frontend/
-│       ├── frontend-dep.yaml   # updated (removed NodePort annotations)
-│       ├── frontend-svc.yaml   # ClusterIP only (no NodePort)
-│       ├── frontend-netpol.yaml
-│       └── frontend-ingress.yaml  # NEW — Traefik Ingress
-└── jobs/                        # Init jobs (unchanged from stage2)
-    ├── init-auth-db.yaml
-    ├── init-catalog-db.yaml
-    └── init-circulation-db.yaml
+volumeClaimTemplates:
+  - metadata: { name: pg-data }
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: local-path   # <-- explicit
+      resources: { requests: { storage: 1Gi } }
 ```
 
 ---
 
-## Deploy
+## Architecture
 
-### 1. Build the container images
-
-```bash
-cd /home/darshan/projects/Apollo11/stages/stage3
-./scripts/build-images.sh
 ```
-
-### 2. Apply manifests in dependency order
-
-```bash
-# Layer 1: Namespaces + ServiceAccounts
-kubectl apply -f k8s/config/namespace.yaml
-kubectl apply -f k8s/config/serviceaccount.yaml
-
-# Layer 2: ConfigMap + Secrets
-kubectl apply -f k8s/config/configmap.yaml
-kubectl apply -f k8s/config/secrets.yaml
-
-# Layer 3: Ingress (controller must be running first)
-kubectl apply -f k8s/config/ingress.yaml
-
-# Layer 4: Infrastructure StatefulSets (wait for namespaces)
-kubectl apply -f k8s/infra/postgres/
-kubectl apply -f k8s/infra/redis/
-
-# Layer 5: Application StatefulSet (fines) + Deployments
-kubectl apply -f k8s/apps/fines/
-kubectl apply -f k8s/apps/auth/
-kubectl apply -f k8s/apps/catalog/
-kubectl apply -f k8s/apps/circulation/
-kubectl apply -f k8s/apps/notification/
-
-# Layer 6: UI (Ingress exposes frontend)
-kubectl apply -f k8s/ui/frontend/
-
-# Layer 7: Init Jobs (seeds data — run after DBs are ready)
-kubectl apply -f k8s/jobs/
-```
-
-### 3. Watch StatefulSet rollout
-
-```bash
-kubectl get pods -n apollo11-infra -w
-kubectl get pods -n apollo11-apps -w
-kubectl get pods -n apollo11-ui -w
-
-# Check PVC binding
-kubectl get pvc -A
+        Browser
+          |
+          |  HTTP, Host: <svc>.apollo.local
+          v
+   172.18.0.50  (MetalLB-assigned, persisted from Stage 2)
+          |
+          v
+   +-----------+         +-----------+
+   |  Envoy    |  routes |  Envoy    |  ← unchanged
+   |  Service  |-------->|  proxy    |
+   |  (LB)     |         +-----------+
+   +-----------+               |
+                                v
+       +----------+ +----------+ +----------+ +----------+ +----------+
+       | identity | | flight   | | booking  | | search   | | notif.   |
+       +----------+ +----------+ +----------+ +----------+ +----------+
+              |           |            |            |             |
+              v           v            v            v             v
+       ┌──────────────────────────────────────────────────────────────┐
+       │ StatefulSets (1 replica each)                                │
+       │                                                              │
+       │  identity-db  ── pg-data-identity-db-0  (1Gi PVC, Bound)   │
+       │  flight-db    ── pg-data-flight-db-0    (1Gi PVC, Bound)   │
+       │  booking-db   ── pg-data-booking-db-0   (1Gi PVC, Bound)   │
+       │  redis        ── redis-data-redis-0     (1Gi PVC, Bound)   │
+       │                                                              │
+       │  Init container in each DB pod:                              │
+       │    1. Wait for pg_isready                                    │
+       │    2. Run init.sql (idempotent CREATE TABLE IF NOT EXISTS)   │
+       │    3. Exit → main container starts                           │
+       └──────────────────────────────────────────────────────────────┘
+                          |
+                          v
+                  ┌──────────────────┐
+                  │  seed-* Jobs     │  ← one-shot, ON CONFLICT DO NOTHING
+                  │  (3 jobs)        │
+                  └──────────────────┘
 ```
 
 ---
 
-## Access the Services
-
-**Frontend via Ingress (add to /etc/hosts first):**
+## Apply
 
 ```bash
-# Add to /etc/hosts:
-127.0.0.1 frontend.apollo11.local api.apollo11.local catalog.apollo11.local
-
-# Then access:
-curl http://frontend.apollo11.local/
+cd stages/stage3
+./scripts/apply.sh
 ```
 
-**Port-forward individual services:**
+`apply.sh` runs 10 steps:
+1. **Build images** — frontend + 5 backend services
+2. **Namespaces + config + secrets**
+3. **ServiceAccounts** (13)
+4. **Apps** — 4 StatefulSets + 6 Deployments + 4 headless SVCs + 4 ClusterIP SVCs
+5. **Wait for StatefulSets** — `kubectl rollout status` for each
+6. **Seed jobs** (3)
+7. **Wait for seed jobs** to succeed
+8. **MetalLB** install + IP pool + L2 advertisement
+9. **Envoy Gateway** install + GatewayClass + Gateway + 6 HTTPRoutes
+10. **Wait for MetalLB to assign a LoadBalancer IP**, then print `/etc/hosts` reminder
+
+**Why does step 5 exist?** The init container inside each StatefulSet pod
+runs the schema. We block until `kubectl rollout status` reports
+`ready=1` before applying the seed Jobs. If the init container is still
+running when the seed Job tries to connect, the seed will retry via its
+`pg_isready` loop — but blocking upfront gives a clean linear log.
+
+After the script prints the MetalLB IP, set up local DNS:
 
 ```bash
-# Auth service in apollo11-apps
-kubectl port-forward -n apollo11-apps svc/auth 8080:8080
+# Use the IP printed by apply.sh:
+172.18.0.50  frontend.apollo.local identity.apollo.local flight.apollo.local \
+              booking.apollo.local search.apollo.local
+```
 
-# Fines StatefulSet (stable pod name)
-kubectl port-forward -n apollo11-apps svc/fines-headless 8084:8084
-kubectl port-forward -n apollo11-infra pods/auth-postgres-0 5432:5432
+Or use nip.io to skip `/etc/hosts`:
+```bash
+curl -H 'Host: frontend.apollo.local' http://frontend.172-18-0-50.nip.io/
 ```
 
 ---
 
-## Self-Check
-
-Run the automated test script:
+## Verify
 
 ```bash
-cd /home/darshan/projects/Apollo11
-bash stages/stage3/test/stage3_test.sh
+./scripts/verify.sh
 ```
 
-The script verifies:
-- All 3 namespaces exist
-- 6 StatefulSets (3 postgres + 2 redis + fines)
-- 6 PVCs bound (1Gi each)
-- 6 Headless services (`clusterIP: None`)
-- Init containers terminated successfully (exit 0) in postgres StatefulSets
-- Init ConfigMaps present (3 postgres init scripts)
-- Frontend Ingress exists (`frontend.apollo11.local`)
-- Frontend Service is ClusterIP (not NodePort)
-- Init Jobs completed (1/1)
-- NetworkPolicies present across all namespaces
-- Stable pod ordinal names (e.g. `auth-postgres-0`)
+**Expected: 53/53 checks pass.** Coverage:
+
+| Group | Checks |
+|---|---|
+| Namespaces | 4 (apps, ui, envoy-gateway-system, metallb-system) |
+| StatefulSets | 4 (all 1/1 ready) |
+| StatefulSet pods | 4 (all Ready) |
+| PVCs | 4 (all Bound) |
+| PVs | ≥ 4 Bound |
+| Headless SVCs | 4 (all `clusterIP: None`) |
+| Headless DNS | 4 (each headless name resolves to a pod IP) |
+| ClusterIP SVCs | 4 (for app connections) |
+| App Deployments | 6 (all ≥ 2/2 ready) |
+| MetalLB controller | 1 |
+| Envoy Gateway controller + proxy | 2 |
+| Seed jobs | 3 (all succeeded) |
+| IPAddressPool + Gateway Programmed | 2 |
+| HTTPRoutes | 1 (count ≥ 6 with parents) |
+| Smoke tests | 4 (identity, flight, frontend, login) |
+| Seed data present | 3 (users, airports, flights row counts) |
+| App→Redis DNS | 1 |
 
 ---
 
-## Clean Up
+## Test the persistence
 
-Delete StatefulSets (PVCs are NOT deleted automatically — must delete manually):
-
-```bash
-kubectl delete -f k8s/jobs/
-kubectl delete -f k8s/ui/frontend/
-kubectl delete -f k8s/apps/notification/
-kubectl delete -f k8s/apps/circulation/
-kubectl delete -f k8s/apps/catalog/
-kubectl delete -f k8s/apps/fines/
-kubectl delete -f k8s/infra/redis/
-kubectl delete -f k8s/infra/postgres/
-kubectl delete -f k8s/config/ingress.yaml
-kubectl delete -f k8s/config/serviceaccount.yaml
-kubectl delete -f k8s/config/namespace.yaml
-
-# PVCs persist — delete them explicitly to free storage
-kubectl delete pvc --all -n apollo11-infra
-kubectl delete pvc --all -n apollo11-apps
-```
-
-Or delete entire namespaces at once (cascades to all resources + PVCs):
+The point of Stage 3 is **durable data**. Prove it:
 
 ```bash
-kubectl delete namespace apollo11-infra apollo11-apps apollo11-ui
-```
+# 1. Note current data
+kubectl exec -n apollo-airlines-apps identity-db-0 -- \
+  psql -U postgres -d identity -c 'SELECT count(*) FROM users;'
+#  count
+# -------
+#      2
 
----
+# 2. Kill the pod
+kubectl delete pod -n apollo-airlines-apps identity-db-0
+# pod "identity-db-0" deleted
 
-## Key Takeaways
+# 3. StatefulSet recreates it (~5–10s)
+kubectl get pod -n apollo-airlines-apps -w
+# identity-db-0   0/1   ContainerCreating   ...
+# identity-db-0   1/1   Running              ...   ← data still here
 
-```
-emptyDir          → data dies with pod (cache only, fine for redis)
-PersistentVolume  → network-attached storage, survives cluster restarts
-PVC               → request for PV storage (bind, reclaim, capacity)
+# 4. Data is intact
+kubectl exec -n apollo-airlines-apps identity-db-0 -- \
+  psql -U postgres -d identity -c 'SELECT count(*) FROM users;'
+#  count
+# -------
+#      2    ← same!
 
-StatefulSet        → stable ordinal names + at-most-one semantics
-  serviceName      → required! must match Headless Service name
-  volumeClaimTemplate → per-replica PVC (each gets unique volume)
-  ordered deployment/termination (N-1 must be Running before N starts)
-
-Headless Service  → clusterIP: None → DNS returns pod IPs directly
-  <name>-<ordinal>.<headless-svc>.<ns>.svc.cluster.local  ← stable FQDN
-  Used by StatefulSets for pod discovery; clients do their own load-balancing
-
-Init container    → runs to completion before main container
-  pg_isready → wait for DB port
-  psql -f    → run idempotent init SQL
-  init containers re-run on EVERY pod restart (use IF NOT EXISTS / ON CONFLICT DO NOTHING)
-
-Ingress (frontend)→ NodePort deprecated: frontend.apollo11.local → ClusterIP service
-  Traefik watches Ingress resources, routes by hostname
-  frontend-svc stays ClusterIP — Ingress handles external traffic
-
-PVC reclaim policy → Retain (manual cleanup) or Delete (auto cleanup on PVC delete)
-  Default is Delete — data gone when PVC is deleted
+# 5. Create a new row, then delete the pod again — the new row survives
+kubectl exec -n apollo-airlines-apps identity-db-0 -- \
+  psql -U postgres -d identity -c \
+  "INSERT INTO users (email, password_hash) VALUES ('test@x.com', 'x');"
+kubectl delete pod -n apollo-airlines-apps identity-db-0
+sleep 10
+kubectl exec -n apollo-airlines-apps identity-db-0 -- \
+  psql -U postgres -d identity -c "SELECT email FROM users WHERE email = 'test@x.com';"
+#  email
+# ----------
+#  test@x.com
 ```
 
 ---
 
-## What's Next
+## Teardown
 
-Stage 4 introduces **probes and resource management** — liveness, readiness,
-and startup probes to keep pods healthy, resource requests/limits for CPU
-and memory, QoS classes that affect scheduling priority, and PodDisruptionBudgets
-for safe cluster operations.
+```bash
+./scripts/teardown.sh
+```
 
-**Before moving on, make sure you can answer:**
+Deletes the 4 PVCs (releases the local-path PVs), both namespaces, Envoy
+Gateway, and MetalLB. Safe to re-run.
 
-1. Why does data survive a pod restart with a PVC but not with an emptyDir?
-2. What does `serviceName: auth-postgres-headless` in a StatefulSet spec do?
-3. How does a Headless Service give a pod a stable DNS name?
-4. When does an init container run — once at cluster setup, or every pod restart?
-5. Why is the init SQL script idempotent (`IF NOT EXISTS`, `ON CONFLICT DO NOTHING`)?
-6. What happens to PVCs when you `kubectl delete` a StatefulSet?
-7. Why does the frontend service no longer need NodePort in stage 3?
-8. What's the difference between `volumeMounts` in the main container vs. in the pod spec?
+---
+
+## Concepts you should be able to answer
+
+1. Why does a StatefulSet require a Headless Service (`clusterIP: None`)?
+2. What's the difference between `volumeClaimTemplates` and a normal
+   `volumes:` entry?
+3. Why does the init container use `127.0.0.1` for `pg_isready` instead
+   of `identity-db`?
+4. What would break if we kept the schema in a Job (Stage 2 style) and
+   only added a PVC?
+5. Why does Stage 3 still have Jobs at all (the seed jobs)?
+6. What is a `StorageClass`? Why didn't we set `storageClassName` on
+   the PVCs?
+7. Where is the data physically stored (on the node)? What happens if
+   the node is wiped?
+8. Why did we make redis a StatefulSet in Stage 3 instead of waiting
+   for Stage 7?
+
+---
+
+## What comes next (Stage 4)
+
+`livenessProbe`, `readinessProbe`, `startupProbe`, `resources.requests`,
+`resources.limits`, and `PodDisruptionBudget` for the frontend + booking
+services. Probes give Kubernetes the signal to restart unhealthy pods
+(whereas right now, a stuck Postgres pod will sit there forever).

@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seed-flight-db
+  namespace: apollo-airlines-apps
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: seed-flight-db
+    spec:
+      serviceAccountName: init-flight-db
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              until pg_isready -h flight-db -U postgres; do echo "Waiting for flight-db..."; sleep 2; done
+              psql -h flight-db -U postgres -d flight -v ON_ERROR_STOP=1 -f /init/seed.sql
+              echo "flight DB seeded"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: seed-script
+              mountPath: /init
+      volumes:
+        - name: seed-script
+          configMap:
+            name: flight-db-seed

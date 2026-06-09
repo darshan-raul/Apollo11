@@ -1,71 +1,45 @@
 #!/bin/bash
-# Build all 6 Apollo11 service images for stage3 and load into kind cluster
+# Build + load all 7 service images into kind.
+# Run from stages/stage3: ./scripts/build-images.sh
 set -e
 
-CLUSTER="${CLUSTER:-apollo11}"
-SERVICES="auth catalog circulation notification fines frontend"
-REGISTRY="apollo11"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+CODE_DIR="$(dirname "$SCRIPT_DIR")/code"
+CLUSTER="${CLUSTER:-apollo11}"
+REGISTRY="apollo11"
+SERVICES="identity flight booking search notification frontend"
 
-usage() {
-    echo "Usage: $0 [--cluster NAME] [--skip-kind-load]"
-    echo "  --cluster NAME      kind cluster name (default: apollo11)"
-    echo "  --skip-kind-load    build images only, skip loading into kind"
-    exit 1
-}
+GREEN='\033[0;32m'; CYAN='\033[0;36m'; NC='\033[0m'
+step()  { echo -e "${CYAN}▶ $1${NC}"; }
+ok()    { echo -e "${GREEN}✓ $1${NC}"; }
 
-SKIP_KIND=false
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --cluster) CLUSTER="$2"; shift 2 ;;
-        --skip-kind-load) SKIP_KIND=true; shift ;;
-        --help) usage ;;
-        *) echo "Unknown option: $1"; usage ;;
-    esac
-done
-
-echo "=== Building Apollo11 service images (stage3) ==="
-
-for svc in $SERVICES; do
-    echo "Building $svc..."
-    docker build -t "${REGISTRY}/${svc}:latest"         -f "${PROJECT_ROOT}/code/${svc}/Dockerfile"         "${PROJECT_ROOT}/code/${svc}/"
-done
-
-if [[ "$SKIP_KIND" == "true" ]]; then
-    echo ""
-    echo "Skipped loading into kind (--skip-kind-load)."
-    echo ""
-    echo "Done. Images built:"
-    for svc in $SERVICES; do
-        echo "  ${REGISTRY}/${svc}:latest"
-    done
-    exit 0
-fi
-
-# Check if kind cluster exists
+step "Checking kind cluster"
 if ! kind get clusters 2>/dev/null | grep -q "^${CLUSTER}$"; then
-    echo ""
-    echo "kind cluster '${CLUSTER}' not found. Skipping image load."
-    echo "Run: kind create cluster --name ${CLUSTER}"
-    echo ""
-    echo "Done. Images built:"
-    for svc in $SERVICES; do
-        echo "  ${REGISTRY}/${svc}:latest"
-    done
-    exit 0
+  echo "Cluster '$CLUSTER' not found. Skipping image build/load."
+  exit 0
 fi
 
-echo ""
-echo "=== Loading images into kind cluster ==="
+step "Building frontend (URLs: <svc>.apollo.local — MetalLB IP)"
+docker build -t "${REGISTRY}/frontend:latest" \
+  --build-arg VITE_IDENTITY_URL="http://identity.apollo.local" \
+  --build-arg VITE_FLIGHT_URL="http://flight.apollo.local" \
+  --build-arg VITE_BOOKING_URL="http://booking.apollo.local" \
+  --build-arg VITE_SEARCH_URL="http://search.apollo.local" \
+  "${CODE_DIR}/frontend/"
+ok "frontend image built"
 
+step "Building backend services"
 for svc in $SERVICES; do
-    echo "Loading ${REGISTRY}/${svc}:latest..."
-    kind load docker-image "${REGISTRY}/${svc}:latest" --name "$CLUSTER" 2>/dev/null ||         echo "  (failed to load — cluster may not be running)"
+  if [[ "$svc" == "frontend" ]]; then continue; fi
+  if [[ -d "${CODE_DIR}/${svc}" ]]; then
+    docker build -t "${REGISTRY}/${svc}:latest" "${CODE_DIR}/${svc}/"
+    kind load docker-image "${REGISTRY}/${svc}:latest" --name "$CLUSTER"
+    ok "built + loaded ${REGISTRY}/${svc}:latest"
+  fi
 done
 
-echo ""
-echo "Done. Images loaded:"
-for svc in $SERVICES; do
-    echo "  ${REGISTRY}/${svc}:latest"
-done
+step "Loading frontend image"
+kind load docker-image "${REGISTRY}/frontend:latest" --name "$CLUSTER"
+ok "loaded ${REGISTRY}/frontend:latest"
+
+ok "All images built and loaded into '$CLUSTER'"
