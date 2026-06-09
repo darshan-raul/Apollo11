@@ -1,0 +1,91 @@
+# Stage 3: identity-db converted from Deployment to StatefulSet.
+#
+# Schema bootstrapping: we use the official Postgres image's built-in
+# /docker-entrypoint-initdb.d/ mechanism (NOT a separate init container).
+# The init-container approach deadlocks — init waits for `pg_isready` on
+# 127.0.0.1, but the kubelet won't start the main container until init
+# exits. So init waits for main, main waits for init. Neither starts.
+#
+# With the volumeMount below, Postgres's docker-entrypoint.sh picks up
+# /docker-entrypoint-initdb.d/init.sql on first start (when the data
+# dir is empty) and runs it via psql as part of initdb. On every
+# subsequent restart, Postgres sees the data dir is populated and
+# skips /docker-entrypoint-initdb.d/ entirely — the SQL is not re-run,
+# which is exactly what we want (idempotent CREATE TABLE IF NOT EXISTS).
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: identity-db
+  namespace: apollo-airlines-apps
+spec:
+  serviceName: identity-db-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: identity-db
+  template:
+    metadata:
+      labels:
+        app: identity-db
+        tier: data
+    spec:
+      serviceAccountName: identity-db
+      # Stage 4: 60s grace — Postgres needs time to checkpoint + close
+      # connections cleanly on SIGTERM. 30s is too tight.
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "identity"
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "identity"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "identity"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          # Stage 4: NO startupProbe — Postgres' own initdb blocks the
+          # main process from accepting connections until initdb is done,
+          # so `pg_isready` is already an implicit startup check.
+          # Stage 4: Guaranteed QoS. Postgres is the noisiest workload;
+          # 200m/256Mi gives the headroom a real booking system needs.
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+      volumes:
+        - name: init-script
+          configMap:
+            name: identity-db-init-script
+  volumeClaimTemplates:
+    - metadata:
+        name: pg-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

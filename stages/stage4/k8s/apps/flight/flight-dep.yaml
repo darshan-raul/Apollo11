@@ -2,10 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: flight
-  namespace: apollo11-apps
-  labels:
-    app: flight
-    stage: "4"
+  namespace: apollo-airlines-apps
 spec:
   replicas: 2
   selector:
@@ -15,10 +12,9 @@ spec:
     metadata:
       labels:
         app: flight
-        stage: "4"
+        tier: public
     spec:
-      serviceAccountName: apollo11-apps
-      priorityClassName: apollo11-app-critical
+      serviceAccountName: flight
       terminationGracePeriodSeconds: 30
       containers:
         - name: flight
@@ -28,17 +24,14 @@ spec:
             - containerPort: 8081
           env:
             - name: DATABASE_URL
-              value: "postgresql://postgres:***@flight-db.apollo11-infra.svc.cluster.local:5432/flight"
+              value: "postgresql://postgres:postgres@flight-db:5432/flight?sslmode=disable"
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: apollo11-secrets
+                  name: apollo-airlines-secrets
                   key: JWT_SECRET
             - name: PORT
               value: "8081"
-          envFrom:
-            - configMapRef:
-                name: apollo11-config
           startupProbe:
             httpGet:
               path: /healthz/startup
@@ -62,8 +55,8 @@ spec:
             failureThreshold: 3
           resources:
             requests:
-              cpu: 50m
-              memory: 64Mi
+              cpu: 100m
+              memory: 128Mi
             limits:
-              cpu: 500m
-              memory: 256Mi
+              cpu: 100m
+              memory: 128Mi

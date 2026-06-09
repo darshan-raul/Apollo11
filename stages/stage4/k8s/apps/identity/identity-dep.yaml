@@ -2,10 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: identity
-  namespace: apollo11-apps
-  labels:
-    app: identity
-    stage: "4"
+  namespace: apollo-airlines-apps
 spec:
   replicas: 2
   selector:
@@ -15,10 +12,9 @@ spec:
     metadata:
       labels:
         app: identity
-        stage: "4"
+        tier: public
     spec:
-      serviceAccountName: apollo11-apps
-      priorityClassName: apollo11-app-critical
+      serviceAccountName: identity
       terminationGracePeriodSeconds: 30
       containers:
         - name: identity
@@ -28,17 +24,18 @@ spec:
             - containerPort: 8080
           env:
             - name: DATABASE_URL
-              value: "postgresql://postgres:***@identity-db.apollo11-infra.svc.cluster.local:5432/identity"
+              value: "postgresql://postgres:postgres@identity-db:5432/identity?sslmode=disable"
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: apollo11-secrets
+                  name: apollo-airlines-secrets
                   key: JWT_SECRET
             - name: PORT
               value: "8080"
-          envFrom:
-            - configMapRef:
-                name: apollo11-config
+          # Stage 4: three distinct probe paths. startupProbe gives the
+          # container up to 30s to bootstrap before liveness takes over;
+          # livenessProbe restarts on a hung process; readinessProbe pulls
+          # the pod from Service endpoints if its DB becomes unreachable.
           startupProbe:
             httpGet:
               path: /healthz/startup
@@ -60,10 +57,12 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 3
+          # Stage 4: requests == limits for Guaranteed QoS. FastAPI/uWSGI
+          # is light, so 100m CPU / 128Mi memory is comfortable headroom.
           resources:
             requests:
-              cpu: 50m
-              memory: 64Mi
+              cpu: 100m
+              memory: 128Mi
             limits:
-              cpu: 500m
-              memory: 256Mi
+              cpu: 100m
+              memory: 128Mi

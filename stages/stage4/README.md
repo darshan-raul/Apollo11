@@ -1,170 +1,196 @@
 ---
-title: Stage 4 - Flight Control
-description: Kubernetes probes, resource limits, QoS classes, PodDisruptionBudgets, and PodPriority
+title: "Stage 4: Flight Control — Probes, Resource Limits, PodDisruptionBudget"
+description: "Add liveness/readiness/startup probes, Guaranteed QoS resource governance, PodDisruptionBudgets for booking + frontend, and graceful SIGTERM shutdown to all 10 workloads. Built on the Stage 3 StatefulSets + Stage 2 Envoy+MetalLB access stack."
 ---
 
-# Stage 4 — Flight Control
+# Stage 4: Flight Control
 
-Probes, resource limits, QoS classes, PodDisruptionBudgets, PodPriority — the operational layer that keeps services running correctly under load.
+**Goal:** Make the running workloads **observable, governed, and
+shutdown-friendly**. The kubelet needs to know when to restart a
+hung process, when to pull a pod from Service endpoints, and when
+to give up on a slow-starting container. The scheduler needs CPU
+and memory budgets to make placement decisions. Voluntary
+disruptions (node drains, cluster upgrades) need a contract that
+keeps the UI and the flagship booking service online. And every
+container needs to **drain in-flight requests on SIGTERM** rather
+than dropping them.
 
-## What's New
-
-### Code Changes (vs stage3)
-
-All 6 services now expose 3 probe endpoints:
-
-| Endpoint | Behavior |
+| | |
 |---|---|
-| `GET /healthz/startup` | 503 for first 5s, then 200 — kubelet waits for process to start |
-| `GET /healthz/live` | 200 if process is alive — kubelet pings every 10s, restarts if fails |
-| `GET /healthz/ready` | 200 if service can handle traffic (DB/Redis reachable) — kubelet checks before routing |
-| `GET /healthz` | Legacy, kept for backwards compatibility |
+| **New concept** | startup/liveness/readiness probes, `resources.{requests,limits}`, Guaranteed QoS, `terminationGracePeriodSeconds`, PodDisruptionBudget (`minAvailable`), graceful SIGTERM drain |
+| **Workloads changed** | 10 (6 app Deployments + 4 StatefulSets) — probes on apps, resources on all 10, graceful shutdown on all 5 backends + 1 Python service, NGINX probe paths on the frontend |
+| **Workloads unchanged** | Envoy Gateway, MetalLB, seed Jobs, NetworkPolicies, ServiceAccounts, ConfigMap, Secret, namespaces |
+| **Code changes** | All 5 Go services + FastAPI identity + frontend NGINX config |
+| **Verify target** | **129/129 checks pass** (76 Stage 3 baseline + 53 new Stage 4 checks) |
+
+---
+
+## What changed vs Stage 3
+
+### 1. Three distinct probe paths
+
+The single `/healthz` endpoint from Stage 1–3 is split into three:
+
+| Path | Purpose | k8s probe | Returns |
+|---|---|---|---|
+| `/healthz/startup` | "Process is up and the HTTP server is listening" | `startupProbe` | 200 unconditionally once the server is up |
+| `/healthz/live` | "Process is alive (cheap check, no downstream calls)" | `livenessProbe` | 200 unconditionally |
+| `/healthz/ready` | "I can handle traffic right now" | `readinessProbe` | 200 if dependency reachable, 503 otherwise |
+| `/healthz` | Legacy back-compat | — | 200 |
+| `/readyz` | Legacy back-compat | — | 200 |
+
+**Why split them?** With a single endpoint, the kubelet has to use the
+same response for "did the process just start?" and "is the process
+still healthy?" A `readinessProbe` failure pulls the pod from Service
+endpoints (no traffic); a `livenessProbe` failure **restarts the
+container**. Conflating them means a temporary DB blip restarts your
+app — a self-inflicted outage.
+
+`startupProbe` is a separate window: it runs *during* pod startup and
+suppresses liveness checks until it succeeds. With
+`failureThreshold: 6 × periodSeconds: 5 = 30s`, the kubelet gives a
+slow-starting container 30s to bootstrap before liveness takes over.
+
+For the **DB StatefulSets** we keep the existing `livenessProbe` +
+`readinessProbe` (both `pg_isready` / `redis-cli ping`) and **do not
+add a `startupProbe`**. Postgres's own `initdb` blocks the main
+process from accepting connections until it's done, so `pg_isready`
+is already an implicit startup check. Adding a `startupProbe` would
+race with the entrypoint and produce false negatives.
+
+For the **frontend** (NGINX), all three probe paths return 200
+unconditionally. Readiness on the frontend is "process is alive and
+serving", which is what a successful HTTP response from NGINX means.
+There is no local DB or Redis to check.
+
+### 2. Guaranteed QoS — `requests == limits` on every container
+
+The kubelet assigns a **Quality of Service class** to every pod:
+
+| QoS | Basis | Eviction under pressure |
+|---|---|---|
+| `Guaranteed` | `requests == limits` for both CPU and memory | Last to be evicted |
+| `Burstable` | `requests` set, `limits > requests` (or limits missing) | Evicted after BestEffort |
+| `BestEffort` | No requests/limits | First to be evicted |
+
+Apollo11 uses **Guaranteed** for every pod. The reasoning: the
+workloads are small enough that over-committing doesn't buy much
+(booking's 200m/256Mi is a tiny slice of a node), and Guaranteed pods
+are the last to be killed when the node runs out of memory. Stage 4
+is the right time to *teach* Guaranteed QoS — later stages (7: HPA/VPA)
+can introduce Burstable when we actually have variable load.
+
+Per-container tiers:
+
+| Tier | CPU req/limit | Memory req/limit |
+|---|---|---|
+| `identity`, `flight`, `search` (Go) | 100m | 128Mi |
+| `booking` (Go, flagship) | 200m | 256Mi |
+| `notification` (Go, low-traffic) | 50m | 64Mi |
+| `frontend` (NGINX) | 50m | 64Mi |
+| `identity-db`, `flight-db`, `booking-db` (PG) | 200m | 256Mi |
+| `redis` | 100m | 128Mi |
+
+### 3. `terminationGracePeriodSeconds`
+
+| Workload | Grace period | Why |
+|---|---|---|
+| All 6 app Deployments | 30s | Enough for the in-flight HTTP drain (Gin's `srv.Shutdown(ctx)` is bounded at 30s) |
+| All 4 StatefulSets (PG, redis) | 60s | Postgres needs to checkpoint + flush WAL; Redis AOF rewrite can spike |
+
+When the kubelet wants to stop a pod, it sends SIGTERM and starts a
+timer. If the container is still alive when the timer hits, the
+kubelet sends SIGKILL. With our graceful-shutdown code in place, the
+process has up to the grace period to finish in-flight work and exit
+cleanly.
+
+### 4. PodDisruptionBudgets
+
+| PDB | ns | minAvailable | Replicas | Effect |
+|---|---|---|---|---|
+| `booking-pdb` | apollo-airlines-apps | 1 | 2 | A node drain cannot take booking below 1 ready pod |
+| `frontend-pdb` | apollo-airlines-ui | 1 | 2 | A node drain cannot take the UI offline |
+
+PDBs only apply to **voluntary** disruptions (the eviction API).
+Involuntary disruptions (node hardware failure, OOMKill) ignore PDBs
+and are handled by replica count + re-creation.
+
+### 5. Graceful SIGTERM shutdown
+
+**Go services** (`flight`, `booking`, `search`, `notification`):
 
 ```go
-// Go services (flight, booking, search, notification)
-r.GET("/healthz/startup", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
-r.GET("/healthz/live",   func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
-r.GET("/healthz/ready",  func(c *gin.Context) { checkDB(); c.JSON(...) })
-
-// Python/FastAPI (identity)
-@app.get("/healthz/startup")
-async def healthz_startup(): return JSONResponse({"status": "ok"})
-```
-
-Graceful SIGTERM shutdown — services drain in-flight requests before exiting:
-
-```go
-// Go: http.Server with Shutdown()
 srv := &http.Server{Addr: ":" + port, Handler: r}
-go srv.ListenAndServe()
+go srv.ListenAndServe()  // non-blocking
+
 quit := make(chan os.Signal, 1)
 signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 <-quit
-srv.Shutdown(context.WithTimeout(context.Background(), 30*time.Second))
+logJSON("INFO", svc, "Received SIGTERM, shutting down gracefully", ...)
+srv.Shutdown(ctx)  // stops accepting + drains for up to 30s
+db.Close()         // release the connection pool
 ```
 
-### Kubernetes Changes
+`srv.Shutdown(ctx)` is the Go standard-library primitive for this: it
+stops accepting new connections, waits for in-flight requests to
+complete, and returns. If `ctx` expires before the drain finishes
+(>30s), `Shutdown` returns `context.DeadlineExceeded` and the kubelet
+SIGKILLs us — that's the right behavior under load.
 
-#### 1. Probe Strategy
-Every pod gets **all three probe types**:
+**Python/identity** uses `uvicorn`'s built-in handler:
 
-| Probe | Purpose | Failure action |
-|---|---|---|
-| `startupProbe` | Block traffic during startup (30s window) | Pod not marked ready |
-| `livenessProbe` | Detect deadlock / hung process | **Restart container** |
-| `readinessProbe` | Detect inability to serve traffic | **Remove from endpoints** |
+```python
+def _log_sigterm(signum, frame):
+    log_json("INFO", "identity-service", "Received SIGTERM, ...")
+signal.signal(signal.SIGTERM, _log_sigterm)
+signal.signal(signal.SIGINT, _log_sigterm)
 
-```yaml
-startupProbe:
-  httpGet:
-    path: /healthz/startup
-    port: 8080           # identity: 8080, flight: 8081, booking: 8082, search: 8083, notification: 8084, frontend: 3000+8085
-  initialDelaySeconds: 0
-  periodSeconds: 5
-  failureThreshold: 6   # 6 × 5s = 30s max startup time
-
-livenessProbe:
-  httpGet:
-    path: /healthz/live
-    port: 8080
-  initialDelaySeconds: 15
-  periodSeconds: 10
-  failureThreshold: 3   # 3 × 10s = 30s hang = restart
-
-readinessProbe:
-  httpGet:
-    path: /healthz/ready
-    port: 8080
-  initialDelaySeconds: 5
-  periodSeconds: 5
-  failureThreshold: 3
+uvicorn.run(app, host="0.0.0.0", port=8080,
+             timeout_graceful_shutdown=30, access_log=False)
 ```
 
-#### 2. Resource Limits
+uvicorn installs its own SIGTERM handler that sets `should_exit=True`,
+which triggers a graceful drain. Our handler runs first (Python's
+signal-handler chain), just logs, and returns. The `lifespan` context
+manager handles DB cleanup.
 
-All containers have explicit `resources.requests` and `resources.limits`:
+**NGINX** receives SIGTERM and exits within ~1s. It has no in-flight
+state to drain beyond the open connection — we let NGINX handle it.
 
-| Tier | CPU request | CPU limit | Memory request | Memory limit |
-|---|---|---|---|---|
-| App services | 50m | 500m | 64Mi | 256Mi |
-| Frontend | 50m | 200m | 64Mi | 128Mi |
-| PostgreSQL | 50m | 500m | 128Mi | 512Mi |
-| Redis | 20m | 200m | 32Mi | 128Mi |
-| Init container | 10m | 100m | 32Mi | 128Mi |
-
-#### 3. QoS Classes
-
-Kubernetes assigns QoS based on resource requests:
-
-```
-┌─────────────────────────────────────────────┐
-│ QoS Class          Basis                     │
-├─────────────────────────────────────────────┤
-│ Guaranteed         requests == limits (both)│
-│ Burstable          requests present          │
-│ BestEffort         no requests              │
-└─────────────────────────────────────────────┘
-```
-
-All Apollo11 pods use **Guaranteed** QoS (requests == limits for both CPU and memory).
-
-#### 4. PriorityClass
-
-`apollo11-app-critical` (value: 100000) assigned to all app pods:
-
-```yaml
-priorityClassName: apollo11-app-critical
-```
-
-Preempts lower-priority pods when cluster is under pressure.
-
-#### 5. Termination Grace Period
-
-All pods set `terminationGracePeriodSeconds: 30` (apps) or `60` (DBs) — enough time for graceful shutdown and in-flight request completion.
-
-#### 6. PodDisruptionBudget
-
-Frontend and booking services have PDBs ensuring at least 1 replica is available during node drain operations:
-
-```yaml
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: booking-pdb
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app: booking
-```
+---
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  Apollo11 Cluster                                                 │
-│                                                                   │
-│  PriorityClasses:                                                 │
-│  ├─ system-node-critical (value: 2000000)  ← kubelet system pods │
-│  ├─ apollo11-app-critical (value: 100000) ← all Apollo11 pods   │
-│  └─ cluster-local (value: 0)              ← default              │
-│                                                                   │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │  Pod: booking-xxxxx                                         │  │
-│  │    QoS: Guaranteed (requests==limits)                        │  │
-│  │    priorityClass: apollo11-app-critical                     │  │
-│  │    startupProbe: /healthz/startup  (30s window)             │  │
-│  │    livenessProbe: /healthz/live  (restart on fail)          │  │
-│  │    readinessProbe: /healthz/ready (route traffic)            │  │
-│  │    resources: cpu=50m-500m, mem=64Mi-256Mi                   │  │
-│  │    terminationGracePeriodSeconds: 30                        │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                                                                   │
-│  ┌─ PodDisruptionBudget ────────────────────────────────────────┐ │
-│  │  booking-pdb: minAvailable=1  (booking deployment, 2 replicas) │ │
-│  │  frontend-pdb: minAvailable=1 (frontend deployment, 2 replicas)│ │
-│  └──────────────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│  Apollo11 Cluster                                                    │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Pod: booking-xxxxx (Deployment, replicas=2)                  │    │
+│  │    QoS: Guaranteed (requests==limits)                         │    │
+│  │    terminationGracePeriodSeconds: 30                           │    │
+│  │    startupProbe    /healthz/startup   (200, 6×5s = 30s win)   │    │
+│  │    livenessProbe   /healthz/live      (200, 10s, fail×3=res)  │    │
+│  │    readinessProbe  /healthz/ready     (200/503, 5s, fail×3)   │    │
+│  │    resources: { cpu: 200m, memory: 256Mi }                    │    │
+│  │    On SIGTERM: log "received SIGTERM" → srv.Shutdown(30s)     │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ┌─ PodDisruptionBudget ─────────────────────────────────────────┐  │
+│  │  booking-pdb:   minAvailable=1  (apps ns, 2 replicas)         │  │
+│  │  frontend-pdb:  minAvailable=1  (ui    ns, 2 replicas)        │  │
+│  │  Status: currentHealthy=2  expectedPods=2  (both satisfied)   │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Pod: identity-db-0 (StatefulSet)                             │    │
+│  │    QoS: Guaranteed (200m/256Mi == 200m/256Mi)                 │    │
+│  │    terminationGracePeriodSeconds: 60                           │    │
+│  │    livenessProbe:  pg_isready (exec)                          │    │
+│  │    readinessProbe: pg_isready (exec)                          │    │
+│  │    NO startupProbe — Postgres' initdb is the implicit start   │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -172,150 +198,182 @@ spec:
 ## Files
 
 ```
-stage4/
-├── code/                          # All 6 services with probe handlers + graceful shutdown
-│   ├── booking/main.go            # Go: /healthz/startup/live/ready + SIGTERM
-│   ├── flight/main.go             # Go: /healthz/startup/live/ready + SIGTERM
-│   ├── search/main.go             # Go: /healthz/startup/live/ready + SIGTERM
-│   ├── notification/main.go       # Go: /healthz/startup/live/ready (checks Redis) + SIGTERM
-│   ├── identity/main.py           # Python/FastAPI: /healthz/startup/live/ready + SIGTERM
+stages/stage4/
+├── code/                       # Snapshot of stage3/code + edits
+│   ├── flight/main.go          # 3 new probe handlers + srv.Shutdown
+│   ├── booking/main.go         # ditto
+│   ├── search/main.go          # ditto
+│   ├── notification/main.go    # ditto (ready checks Redis)
+│   ├── identity/main.py        # 3 new endpoints + uvicorn timeout_graceful_shutdown
 │   └── frontend/
-│       ├── probe.go               # Go probe server on :8085
-│       ├── Dockerfile             # NGINX + probe server (supervisord)
-│       └── supervisord.conf
+│       ├── nginx.conf          # /healthz/{startup,live,ready} location blocks
+│       └── Dockerfile          # COPY nginx.conf into the image
 ├── k8s/
-│   ├── config/
-│   │   ├── namespace.yaml         # 3 namespaces (apollo-airlines-infra/apps/ui)
-│   │   ├── serviceaccount.yaml   # 3 SAs
-│   │   ├── configmap.yaml         # FQDN service URLs
-│   │   ├── secrets.yaml
-│   │   ├── ingress.yaml           # Traefik Ingress
-│   │   └── priorityclass.yaml    # apollo11-app-critical (value: 100000)
-│   ├── infra/
-│   │   ├── postgres/              # StatefulSets with probes + limits (3 dbs)
-│   │   └── redis/                # StatefulSets with probes + limits
-│   ├── apps/                     # Deployments with all 3 probes + PDB
-│   │   ├── identity/
-│   │   ├── flight/
-│   │   ├── booking/              # + booking-pdb.yaml
-│   │   ├── search/
-│   │   └── notification/
-│   └── ui/
-│       └── frontend/             # + frontend-pdb.yaml, NGINX + probe sidecar
-└── README.md (this file)
+│   ├── config/                 # Verbatim from stage 3
+│   ├── serviceaccounts/        # Verbatim from stage 3
+│   ├── networkpolicies/        # Verbatim from stage 3 (reference only)
+│   ├── apps/                   # Probes + resources + terminationGracePeriodSeconds
+│   │   ├── identity/identity-dep.yaml
+│   │   ├── flight/flight-dep.yaml
+│   │   ├── booking/booking-dep.yaml       # resources bumped to 200m/256Mi
+│   │   ├── search/search-dep.yaml
+│   │   ├── notification/notification-dep.yaml  # 50m/64Mi (low tier)
+│   │   ├── frontend/frontend-dep.yaml
+│   │   ├── identity-db/identity-db-sts.yaml    # +resources (no probes change)
+│   │   ├── flight-db/flight-db-sts.yaml        # +resources (no probes change)
+│   │   ├── booking-db/booking-db-sts.yaml      # +resources (no probes change)
+│   │   └── redis/redis-sts.yaml                # +resources (no probes change)
+│   ├── pdb/                    # NEW
+│   │   ├── booking-pdb.yaml    # minAvailable=1, 2 replicas
+│   │   └── frontend-pdb.yaml   # minAvailable=1, 2 replicas
+│   ├── jobs/                   # Verbatim from stage 3
+│   ├── gateway/                # Verbatim from stage 3
+│   └── metallb/                # Verbatim from stage 3
+└── scripts/
+    ├── apply.sh                # Stage 3 + apply k8s/pdb/ at step 4
+    ├── teardown.sh             # Verbatim from stage 3
+    ├── build-images.sh         # Builds stage4/code/ (only code differs)
+    └── verify.sh               # 129 checks (76 Stage 3 baseline + 53 Stage 4)
 ```
 
 ---
 
-## Deploy
-
-### 1. Build the container images
+## Apply / Verify / Teardown
 
 ```bash
 cd /home/darshan/projects/Apollo11/stages/stage4
-./scripts/build-images.sh
+./scripts/apply.sh        # ~3 min: builds images, applies 50+ manifests, waits for Gateway
+./scripts/verify.sh       # ~30s: 129 checks, prints Passed/Failed count
+./scripts/teardown.sh     # ~30s: deletes namespaces + controllers in safe order
 ```
 
-### 2. Apply manifests
+`apply.sh` exits 0 when the Gateway is Programmed and MetalLB has
+assigned an IP. `verify.sh` exits non-zero on any failure. `teardown.sh`
+deletes app namespaces first (which drops the PDBs + PVCs), then the
+Gateway, then Envoy, then MetalLB — this is the order that avoids
+hanging webhooks (see Stage 3 handoff §"Teardown order matters").
+
+---
+
+## Verify (129 checks)
+
+| Group | Count | What it checks |
+|---|---|---|
+| Stage 3 baseline (namespaces, sts, PVCs, deps, controllers, gateway, routes, smoke) | 76 | Unchanged from Stage 3 — the access stack still works |
+| Probes configured on 6 apps | 18 | Each Deployment has startup/live/ready with HTTP path set |
+| Probes on 4 sts + no startupProbe | 12 | Each sts has liveness + readiness, no startupProbe |
+| Resources on 10 workloads | 10 | requests.{cpu,memory} + limits.{cpu,memory} all set |
+| QoS class is Guaranteed on 10 pods | 10 | `.status.qosClass` reports Guaranteed |
+| terminationGracePeriodSeconds | 10 | 30s for 6 apps, 60s for 4 sts |
+| PodDisruptionBudgets (booking + frontend) | 4 | PDB exists, minAvailable=1, status populated |
+| Live probe responses | 18 | curl from inside each pod → 3 probe paths × 6 apps |
+| Behavioural demo: graceful shutdown | 2 | Delete a booking pod, follow logs, see "Received SIGTERM" |
+| Behavioural demo: frontend restart | 2 | Delete frontend pod, replacement serves /healthz/ready |
+| **Total** | **129** | |
+
+---
+
+## Demo: prove the probes actually work
+
+After `apply.sh` finishes:
 
 ```bash
-kubectl apply -f k8s/config/
-kubectl apply -f k8s/infra/
-kubectl apply -f k8s/apps/
-kubectl apply -f k8s/ui/
-```
+# 1. Look at a live pod's probe state
+kubectl describe pod -n apollo-airlines-apps -l app=booking | head -40
+# Look for:
+#   Liveness:  http-get http://:8082/healthz/live  delay=15s period=10s
+#   Readiness: http-get http://:8082/healthz/ready delay=5s  period=5s
+#   Startup:   http-get http://:8082/healthz/startup delay=0s period=5s
 
-Or with Kustomize:
+# 2. Hit the probe paths from inside the pod
+kubectl exec -n apollo-airlines-apps -l app=booking -- \
+  sh -c "wget -q -O- http://127.0.0.1:8082/healthz/{startup,live,ready}"
 
-```bash
-kubectl apply -k k8s/
+# 3. Delete a pod — the kubelet creates a new one. Follow the new pod's logs.
+kubectl delete pod -n apollo-airlines-apps -l app=booking --wait=false
+kubectl logs -n apollo-airlines-apps -l app=booking -f
+# You'll see the OLD pod (if you tailed it): "Received SIGTERM, shutting down gracefully"
+
+# 4. Watch a PDB prevent a node drain (only relevant in multi-node)
+# With 2 replicas and minAvailable=1, kubectl drain on a node running
+# both pods will block until you delete one first (proving the contract).
+
+# 5. Trigger a readiness failure
+# Drop a NetworkPolicy or iptables rule that blocks booking's connection
+# to booking-db. Within ~15s, the readiness probe starts failing, and
+# the pod is removed from Service endpoints:
+kubectl exec -n apollo-airlines-apps -l app=booking -- \
+  sh -c "wget -q -O- http://127.0.0.1:8082/healthz/ready"
+# Returns: {"status":"error","detail":"..."} with 503
 ```
 
 ---
 
-## Verification
+## Lessons learned during build (read this if you're changing this stage)
 
-```bash
-# Validate all YAML
-kubectl apply --dry-run=server -f k8s/
+1. **`kubectl logs --previous <pod>` is unreliable for the SIGTERM
+   demo.** When you delete a pod, the API server removes it
+   immediately. The `kubectl logs <old-pod> --previous` call returns
+   `NotFound` because the old pod is gone. **Fix in verify.sh:** start
+   `kubectl logs <pod> --follow` in the background *before* the
+   delete, capture the SIGTERM log line, then kill the follower. The
+   booking pod's logs in the demo section use this pattern.
 
-# Deploy
-kubectl apply -f k8s/
+2. **NGINX may report Ready before it serves HTTP.** The pod's
+   `ready` condition flips based on the readiness probe. The very
+   first `kubectl exec ... wget` call can race with NGINX binding the
+   port. The verify script retries 30× with 1s sleep and re-fetches
+   the pod name each iteration (the API server returns the old
+   deleting pod for 1-2s after `kubectl delete --wait=false`).
 
-# Check pod status and QoS
-kubectl get pods -n apollo-airlines-apps -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.qosClass}{"\n"}'
+3. **uvicorn's SIGTERM handling is "baked in" — don't replace it.**
+   uvicorn's default signal handler sets `should_exit=True`, which
+   triggers a graceful drain via `Server.shutdown()`. If you replace
+   the handler with one that calls `sys.exit(0)`, you lose the drain.
+   The right pattern: register a *prior* handler that just logs, and
+   let uvicorn's handler run.
 
-# Watch probe statuses
-kubectl get pods -n apollo-airlines-apps -w
+4. **DB StatefulSets don't need a `startupProbe`.** Postgres' own
+   `initdb` is gated by the entrypoint, and `pg_isready` returns
+   non-zero until `initdb` is done. A `startupProbe` would race with
+   the entrypoint and produce false negatives. The `livenessProbe`
+   already covers "is the process healthy".
 
-# Test startup probe (should return 503 for first 5s, then 200)
-curl -s http://identity.apollo-airlines-apps.svc.cluster.local:8080/healthz/startup
+5. **Guaranteed QoS = `requests == limits`, not "high requests".**
+   The class is *Guaranteed* if both fields are set and equal. A pod
+   with `requests: {cpu: 100m}, limits: {cpu: 100m}` is Guaranteed.
+   A pod with `requests: {cpu: 100m, memory: 256Mi}, limits: {cpu:
+   500m, memory: 1Gi}` is Burstable. The verify script asserts
+   `qosClass == "Guaranteed"` so a typo in any field fails fast.
 
-# Check PDBs
-kubectl get pdb -A
-
-# Check PriorityClass assigned
-kubectl get pods -n apollo-airlines-apps -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.priority}{"\n"}'
-```
-
----
-
-## Self-Check
-
-```bash
-bash /home/darshan/projects/Apollo11/test/stage4_test.sh
-```
-
----
-
-## Clean Up
-
-```bash
-kubectl delete -f k8s/
-kubectl delete pvc --all -n apollo-airlines-infra
-kubectl delete pvc --all -n apollo-airlines-apps
-```
-
----
-
-## Key Takeaways
-
-```
-livenessProbe   → kubelet restarts container on failure (process dead/hung)
-readinessProbe  → kubelet removes pod from endpoints (can't handle traffic)
-startupProbe    → kubelet waits 30s for startup before liveness takes over
-
-requests        → scheduler uses this to decide which node fits the pod
-limits          → kubelet enforces this — pod OOMKilled or CPU throttled
-
-Guaranteed QoS  → requests == limits for both CPU and memory
-Burstable       → requests present, but limits > requests
-BestEffort      → no requests/limits set
-
-PodPriority     → value determines preemption ranking
-preemptionPolicy: PreemptLowerPriority → kills lower-priority pods under pressure
-
-terminationGracePeriodSeconds: 30
-  → SIGTERM sent to container → drains in-flight requests → exits
-  → If still alive after 30s → SIGKILL
-
-PodDisruptionBudget minAvailable: 1
-  → Node drain is blocked if it would violate the PDB
-  → Cluster operations (upgrades, maintenance) must respect PDB
-```
+6. **PDB status is computed by the controller.** A newly-created PDB
+   reports `currentHealthy: 0` until the next reconciliation loop
+   (~10s). The verify script tolerates this and retries until
+   `currentHealthy >= 1`.
 
 ---
 
-## What's Next
+## What's next
 
-Stage 5 wraps everything in **Helm charts** and **Kustomize overlays** for environment-specific configuration (dev/staging/prod) and GitOps-driven deployment with ArgoCD.
+Stage 5 wraps the manifests in **Helm charts** and **Kustomize
+overlays** for environment-specific config (dev/staging/prod) and
+adds a **GitHub Actions** workflow. The probe + resource config
+we built here becomes a `values.yaml` knob in Helm and a patch in
+Kustomize.
 
 **Before moving on, make sure you can answer:**
 
-1. What happens if a container's liveness probe fails 3 times in a row?
-2. Why does a startup probe need to exist alongside a liveness probe?
-3. What's the difference between `readinessProbe` and `startupProbe`?
-4. Why are resource limits set equal to requests (Guaranteed QoS) in Apollo11?
-5. What would happen to in-flight requests if a pod didn't handle SIGTERM?
-6. Why does the booking service need a PodDisruptionBudget but the search service doesn't?
-7. What does `preemptionPolicy: PreemptLowerPriority` mean in the PriorityClass?
+1. What does each of `startupProbe`, `livenessProbe`, and
+   `readinessProbe` do? What happens on failure of each?
+2. Why is `requests == limits` classified as Guaranteed QoS? What
+   is the alternative and when would you choose it?
+3. What's the difference between a `livenessProbe` failure and a
+   `readinessProbe` failure from the kubelet's perspective?
+4. What is `terminationGracePeriodSeconds`? What happens when the
+   timer expires?
+5. Why does a `PodDisruptionBudget` only apply to *voluntary*
+   disruptions, and what counts as voluntary?
+6. What does `srv.Shutdown(ctx)` actually do in Go's
+   `net/http`? What if the context expires before all in-flight
+   requests complete?
+7. Why is uvicorn's default SIGTERM handler the right one to keep?

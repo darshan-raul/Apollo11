@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -19,8 +20,6 @@ import (
 var (
 	flightServiceURL string
 	logger           = log.New(os.Stdout, "", 0)
-
-	server *http.Server
 )
 
 func init() {
@@ -44,15 +43,15 @@ func logJSON(level, service, message, traceID, spanID string, extra ...map[strin
 }
 
 type SearchResult struct {
-	ID             string `json:"id"`
-	FlightNumber   string `json:"flightNumber"`
-	Origin         string `json:"origin"`
-	Destination    string `json:"destination"`
-	DepartureTime  string `json:"departureTime"`
-	ArrivalTime    string `json:"arrivalTime"`
-	Duration       int    `json:"duration"`
-	AvailableSeats int    `json:"availableSeats"`
-	Status         string `json:"status"`
+	ID            string `json:"id"`
+	FlightNumber  string `json:"flightNumber"`
+	Origin        string `json:"origin"`
+	Destination   string `json:"destination"`
+	DepartureTime string `json:"departureTime"`
+	ArrivalTime   string `json:"arrivalTime"`
+	Duration      int    `json:"duration"`
+	AvailableSeats int   `json:"availableSeats"`
+	Status        string `json:"status"`
 }
 
 func getEnv(key, fallback string) string {
@@ -70,6 +69,18 @@ func main() {
 	r := gin.Default()
 
 	r.Use(func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
+		c.Header("Access-Control-Expose-Headers", "X-Request-ID")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
+
+	r.Use(func(c *gin.Context) {
 		requestID := c.GetHeader("X-Request-ID")
 		if requestID == "" {
 			requestID = generateRequestID()
@@ -79,22 +90,24 @@ func main() {
 		c.Next()
 	})
 
-	// --- Stage 4: Probe handlers ---
+	// Stage 4: split /healthz into startup/live/ready probes. Search has no
+	// persistent local state to check, so /readyz and /healthz/ready both
+	// return 200 unconditionally. The legacy /healthz path is kept for
+	// back-compat.
 	r.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
 	r.GET("/healthz/startup", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, gin.H{"status": "starting"})
 	})
 
 	r.GET("/healthz/live", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, gin.H{"status": "alive"})
 	})
 
 	r.GET("/healthz/ready", func(c *gin.Context) {
-		// Search has no DB — always ready if the process is alive
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, gin.H{"status": "ready"})
 	})
 
 	r.GET("/readyz", func(c *gin.Context) {
@@ -104,9 +117,9 @@ func main() {
 	r.GET("/metrics", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"service":                  "search",
-			"http_requests_total":      0,
+			"http_requests_total":       0,
 			"http_request_duration_ms": 0,
-			"db_connections_active":    0,
+			"db_connections_active":     0,
 		})
 	})
 
@@ -151,15 +164,15 @@ func main() {
 			arr, _ := time.Parse(time.RFC3339, arrStr)
 			duration := int(arr.Sub(dep).Minutes())
 			results = append(results, SearchResult{
-				ID:             fm["id"].(string),
-				FlightNumber:   fm["flightNumber"].(string),
-				Origin:         fm["origin"].(string),
-				Destination:    fm["destination"].(string),
-				DepartureTime:  depStr,
-				ArrivalTime:    arrStr,
-				Duration:       duration,
+				ID:            fm["id"].(string),
+				FlightNumber:  fm["flightNumber"].(string),
+				Origin:        fm["origin"].(string),
+				Destination:   fm["destination"].(string),
+				DepartureTime: depStr,
+				ArrivalTime:   arrStr,
+				Duration:      duration,
 				AvailableSeats: int(fm["availableSeats"].(float64)),
-				Status:         fm["status"].(string),
+				Status:        fm["status"].(string),
 			})
 		}
 		logJSON("INFO", "search-service", "Search completed", traceID, "", map[string]interface{}{"count": len(results)})
@@ -168,14 +181,12 @@ func main() {
 
 	port := getEnv("PORT", "8083")
 
-	// --- Graceful shutdown (Stage 4) ---
 	srv := &http.Server{Addr: ":" + port, Handler: r}
-	server = srv
 
 	go func() {
-		log.Printf("Search service starting on :%s", port)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+		logJSON("INFO", "search-service", fmt.Sprintf("Starting on :%s", port), "", "", nil)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logJSON("ERROR", "search-service", fmt.Sprintf("Server error: %v", err), "", "", nil)
 		}
 	}()
 
@@ -184,9 +195,9 @@ func main() {
 	<-quit
 	logJSON("INFO", "search-service", "Received SIGTERM, shutting down gracefully", "", "", nil)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logJSON("ERROR", "search-service", fmt.Sprintf("Shutdown error: %v", err), "", "", nil)
 	}
 	logJSON("INFO", "search-service", "Server stopped", "", "", nil)

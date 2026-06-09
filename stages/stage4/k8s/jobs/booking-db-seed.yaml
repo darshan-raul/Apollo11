@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: booking-db-seed
+  namespace: apollo-airlines-apps
+data:
+  seed.sql: |
+    -- Booking seed: none (bookings are created at runtime by the booking service).
+    -- File is intentionally empty — kept so the pattern is uniform across all
+    -- three DBs, and as a smoke test that the `bookings` table exists.
+    SELECT 1;

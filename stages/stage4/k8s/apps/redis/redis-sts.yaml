@@ -1,0 +1,66 @@
+# Stage 3: redis converted from Deployment to StatefulSet.
+# - Persistent volume so AOF / RDB survives pod restarts.
+# - Wired to the headless service `redis-headless` for stable DNS.
+# - AOF enabled (`--appendonly yes`) — gives durable writes for the
+#   notification fan-out queue. Stage 7's search cache uses this too.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: apollo-airlines-apps
+spec:
+  serviceName: redis-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+        tier: data
+    spec:
+      serviceAccountName: redis
+      # Stage 4: 60s grace — Redis usually shuts down in <1s, but AOF
+      # rewrite + final fsync can take longer on a busy node.
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          command:
+            - redis-server
+            - --appendonly yes
+            - --appendfsync everysec
+            - --save 60 100
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          # Stage 4: Guaranteed QoS for redis. Smaller than PG since
+          # it's mostly idle at this stage.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seed-identity-db
+  namespace: apollo-airlines-apps
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: seed-identity-db
+    spec:
+      serviceAccountName: init-identity-db
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              until pg_isready -h identity-db -U postgres; do echo "Waiting for identity-db..."; sleep 2; done
+              psql -h identity-db -U postgres -d identity -v ON_ERROR_STOP=1 -f /init/seed.sql
+              echo "identity DB seeded"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: seed-script
+              mountPath: /init
+      volumes:
+        - name: seed-script
+          configMap:
+            name: identity-db-seed

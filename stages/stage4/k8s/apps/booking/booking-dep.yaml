@@ -2,10 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: booking
-  namespace: apollo11-apps
-  labels:
-    app: booking
-    stage: "4"
+  namespace: apollo-airlines-apps
 spec:
   replicas: 2
   selector:
@@ -15,10 +12,9 @@ spec:
     metadata:
       labels:
         app: booking
-        stage: "4"
+        tier: public
     spec:
-      serviceAccountName: apollo11-apps
-      priorityClassName: apollo11-app-critical
+      serviceAccountName: booking
       terminationGracePeriodSeconds: 30
       containers:
         - name: booking
@@ -28,23 +24,20 @@ spec:
             - containerPort: 8082
           env:
             - name: DATABASE_URL
-              value: "postgresql://postgres:***@booking-db.apollo11-infra.svc.cluster.local:5432/booking"
+              value: "postgresql://postgres:postgres@booking-db:5432/booking?sslmode=disable"
+            - name: FLIGHT_SERVICE_URL
+              value: "http://flight:8081"
+            - name: IDENTITY_SERVICE_URL
+              value: "http://identity:8080"
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification:8084"
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: apollo11-secrets
+                  name: apollo-airlines-secrets
                   key: JWT_SECRET
-            - name: FLIGHT_SERVICE_URL
-              value: "http://flight.apollo11-apps.svc.cluster.local:8081"
-            - name: IDENTITY_SERVICE_URL
-              value: "http://identity.apollo11-apps.svc.cluster.local:8080"
-            - name: NOTIFICATION_SERVICE_URL
-              value: "http://notification.apollo11-apps.svc.cluster.local:8084"
             - name: PORT
               value: "8082"
-          envFrom:
-            - configMapRef:
-                name: apollo11-config
           startupProbe:
             httpGet:
               path: /healthz/startup
@@ -66,10 +59,13 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 3
+          # Booking is the flagship service and the noisiest (calls flight +
+          # identity + notification synchronously per request). Twice the
+          # default app tier — still Guaranteed QoS.
           resources:
             requests:
-              cpu: 50m
-              memory: 64Mi
+              cpu: 200m
+              memory: 256Mi
             limits:
-              cpu: 500m
+              cpu: 200m
               memory: 256Mi

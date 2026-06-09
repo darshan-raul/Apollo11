@@ -136,8 +136,7 @@ Frontend → Booking Service → Identity Service
 * ☐ Control where Pods run using **taints and tolerations**.
 * ☐ Influence scheduling decisions using **node affinity rules**.
 * ☐ Control Pod co-location and separation using **pod affinity and anti-affinity**.
-    * ☐ Add **Redis caching** to the Search service (TTL 5min)
-
+    
 ---
 
 ### Stage 8 : 🔐 Command Module Hardening – Security ☐ [📖 README](stages/stage8/README.md)

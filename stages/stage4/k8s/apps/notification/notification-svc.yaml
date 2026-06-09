@@ -1,12 +1,13 @@
+# notification is internal-only — only booking calls it. ClusterIP, no NodePort.
 apiVersion: v1
 kind: Service
 metadata:
   name: notification
-  namespace: apollo11-apps
+  namespace: apollo-airlines-apps
 spec:
+  type: ClusterIP
   selector:
     app: notification
   ports:
     - port: 8084
       targetPort: 8084
-  type: ClusterIP

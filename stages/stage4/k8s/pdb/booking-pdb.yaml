@@ -1,0 +1,19 @@
+# Stage 4: PodDisruptionBudget for booking — the flagship service. With 2
+# replicas, minAvailable=1 ensures voluntary disruptions (node drains,
+# autoscaler scale-downs, cluster upgrades) can never reduce the booking
+# deployment below 1 ready pod. Voluntary disruptions are gated by the
+# eviction API; PDBs are the contract that says "leave at least N ready".
+#
+# minAvailable=1 (vs minAvailable=100%) lets one of the two pods be
+# evicted at a time — the API server / kubelet waits for the replacement
+# to become ready before evicting the second.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: booking-pdb
+  namespace: apollo-airlines-apps
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: booking

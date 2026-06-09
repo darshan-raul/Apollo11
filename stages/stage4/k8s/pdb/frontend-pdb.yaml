@@ -1,0 +1,13 @@
+# Stage 4: PodDisruptionBudget for frontend — keeps the UI available
+# during voluntary disruptions (node drains, cluster upgrades). With 2
+# replicas, minAvailable=1 prevents a node drain from taking down the UI.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-pdb
+  namespace: apollo-airlines-ui
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: frontend

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -23,19 +24,10 @@ var (
 	db        *sql.DB
 	jwtSecret string
 	logger    = log.New(os.Stdout, "", 0)
-
-	server *http.Server
 )
 
 func init() {
 	jwtSecret = getEnv("JWT_SECRET", "apollo-airlines-dev-secret")
-}
-
-func getEnv(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
 }
 
 func logJSON(level, service, message, traceID, spanID string, extra ...map[string]interface{}) {
@@ -78,19 +70,42 @@ type UpdateSeatsRequest struct {
 	Delta int `json:"delta"`
 }
 
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
+func addSSLMode(dsn string) string {
+	if strings.Contains(dsn, "sslmode=") {
+		return dsn
+	}
+	return dsn + "?sslmode=disable"
+}
+
 func initDB() {
 	dbURL := getEnv("DATABASE_URL", "postgresql://postgres:***@flight-db:5432/flight")
 	var err error
-	db, err = sql.Open("postgres", dbURL)
+	db, err = sql.Open("postgres", addSSLMode(dbURL))
 	if err != nil {
 		logJSON("ERROR", "flight-service", fmt.Sprintf("Failed to open DB: %v", err), "", "", nil)
+		return
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
 	for {
-		err = db.Ping()
+		err = db.PingContext(ctx)
 		if err == nil {
 			break
 		}
-		time.Sleep(1 * time.Second)
+		logJSON("ERROR", "flight-service", fmt.Sprintf("DB not ready (will retry): %v", err), "", "", nil)
+		select {
+		case <-ctx.Done():
+			logJSON("ERROR", "flight-service", fmt.Sprintf("DB connection timeout: %v", ctx.Err()), "", "", nil)
+			return
+		case <-time.After(2 * time.Second):
+		}
 	}
 	logJSON("INFO", "flight-service", "Connected to flight DB", "", "", nil)
 }
@@ -106,6 +121,18 @@ func main() {
 	r := gin.Default()
 
 	r.Use(func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
+		c.Header("Access-Control-Expose-Headers", "X-Request-ID")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
+
+	r.Use(func(c *gin.Context) {
 		requestID := c.GetHeader("X-Request-ID")
 		if requestID == "" {
 			requestID = generateRequestID()
@@ -115,17 +142,20 @@ func main() {
 		c.Next()
 	})
 
-	// --- Stage 4: Probe handlers ---
+	// Stage 4: split /healthz into three distinct probe paths. The legacy
+	// /healthz and /readyz are kept returning 200 for backward compatibility
+	// (smoke tests, external monitoring) but the kubelet probes target the
+	// new /healthz/{startup,live,ready} paths.
 	r.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
 	r.GET("/healthz/startup", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, gin.H{"status": "starting"})
 	})
 
 	r.GET("/healthz/live", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, gin.H{"status": "alive"})
 	})
 
 	r.GET("/healthz/ready", func(c *gin.Context) {
@@ -133,7 +163,7 @@ func main() {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not reachable"})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, gin.H{"status": "ready"})
 	})
 
 	r.GET("/readyz", func(c *gin.Context) {
@@ -356,14 +386,18 @@ func main() {
 
 	port := getEnv("PORT", "8081")
 
-	// --- Graceful shutdown (Stage 4) ---
-	srv := &http.Server{Addr: ":" + port, Handler: r}
-	server = srv
+	// Stage 4: graceful shutdown. We start the HTTP server in a goroutine so
+	// we can wait for SIGTERM in the main goroutine. On signal we call
+	// srv.Shutdown(ctx) which stops accepting new connections, drains
+	// in-flight requests up to the 30s timeout, then returns. After Shutdown
+	// returns we close the DB pool. If Shutdown times out, srv.Shutdown
+	// returns context.DeadlineExceeded and the kubelet will SIGKILL us.
+	srv := &http.Server{Addr: fmt.Sprintf("0.0.0.0:%s", port), Handler: r}
 
 	go func() {
-		log.Printf("Flight service starting on :%s", port)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+		logJSON("INFO", "flight-service", fmt.Sprintf("Starting on :%s", port), "", "", nil)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logJSON("ERROR", "flight-service", fmt.Sprintf("Server error: %v", err), "", "", nil)
 		}
 	}()
 
@@ -372,10 +406,14 @@ func main() {
 	<-quit
 	logJSON("INFO", "flight-service", "Received SIGTERM, shutting down gracefully", "", "", nil)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logJSON("ERROR", "flight-service", fmt.Sprintf("Shutdown error: %v", err), "", "", nil)
+	}
+
+	if err := db.Close(); err != nil {
+		logJSON("ERROR", "flight-service", fmt.Sprintf("DB close error: %v", err), "", "", nil)
 	}
 	logJSON("INFO", "flight-service", "Server stopped", "", "", nil)
 }

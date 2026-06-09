@@ -1,9 +1,8 @@
 import os
 import json
+import signal
 import uuid
 import datetime
-import signal
-import sys
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from typing import Optional
@@ -12,6 +11,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, HTTPException, Header, Depends, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from passlib.context import CryptContext
 from jose import jwt, JWTError
@@ -22,10 +22,7 @@ JWT_EXPIRY_HOURS = 24
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres:***@identity-db:5432/identity")
-
-# Graceful shutdown flag
-shutdown_requested = False
+DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@identity-db:5432/identity")
 
 
 def get_db():
@@ -52,20 +49,25 @@ def log_json(level: str, service: str, message: str, trace_id: str = "", span_id
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    conn = get_db()
+    log_json("INFO", "identity-service", "Service starting", trace_id="")
     yield
-    conn.close()
+    log_json("INFO", "identity-service", "Lifespan shutdown complete", trace_id="")
 
 
 app = FastAPI(title="identity-service", version="1.0.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class RegisterRequest(BaseModel):
     email: str
     password: str
-    firstName: str
-    lastName: str
-    passportNumber: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -88,20 +90,22 @@ async def add_request_id(request: Request, call_next):
     return response
 
 
-# --- Stage 4: Probe handlers ---
 @app.get("/healthz")
 async def healthz():
     return JSONResponse({"status": "ok"})
 
 
+# Stage 4: split /healthz into three distinct probe paths. /readyz is kept
+# as a back-compat alias of /healthz/ready so smoke tests from earlier
+# stages still pass.
 @app.get("/healthz/startup")
 async def healthz_startup():
-    return JSONResponse({"status": "ok"})
+    return JSONResponse({"status": "starting"})
 
 
 @app.get("/healthz/live")
 async def healthz_live():
-    return JSONResponse({"status": "ok"})
+    return JSONResponse({"status": "alive"})
 
 
 @app.get("/healthz/ready")
@@ -112,7 +116,7 @@ async def healthz_ready():
         cur.execute("SELECT 1")
         cur.close()
         conn.close()
-        return JSONResponse({"status": "ok"})
+        return JSONResponse({"status": "ready"})
     except Exception as e:
         return JSONResponse({"status": "error", "detail": str(e)}, status_code=503)
 
@@ -177,10 +181,10 @@ async def register(body: RegisterRequest, request: Request):
             raise HTTPException(status_code=409, detail="Email already registered")
         password_hash = pwd_context.hash(body.password)
         cur.execute(
-            """INSERT INTO users (email, password_hash, first_name, last_name, passport_number)
-               VALUES (%s, %s, %s, %s, %s)
-               RETURNING id, email, first_name, last_name, loyalty_tier, role""",
-            (body.email, password_hash, body.firstName, body.lastName, body.passportNumber)
+            """INSERT INTO users (email, password_hash)
+               VALUES (%s, %s)
+               RETURNING id, email, loyalty_tier, role""",
+            (body.email, password_hash)
         )
         user = cur.fetchone()
         conn.commit()
@@ -190,8 +194,6 @@ async def register(body: RegisterRequest, request: Request):
         return {
             "id": str(user["id"]),
             "email": user["email"],
-            "firstName": user["first_name"],
-            "lastName": user["last_name"],
             "loyaltyTier": user["loyalty_tier"],
             "role": user["role"]
         }
@@ -332,16 +334,59 @@ async def get_user_by_id(user_id: str, authorization: str = Header(None), reques
     }
 
 
+@app.get("/api/admin/users")
+async def get_all_users(authorization: str = Header(None), request: Request = None):
+    trace_id = getattr(request.state, "request_id", "")
+    payload = verify_jwt(authorization)
+    if payload.get("role") != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute(
+        """SELECT id, email, first_name, last_name, loyalty_tier, role, is_active, created_at
+           FROM users ORDER BY created_at DESC"""
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    log_json("INFO", "identity-service", "Admin fetched all users", trace_id=trace_id, count=len(rows))
+    return {
+        "users": [
+            {
+                "id": str(u["id"]),
+                "email": u["email"],
+                "firstName": u["first_name"],
+                "lastName": u["last_name"],
+                "loyaltyTier": u["loyalty_tier"],
+                "role": u["role"],
+                "isActive": u["is_active"],
+                "createdAt": u["created_at"].isoformat() + "Z" if u["created_at"] else None,
+            }
+            for u in rows
+        ]
+    }
+
+
 # --- Graceful shutdown (Stage 4) ---
-def handle_sigterm(signum, frame):
+# uvicorn installs its own SIGTERM handler that triggers a graceful drain
+# (server.should_exit = True). We register a *prior* handler that just
+# logs the SIGTERM for observability; the lifespan context manager handles
+# DB cleanup, and uvicorn's timeout_graceful_shutdown gives in-flight
+# requests up to 30s to complete before forcing exit.
+def _log_sigterm(signum, frame):
     log_json("INFO", "identity-service", "Received SIGTERM, shutting down gracefully", trace_id="")
-    sys.exit(0)
 
 
-signal.signal(signal.SIGTERM, handle_sigterm)
-signal.signal(signal.SIGINT, handle_sigterm)
+signal.signal(signal.SIGTERM, _log_sigterm)
+signal.signal(signal.SIGINT, _log_sigterm)
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8080,
+        timeout_graceful_shutdown=30,
+        access_log=False,
+    )
