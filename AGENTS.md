@@ -18,7 +18,7 @@ Apollo11 is a **13-phase Kubernetes/cloud-native learning bootstrap** using **Ap
 | Stage 2 | Guidance/N&C | **4 manifest sets** — Namespaces, DNS, ServiceAccounts, Headless Services, NetworkPolicies (reference), Ingress (Traefik), Gateway API (Envoy), MetalLB |
 | Stage 3 | Mission Data | StatefulSets + 1Gi PVCs for all 4 stateful workloads (3 PG + redis), schema bootstrap via Postgres `/docker-entrypoint-initdb.d/` ConfigMap mount, idempotent seed Jobs. **Envoy Gateway + MetalLB access stack from Stage 2 set 4 carries over verbatim and persists for all later stages.** |
 | Stage 4 | Flight Control | Probes, resource limits, QoS, PodDisruptionBudget |
-| Stage 5 | Payload Integration | Helm charts, Kustomize, GitHub Actions, ArgoCD |
+| Stage 5 | Payload Integration | Helm chart (full access stack), Kustomize overlays (dev/staging/prod), GitHub Actions CI |
 | Stage 6 | Mission Ops | Prometheus, Grafana, OpenTelemetry |
 | Stage 7 | Orbital Maneuvering | HPA, VPA, Redis cache, taints/tolerations, affinity |
 | Stage 8 | Command Module | RBAC, SecurityContext, OPA, Vault |
@@ -473,16 +473,24 @@ drain needed.
 
 **Location:** `stages/stage5/`
 
-**k8s manifest changes:** None (packaging layer)
+**Status:** ✅ Complete. Helm chart (`helm/apollo11/`) provisions the full cluster from a single `helm install` — 2 namespaces, 13 SAs, 3 PG + 1 Redis StatefulSets, 6+1 Deployments, 2 PDBs, 3 seed Jobs, Envoy Gateway + 6 HTTPRoutes + 1 ReferenceGrant, MetalLB IPAddressPool. Kustomize overlays (`overlays/{base,dev,staging,prod}/`) provide a plain-manifest alternative for dev-friendly iteration. GitHub Actions CI (`.github/workflows/main.yml`) lints, builds, and pushes images to GHCR.
+
+**k8s manifest changes:** None at the workload level (Stage 5 is a packaging layer). The chart's `templates/` produce the same Deployments/StatefulSets/Services that Stage 4's `k8s/` tree contains.
 
 **New files:**
-- `helm/apollo-airlines/` — Helm chart with values.yaml, templates
-- `overlays/dev/` — Kustomize overlay for local dev
-- `overlays/staging/` — Kustomize overlay for staging
-- `overlays/prod/` — Kustomize overlay for prod-like
-- `.github/workflows/deploy.yml` — GitHub Actions workflow
+- `helm/apollo11/Chart.yaml` + `values.yaml` — chart metadata + configurable defaults
+- `helm/apollo11/bundles/envoy-gateway-install.yaml` — v1.2.4 (~2.4MB, offline-friendly)
+- `helm/apollo11/bundles/metallb-native.yaml` — v0.14.5 (~67KB, offline-friendly)
+- `helm/apollo11/templates/` — 27 templates (config, infra, apps, ui, pdb, jobs, gateway)
+- `overlays/base/` — plain manifest base (6 apps + frontend)
+- `overlays/{dev,staging,prod}/` — environment overlays (replicas, image tags, PDBs in prod only)
+- `scripts/apply.sh` — mode-aware: `--mode helm|kustomize` + `--env dev|staging|prod`
+- `scripts/teardown.sh` — symmetric teardown + `--purge` for namespace cleanup
+- `scripts/verify.sh` — ~70 checks (namespaces, SAs, ConfigMap, Secret, StatefulSets, Deployments, probes, resources, PDBs, seed jobs, Gateway, HTTPRoutes, MetalLB)
+- `scripts/build-images.sh` — 6 services + frontend with VITE_* URLs from `values.yaml`
+- `.github/workflows/main.yml` — replaces stub. Lint + matrix build + GHCR push (no deploy)
 
-**Code changes vs stage4:** None (packaging only)
+**Code changes vs stage4:** None (snapshot of `stages/stage4/code/`).
 
 ---
 
@@ -638,7 +646,8 @@ Needed but missing: kind, kustomize, k6, trivy, opa, kyverno, prometheus, grafan
 | Stage 2 | ✅ Complete | 4 manifest sets verified: NodePort 25/25, Traefik 25/25, Envoy Gateway 26/26, Envoy+MetalLB 28/28 |
 | Stage 3 | ✅ Complete | 4 StatefulSets + PVCs + entrypoint-hook schema + seed jobs, 53/53 verify (Envoy+MetalLB access stack persists for stages 4–11) |
 | Stage 4 | ✅ Complete | Probes (startup/live/ready) on 6 apps, Guaranteed QoS on all 10 pods, PDBs for booking + frontend, graceful SIGTERM on all backends, 129/129 verify |
-| Stage 5–11 | ⚠️ Pending | Scope defined in AGENTS.md, not yet implemented |
+| Stage 5 | ✅ Complete | Helm chart (full access stack) + Kustomize overlays (dev/staging/prod) + GitHub Actions CI, ~70 verify checks |
+| Stage 6–11 | ⚠️ Pending | Scope defined in AGENTS.md, not yet implemented |
 
 ---
 

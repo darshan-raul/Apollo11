@@ -1,156 +1,271 @@
 ---
-title: Stage 5 - Payload Integration
-description: Helm charts, Kustomize overlays, and GitHub Actions for automated deployments
+title: "Stage 5: Payload Integration — Helm + Kustomize + GitHub Actions"
+description: "Package the Stage 4 (probes + QoS + graceful SIGTERM) workloads as a production-ready Helm chart with Kustomize overlays for dev/staging/prod and a CI workflow that builds + pushes images to GHCR."
 ---
 
-# Stage 5 — Payload Integration
+# Stage 5: Payload Integration
 
-Package all stage4 manifests as a **Helm chart** with **Kustomize overlays** for dev/staging/prod environments. Add **GitHub Actions** for CI/CD.
+**Goal:** Make Apollo Airlines **deployable, versioned, and CI-driven**. The
+Stage 4 workloads (6 app Deployments + 4 StatefulSets + PDBs + 13 SAs) are
+packaged as a single Helm chart with Kustomize overlays for environment
+variation, and a GitHub Actions workflow that lints, builds, and pushes
+images to GHCR on every change to `main`.
 
-## What's New
+| | |
+|---|---|
+| **New concept** | Helm chart structure, values templating, Kustomize base + overlays, GitHub Actions matrix builds, GHCR image registry, GitOps-ready packaging |
+| **Workloads changed** | None at the workload level — Stage 5 is a packaging layer. All 10 workloads are unchanged from Stage 4. |
+| **Workloads unchanged** | Probes, Guaranteed QoS, graceful SIGTERM, PDBs, 13 SAs, 3 PG + 1 Redis StatefulSets, seed jobs |
+| **Code changes** | None (snapshot of `stages/stage4/code/`) |
+| **Verify target** | **~70 checks pass** |
 
-### Helm Chart
+---
 
-Structure:
+## What changed vs Stage 4
+
+### 1. Helm chart (production deployment path)
+
+The chart at `stages/stage5/helm/apollo11/` is a single source of truth
+for the cluster. `helm install` provisions everything:
+
 ```
 helm/apollo11/
-├── Chart.yaml              # chart metadata
-├── values.yaml             # default config (dev)
-├── templates/
-│   ├── _helpers.tpl        # label/selector helpers
-│   ├── _resources.tpl      # ns/sa/priorityclass helpers
-│   ├── configmap.yaml      # ConfigMap + Secret
-│   ├── config/namespace.yaml # namespaces, SAs, PriorityClass, init scripts
-│   ├── infra/
-│   │   ├── postgres.yaml   # 3 postgres StatefulSets + headless SVCs
-│   │   └── redis.yaml      # catalog-redis + notification-redis StatefulSets
-│   ├── apps/
-│   │   ├── auth.yaml       # auth Deployment + Service
-│   │   ├── catalog.yaml    # catalog Deployment + Service
-│   │   ├── circulation.yaml # circulation Deployment + Service
-│   │   ├── notification.yaml # notification Deployment + Service
-│   │   └── fines.yaml      # fines StatefulSet + headless Service
-│   ├── ui/
-│   │   └── frontend.yaml   # frontend Deployment + Service + Ingress
-│   └── jobs/
-│       └── init.yaml       # init-auth-db, init-catalog-db, init-circulation-db Jobs
+├── Chart.yaml                          (metadata: name, version 1.0.0)
+├── values.yaml                         (configurable defaults)
+├── values-dev.yaml                     (env-specific: 1 replica, :dev tag, no PDBs)
+├── values-staging.yaml                 (env-specific: 2 replicas, :latest tag, no PDBs)
+├── values-prod.yaml                    (env-specific: 3 replicas, :v1.0.0 tag, full PDBs, GHCR pull)
+├── bundles/
+│   ├── envoy-gateway-install.yaml      (v1.2.4, 2.4MB — offline-friendly)
+│   └── metallb-native.yaml             (v0.14.5, 67KB — offline-friendly)
+└── templates/
+    ├── _helpers.tpl                    (label, selector, name helpers)
+    ├── config/
+    │   ├── namespace.yaml              (2 ns: apps, ui)
+    │   ├── serviceaccount.yaml         (13 SAs)
+    │   ├── configmap.yaml
+    │   └── secrets.yaml
+    ├── infra/
+    │   ├── postgres.yaml               (3 PG StatefulSets + headless + init SQL)
+    │   └── redis.yaml                  (1 Redis StatefulSet + headless)
+    ├── apps/
+    │   ├── identity.yaml
+    │   ├── flight.yaml
+    │   ├── booking.yaml                (flagship tier: 200m/256Mi)
+    │   ├── search.yaml
+    │   └── notification.yaml
+    ├── ui/
+    │   └── frontend.yaml
+    ├── pdb/
+    │   └── pdb.yaml                    (booking-pdb, frontend-pdb)
+    ├── jobs/
+    │   └── seed.yaml                   (3 idempotent seed Jobs)
+    └── gateway/
+        ├── gateway.yaml                (GatewayClass + Gateway)
+        ├── httproutes.yaml             (6 HTTPRoutes + 1 ReferenceGrant)
+        ├── envoy-install.yaml          (renders bundles/envoy-gateway-install.yaml)
+        ├── metallb.yaml                (IPAddressPool + L2Advertisement)
+        └── metallb-install.yaml        (renders bundles/metallb-native.yaml)
 ```
 
-### Kustomize Overlays
+**One `helm install` gives you:**
+
+- 2 namespaces (`apollo-airlines-apps`, `apollo-airlines-ui`)
+- 13 ServiceAccounts
+- 3 Postgres StatefulSets + 3 headless SVCs + 3 init SQL ConfigMaps
+- 1 Redis StatefulSet + 1 headless SVC
+- 6 app Deployments + 1 frontend Deployment
+- 2 PodDisruptionBudgets (booking, frontend)
+- 3 idempotent seed Jobs
+- Envoy Gateway install + GatewayClass + Gateway
+- 6 HTTPRoutes + 1 cross-namespace ReferenceGrant
+- MetalLB install + IPAddressPool + L2Advertisement
+
+**Tunable via `values.yaml`:**
+
+| Setting | Default | Purpose |
+|---|---|---|
+| `image.tag` | `latest` | Pin to a specific version (e.g. `v1.2.3`) |
+| `image.repository` | `apollo11` | Override registry (e.g. `ghcr.io/darshan/apollo11`) |
+| `apps.<name>.replicas` | 2 | Per-app replica count |
+| `apps.<name>.tier` | `default` | Resource tier: `default` (100m/128Mi), `flagship` (200m/256Mi), `low` (50m/64Mi), `edge` (50m/64Mi) |
+| `pdb.enabled` | `true` | Toggle both PodDisruptionBudgets |
+| `gateway.enabled` | `true` | Bundle the Envoy Gateway access stack |
+| `metallb.enabled` | `true` | Bundle MetalLB |
+| `metallb.ipPool.addresses` | `172.18.0.50-100` | LoadBalancer IP range |
+| `gateway.hostSuffix` | `apollo.local` | Hostname suffix for all HTTPRoutes |
+
+### 2. Kustomize overlays (dev-friendly alternative)
 
 ```
 overlays/
-├── base/           # references helm templates as base
-├── dev/            # 1 replica, dev image tag :dev
-├── staging/        # 2 replicas, latest tag
-└── prod/           # 3 replicas, v1.0.0 tag, pod disruption budget
+├── base/                # plain manifests for 6 apps + frontend
+│   ├── kustomization.yaml
+│   ├── apps/
+│   │   ├── identity.yaml
+│   │   ├── flight.yaml
+│   │   ├── booking.yaml
+│   │   ├── search.yaml
+│   │   └── notification.yaml
+│   └── ui/
+│       ├── kustomization.yaml
+│       └── frontend.yaml
+├── dev/                 # 1 replica, tag=dev
+├── staging/             # 2 replicas, tag=latest
+└── prod/                # 3 replicas, tag=v1.0.0, +PDBs
 ```
 
-### Values Architecture
+The Kustomize base is a **plain manifest subset** of the chart — it only
+contains the 6 app Deployments + frontend. The chart's StatefulSets, seed
+jobs, and access stack are not part of the Kustomize path (apply.sh
+combines the overlay with the chart's infra templates so the apps can
+still resolve `identity-db:5432` etc.).
 
-```yaml
-# All values templated — change in values.yaml or overlays
-image:
-  repository: apollo11
-  tag: latest
+### 3. GitHub Actions CI
 
-apps:
-  auth:
-    replicas: 2
-    port: 8080
-    resources:
-      requests: {cpu: 50m, memory: 64Mi}
-      limits:   {cpu: 500m, memory: 256Mi}
+`.github/workflows/main.yml` (replaces the stock "Hello, world" stub):
 
-postgres:
-  auth:
-    storage: 1Gi
-    resources:
-      requests: {cpu: 50m, memory: 128Mi}
-      limits:   {cpu: 500m, memory: 512Mi}
+1. **Lint job** — `helm lint`, `helm template` smoke render, `kubectl kustomize build` for all 3 overlays, `shellcheck` on the scripts.
+2. **Build job** — Matrix build of all 6 service images using `docker/build-push-action@v6` with GHA cache. Frontend gets `VITE_*` URLs from `values.yaml` injected as build args.
+3. **Push job** — Only on `main` push or `v*` tag, push to GHCR with `:sha-<gitsha>` + `:latest` tags.
 
-probes:
-  startup:   {periodSeconds: 5, failureThreshold: 6}
-  liveness:  {initialDelaySeconds: 15, periodSeconds: 10, failureThreshold: 3}
-  readiness: {initialDelaySeconds: 5, periodSeconds: 5, failureThreshold: 3}
-```
+No deploy step — ArgoCD (separate tooling, mentioned in `AGENTS.md`) handles deploys from GHCR.
 
-## Architecture
+---
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Stage5 Architecture                                             │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Helm Chart (values.yaml)                                 │   │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │   │
-│  │  │ Dev Overlay  │  │ Stage Overlay │  │  Prod Overlay │  │   │
-│  │  │  replicas=1  │  │  replicas=2  │  │  replicas=3  │  │   │
-│  │  │  tag=:dev    │  │  tag=:latest  │  │  tag=:v1.0.0 │  │   │
-│  │  └──────────────┘  └──────────────┘  └──────────────┘  │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                              │                                   │
-│                              ▼                                   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  kubectl apply -k overlays/{env}                          │   │
-│  │  OR                                                       │   │
-│  │  helm template apollo11 | kubectl apply -f -             │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                              │                                   │
-│                              ▼                                   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Kubernetes Cluster                                       │   │
-│  │  apollo11-infra / apollo11-apps / apollo11-ui            │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-```
+## Environment Comparison
+
+| Setting | Dev | Staging | Prod |
+|---|---|---|---|
+| **Deployment path** | Kustomize overlay (`apply.sh --mode kustomize --env dev`) | Kustomize overlay (`--env staging`) | Helm chart (recommended) or Kustomize (`--env prod`) |
+| **Replicas per app** | 1 | 2 | 3 |
+| **Image tag** | `:dev` | `:latest` | `:v1.0.0` (pinned) |
+| **PodDisruptionBudgets** | No | No | Yes (`minAvailable: 2`) |
+| **Access stack** | Yes (via chart components during `apply.sh`) | Yes | Yes |
+| **StatefulSets** | Yes | Yes | Yes |
+| **Cost** | Lowest | Medium | Highest |
+
+**Dev** is the cheapest cluster — 1 replica each, dev image tag, no PDBs.
+Use it for local iteration and feature branches.
+
+**Staging** mirrors prod's default replica count but with rolling `:latest`
+images. Use it for integration testing.
+
+**Prod** is the recommended Helm install with pinned tags, 3 replicas, and
+PDBs for booking + frontend. Use it for the actual production cluster.
+
+---
 
 ## Usage
 
+### Helm (production path)
+
 ```bash
-# Render helm template (dry run)
-helm template apollo11 helm/apollo11/
+cd stages/stage5
 
-# Install with defaults (dev)
-helm install apollo11 helm/apollo11/ -n apollo11 --create-namespace
+# One-shot install with defaults (values.yaml, tag=latest)
+bash scripts/apply.sh
 
-# Install with staging overrides
-helm install apollo11 helm/apollo11/ \
-  --set apps.auth.replicas=2 \
-  --set image.tag=latest
+# Use the env-specific values file
+bash scripts/apply.sh --env dev       # values-dev.yaml — 1 replica, :dev tag
+bash scripts/apply.sh --env staging   # values-staging.yaml — 2 replicas, :latest
+bash scripts/apply.sh --env prod      # values-prod.yaml — 3 replicas, :v1.0.0, GHCR
 
-# Kustomize build (dev)
-kubectl kustomize overlays/dev/
+# Override the tag the env file pins
+bash scripts/apply.sh --env prod --tag v1.2.3
 
-# Kustomize apply (dev)
-kubectl apply -k overlays/dev/
+# Skip the docker build step (use pre-loaded images)
+bash scripts/apply.sh --skip-build
 
-# ArgoCD sync (see stage5 GitOps flow)
-argocd app sync apollo11-dev
+# Tear down
+bash scripts/teardown.sh                # uninstall the helm release
+bash scripts/teardown.sh --purge        # also delete namespaces + access stack
 ```
+
+### Kustomize (dev-friendly path)
+
+```bash
+cd stages/stage5
+
+# Dev overlay (1 replica, :dev tag)
+bash scripts/apply.sh --mode kustomize --env dev
+
+# Staging overlay
+bash scripts/apply.sh --mode kustomize --env staging
+
+# Prod overlay
+bash scripts/apply.sh --mode kustomize --env prod
+
+# Tear down
+bash scripts/teardown.sh --mode kustomize --env dev
+```
+
+### Verify
+
+```bash
+cd stages/stage5
+
+# Auto-detect mode
+bash scripts/verify.sh
+
+# Explicit
+bash scripts/verify.sh --mode helm
+bash scripts/verify.sh --mode kustomize --env prod
+```
+
+### CI
+
+Push to `main` or open a PR — the workflow at `.github/workflows/main.yml`
+runs lint + build automatically. On `main` pushes it also pushes to GHCR.
+
+---
 
 ## Files
 
 ```
 stage5/
-├── code/                     # same as stage4 (probe handlers)
-│   ├── auth/main.py
-│   ├── catalog/main.go
-│   ├── circulation/main.go
-│   ├── notification/main.go
-│   ├── fines/main.go
-│   └── frontend/main.go
-├── helm/apollo11/            # Helm chart
+├── code/                            # snapshot of stages/stage4/code/
+│   ├── identity/                    (Python/FastAPI)
+│   ├── flight/                      (Go/Gin)
+│   ├── booking/                     (Go/Gin — flagship)
+│   ├── search/                      (Go/Gin)
+│   ├── notification/                (Go/Gin)
+│   └── frontend/                    (React/Tailwind → NGINX)
+├── helm/apollo11/                   # Helm chart
 │   ├── Chart.yaml
 │   ├── values.yaml
-│   └── templates/
-├── overlays/
-│   ├── base/                 # kustomization base
-│   ├── dev/                  # 1 replica, dev tag
-│   ├── staging/             # 2 replicas
-│   └── prod/                # 3 replicas, stricter limits
-└── README.md (this file)
+│   ├── bundles/                     (Envoy + MetalLB install YAMLs)
+│   └── templates/                   (27 templates)
+├── overlays/                        # Kustomize overlays
+│   ├── base/                        (plain manifest base — 6 apps + frontend)
+│   ├── dev/
+│   ├── staging/
+│   └── prod/
+├── scripts/
+│   ├── apply.sh                     (mode-aware: helm or kustomize)
+│   ├── teardown.sh                  (symmetric teardown + --purge)
+│   ├── verify.sh                    (~70 checks)
+│   └── build-images.sh              (6 services + frontend with VITE_*)
+└── README.md                        (this file)
 ```
 
+---
+
+## What is *not* in Stage 5
+
+These are reserved for later stages:
+
+- **Observability** (Prometheus, Grafana, OpenTelemetry) — Stage 6
+- **Auto-scaling** (HPA, VPA) and Redis caching — Stage 7
+- **RBAC hardening, SecurityContext, OPA, Vault** — Stage 8
+- **Cloud provisioning** (EKS/GKE via Terraform) — Stage 9
+- **Service mesh, progressive delivery, chaos testing** — Stage 10
+- **Custom operator, k3s, KEDA** — Stage 11
+
+---
+
 ## What's Next
-Stage6 adds **observability** — Prometheus metrics, Grafana dashboards, Loki for logs, and OpenTelemetry for distributed tracing.
+
+Stage 6 adds **observability** — Prometheus scrapes `/metrics` from each
+service, Grafana dashboards visualise booking latency, and OpenTelemetry
+propagates trace IDs across service boundaries.

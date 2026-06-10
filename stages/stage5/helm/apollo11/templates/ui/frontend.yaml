@@ -1,14 +1,35 @@
 {{- /*
-Frontend Deployment + Service + Ingress
+Frontend (React SPA served by NGINX). Lives in apollo-airlines-ui namespace
+because the browser-facing service is logically separate from the API tier.
+
+The VITE_* URLs are baked into the image at build time (multi-stage
+Dockerfile). apply.sh's `docker build` passes them as build args. The
+values below are the source of truth — the build script reads them so
+the rendered image and the HTTPRoute hostnames never drift.
 */ -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: {{ .Values.namespaces.ui }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: frontend
+  ports:
+    - port: {{ .Values.frontend.port }}
+      targetPort: {{ .Values.frontend.port }}
+      protocol: TCP
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
   namespace: {{ .Values.namespaces.ui }}
   labels:
-    app: frontend
-    stage: "5"
+    {{- include "apollo11.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.frontend.replicas }}
   selector:
@@ -17,79 +38,37 @@ spec:
   template:
     metadata:
       labels:
-        app: frontend
-        stage: "5"
+        {{- include "apollo11.podLabels" (dict "root" . "name" "frontend" "tier" "edge") | nindent 8 }}
     spec:
-      serviceAccountName: {{ .Values.serviceAccounts.ui }}
-      priorityClassName: {{ .Values.priorityClassName }}
+      serviceAccountName: frontend
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
       containers:
         - name: frontend
-          image: {{ .Values.image.repository }}/frontend:{{ .Values.image.tag }}
+          image: "{{ .Values.image.repository }}/frontend:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.frontend.port }}
-          envFrom:
-            - configMapRef:
-                name: apollo11-config
-          startupProbe:
-            httpGet:
-              path: /healthz/startup
-              port: {{ .Values.frontend.port }}
-            initialDelaySeconds: 0
-            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
-            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+              protocol: TCP
+          # Frontend probes return 200 unconditionally — NGINX has no
+          # local DB/Redis to check, and readiness on the frontend is
+          # "process is alive and serving", which a successful HTTP
+          # response from NGINX already proves.
           livenessProbe:
             httpGet:
               path: /healthz/live
               port: {{ .Values.frontend.port }}
-            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
-            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /healthz/ready
               port: {{ .Values.frontend.port }}
-            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
-            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
           resources:
-            {{- toYaml .Values.frontend.resources | nindent 10 }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend
-  namespace: {{ .Values.namespaces.ui }}
-spec:
-  selector:
-    app: frontend
-  ports:
-    - port: 80
-      targetPort: {{ .Values.frontend.port }}
-  type: ClusterIP
-{{- if .Values.ingress.enabled }}
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: frontend
-  namespace: {{ .Values.namespaces.ui }}
-  annotations:
-    {{- range $k, $v := .Values.ingress.annotations }}
-    {{ $k }}: {{ $v }}
-    {{- end }}
-spec:
-  ingressClassName: {{ .Values.ingress.className }}
-  rules:
-    - host: {{ .Values.ingress.host }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: frontend
-                port:
-                  number: 80
-{{- end }}
+            requests:
+              cpu: {{ .Values.tiers.edge.cpu }}
+              memory: {{ .Values.tiers.edge.memory }}
+            limits:
+              cpu: {{ .Values.tiers.edge.cpu }}
+              memory: {{ .Values.tiers.edge.memory }}

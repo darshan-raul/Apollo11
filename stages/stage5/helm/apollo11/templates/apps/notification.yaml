@@ -1,72 +1,87 @@
-{{- /*
-Notification Deployment + Service
-*/ -}}
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: notification
-  namespace: {{ .Values.namespaces.apps }}
-  labels:
-    app: notification
-    stage: "5"
-spec:
-  replicas: {{ .Values.apps.notification.replicas }}
-  selector:
-    matchLabels:
-      app: notification
-  template:
-    metadata:
-      labels:
-        app: notification
-        stage: "5"
-    spec:
-      serviceAccountName: {{ .Values.serviceAccounts.apps }}
-      priorityClassName: {{ .Values.priorityClassName }}
-      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
-      containers:
-        - name: notification
-          image: {{ .Values.image.repository }}/notification:{{ .Values.image.tag }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          ports:
-            - containerPort: {{ .Values.apps.notification.port }}
-          env:
-            - name: REDIS_URL
-              value: "redis://redis.{{ .Values.namespaces.infra }}.svc.cluster.local:6379"
-          envFrom:
-            - configMapRef:
-                name: apollo11-config
-          startupProbe:
-            httpGet:
-              path: /healthz/startup
-              port: {{ .Values.apps.notification.port }}
-            initialDelaySeconds: 0
-            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
-            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
-          livenessProbe:
-            httpGet:
-              path: /healthz/live
-              port: {{ .Values.apps.notification.port }}
-            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
-            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
-          readinessProbe:
-            httpGet:
-              path: /healthz/ready
-              port: {{ .Values.apps.notification.port }}
-            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
-            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
-          resources:
-            {{- toYaml .Values.apps.notification.resources | nindent 10 }}
----
+{{- $name := "notification" -}}
+{{- $appCfg := index .Values.apps $name -}}
+{{- $tier := index .Values.tiers $appCfg.tier -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: notification
+  name: {{ $name }}
   namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
 spec:
+  type: ClusterIP
   selector:
-    app: notification
+    app: {{ $name }}
   ports:
-    - port: 8084
-      targetPort: {{ .Values.apps.notification.port }}
+    - port: {{ $appCfg.port }}
+      targetPort: {{ $appCfg.port }}
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  replicas: {{ $appCfg.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        {{- include "apollo11.podLabels" (dict "root" . "name" $name) | nindent 8 }}
+    spec:
+      serviceAccountName: {{ $name }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      containers:
+        - name: {{ $name }}
+          image: "{{ .Values.image.repository }}/{{ $name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ $appCfg.port }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: {{ $appCfg.port | quote }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: JWT_SECRET
+          {{- with .Values.probes.startup }}
+          startupProbe:
+            httpGet:
+              path: {{ .httpGet.path }}
+              port: {{ $appCfg.port }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
+          {{- with .Values.probes.liveness }}
+          livenessProbe:
+            httpGet:
+              path: {{ .httpGet.path }}
+              port: {{ $appCfg.port }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
+          {{- with .Values.probes.readiness }}
+          readinessProbe:
+            httpGet:
+              path: {{ .httpGet.path }}
+              port: {{ $appCfg.port }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
+          resources:
+            requests:
+              cpu: {{ $tier.cpu }}
+              memory: {{ $tier.memory }}
+            limits:
+              cpu: {{ $tier.cpu }}
+              memory: {{ $tier.memory }}

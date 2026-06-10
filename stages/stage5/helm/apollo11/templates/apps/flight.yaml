@@ -1,79 +1,94 @@
-{{- /*
-Flight Deployment + Service
-*/ -}}
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: flight
-  namespace: {{ .Values.namespaces.apps }}
-  labels:
-    app: flight
-    stage: "5"
-spec:
-  replicas: {{ .Values.apps.flight.replicas }}
-  selector:
-    matchLabels:
-      app: flight
-  template:
-    metadata:
-      labels:
-        app: flight
-        stage: "5"
-    spec:
-      serviceAccountName: {{ .Values.serviceAccounts.apps }}
-      priorityClassName: {{ .Values.priorityClassName }}
-      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
-      containers:
-        - name: flight
-          image: {{ .Values.image.repository }}/flight:{{ .Values.image.tag }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          ports:
-            - containerPort: {{ .Values.apps.flight.port }}
-          env:
-            - name: DATABASE_URL
-              value: "postgresql://postgres:***@flight-db.{{ .Values.namespaces.infra }}.svc.cluster.local:5432/flight"
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: apollo11-secrets
-                  key: JWT_SECRET
-            - name: PORT
-              value: "{{ .Values.apps.flight.port }}"
-          envFrom:
-            - configMapRef:
-                name: apollo11-config
-          startupProbe:
-            httpGet:
-              path: /healthz/startup
-              port: {{ .Values.apps.flight.port }}
-            initialDelaySeconds: 0
-            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
-            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
-          livenessProbe:
-            httpGet:
-              path: /healthz/live
-              port: {{ .Values.apps.flight.port }}
-            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
-            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
-          readinessProbe:
-            httpGet:
-              path: /healthz/ready
-              port: {{ .Values.apps.flight.port }}
-            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
-            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
-            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
-          resources:
-            {{- toYaml .Values.apps.flight.resources | nindent 10 }}
----
+{{- $name := "flight" -}}
+{{- $appCfg := index .Values.apps $name -}}
+{{- $tier := index .Values.tiers $appCfg.tier -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: flight
+  name: {{ $name }}
   namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
 spec:
+  type: ClusterIP
   selector:
-    app: flight
+    app: {{ $name }}
   ports:
-    - port: 8081
-      targetPort: {{ .Values.apps.flight.port }}
+    - port: {{ $appCfg.port }}
+      targetPort: {{ $appCfg.port }}
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  replicas: {{ $appCfg.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        {{- include "apollo11.podLabels" (dict "root" . "name" $name) | nindent 8 }}
+    spec:
+      serviceAccountName: {{ $name }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      containers:
+        - name: {{ $name }}
+          image: "{{ .Values.image.repository }}/{{ $name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ $appCfg.port }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: {{ $appCfg.port | quote }}
+            - name: DATABASE_URL
+              value: "postgresql://postgres:$(POSTGRES_PASSWORD)@{{ $name }}-db:5432/{{ $name }}?sslmode=disable"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: POSTGRES_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: JWT_SECRET
+          {{- with .Values.probes.startup }}
+          startupProbe:
+            httpGet:
+              path: {{ .httpGet.path }}
+              port: {{ $appCfg.port }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
+          {{- with .Values.probes.liveness }}
+          livenessProbe:
+            httpGet:
+              path: {{ .httpGet.path }}
+              port: {{ $appCfg.port }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
+          {{- with .Values.probes.readiness }}
+          readinessProbe:
+            httpGet:
+              path: {{ .httpGet.path }}
+              port: {{ $appCfg.port }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
+          resources:
+            requests:
+              cpu: {{ $tier.cpu }}
+              memory: {{ $tier.memory }}
+            limits:
+              cpu: {{ $tier.cpu }}
+              memory: {{ $tier.memory }}

@@ -1,10 +1,10 @@
 # Stage 1: Build React app
 FROM node:20-alpine AS builder
 
-ARG VITE_IDENTITY_URL
-ARG VITE_FLIGHT_URL
-ARG VITE_BOOKING_URL
-ARG VITE_SEARCH_URL
+ARG VITE_IDENTITY_URL="http://localhost:30083"
+ARG VITE_FLIGHT_URL="http://localhost:30081"
+ARG VITE_BOOKING_URL="http://localhost:30082"
+ARG VITE_SEARCH_URL="http://localhost:30084"
 
 ENV VITE_IDENTITY_URL=$VITE_IDENTITY_URL
 ENV VITE_FLIGHT_URL=$VITE_FLIGHT_URL
@@ -24,7 +24,9 @@ FROM nginx:alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-RUN echo 'server { listen 3000; root /usr/share/nginx/html; index index.html; location / { try_files $uri $uri/ /index.html; } }' > /etc/nginx/conf.d/default.conf
+# Stage 4: external NGINX config with /healthz/{startup,live,ready} probe
+# endpoints baked in. See nginx.conf.
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 3000
 

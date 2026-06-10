@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flight
+spec:
+  type: ClusterIP
+  selector:
+    app: flight
+  ports:
+    - port: 8081
+      targetPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flight
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: flight
+  template:
+    metadata:
+      labels:
+        app: flight
+        tier: public
+    spec:
+      serviceAccountName: flight
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: flight
+          image: apollo11/flight:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:postgres@flight-db:5432/flight?sslmode=disable"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: JWT_SECRET
+            - name: PORT
+              value: "8081"
+          startupProbe:
+            httpGet:
+              path: /healthz/startup
+              port: 8081
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi

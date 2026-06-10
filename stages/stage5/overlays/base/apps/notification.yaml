@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification
+spec:
+  type: ClusterIP
+  selector:
+    app: notification
+  ports:
+    - port: 8084
+      targetPort: 8084
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notification
+  template:
+    metadata:
+      labels:
+        app: notification
+        tier: public
+    spec:
+      serviceAccountName: notification
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: notification
+          image: apollo11/notification:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8084
+          env:
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: JWT_SECRET
+            - name: PORT
+              value: "8084"
+          startupProbe:
+            httpGet:
+              path: /healthz/startup
+              port: 8084
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 8084
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 8084
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 50m
+              memory: 64Mi

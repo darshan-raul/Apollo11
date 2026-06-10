@@ -1,13 +1,19 @@
-{{- /*
-Staging overlay — 2 replicas per service, standard image tags
-*/ -}}
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: apollo11
+# Staging overlay — 2 replicas per service, latest tag.
+# Matches the production default replica count but with the rolling
+# `:latest` tag for fast feedback.
 
-commonLabels:
-  environment: staging
+namespace: apollo-airlines-apps
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: staging
+
+resources:
+  - ../base
 
 replicas:
   - name: identity

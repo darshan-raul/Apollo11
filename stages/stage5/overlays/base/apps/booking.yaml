@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking
+spec:
+  type: ClusterIP
+  selector:
+    app: booking
+  ports:
+    - port: 8082
+      targetPort: 8082
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: booking
+  template:
+    metadata:
+      labels:
+        app: booking
+        tier: public
+    spec:
+      serviceAccountName: booking
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: booking
+          image: apollo11/booking:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:postgres@booking-db:5432/booking?sslmode=disable"
+            - name: FLIGHT_SERVICE_URL
+              value: "http://flight:8081"
+            - name: IDENTITY_SERVICE_URL
+              value: "http://identity:8080"
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification:8084"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: JWT_SECRET
+            - name: PORT
+              value: "8082"
+          startupProbe:
+            httpGet:
+              path: /healthz/startup
+              port: 8082
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 8082
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 8082
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

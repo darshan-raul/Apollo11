@@ -1,0 +1,22 @@
+# PDBs applied only in prod. With 3 replicas and minAvailable=2, at
+# most one pod can be evicted at a time — the kubelet waits for the
+# replacement to become ready before evicting the next.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: booking-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: booking
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: frontend

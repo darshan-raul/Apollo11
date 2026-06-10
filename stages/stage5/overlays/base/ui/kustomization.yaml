@@ -1,0 +1,8 @@
+# Frontend lives in the apollo-airlines-ui namespace (separate from the
+# apps namespace). This kustomization is a sibling to ../kustomization.yaml
+# — overlays can reference both.
+
+namespace: apollo-airlines-ui
+
+resources:
+  - frontend.yaml

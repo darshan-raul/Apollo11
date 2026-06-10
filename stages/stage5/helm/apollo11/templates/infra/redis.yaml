@@ -1,75 +1,18 @@
 {{- /*
-Redis StatefulSet — single redis instance for Apollo Airlines
+Redis as a single-replica StatefulSet with a 1Gi PVC. AOF is enabled with
+appendfsync=everysec, giving us durable writes for the notification fan-out
+queue (and later, Stage 7's search cache).
+
+Headless service gives the pod a stable DNS name: redis-0.redis-headless.
 */ -}}
-apiVersion: apps/v1
-kind: StatefulSet
+---
+apiVersion: v1
+kind: Service
 metadata:
   name: redis
-  namespace: {{ .Values.namespaces.infra }}
+  namespace: {{ .Values.namespaces.apps }}
   labels:
-    app: redis
-    stage: "5"
-spec:
-  serviceName: redis-headless
-  replicas: {{ .Values.redis.replicas }}
-  selector:
-    matchLabels:
-      app: redis
-  template:
-    metadata:
-      labels:
-        app: redis
-        stage: "5"
-    spec:
-      serviceAccountName: {{ .Values.serviceAccounts.infra }}
-      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.infra }}
-      containers:
-        - name: redis
-          image: redis:7-alpine
-          ports:
-            - containerPort: 6379
-          command: ["redis-server"]
-          volumeMounts:
-            - name: redis-data
-              mountPath: /data
-          readinessProbe:
-            exec:
-              command: ["redis-cli", "ping"]
-            initialDelaySeconds: 5
-            periodSeconds: 5
-            failureThreshold: 3
-          livenessProbe:
-            exec:
-              command: ["redis-cli", "ping"]
-            initialDelaySeconds: 15
-            periodSeconds: 10
-            failureThreshold: 3
-          resources:
-            {{- toYaml .Values.redis.resources | nindent 10 }}
-  volumeClaimTemplates:
-    - metadata:
-        name: redis-data
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: {{ .Values.redis.storage }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis-headless
-  namespace: {{ .Values.namespaces.infra }}
-spec:
-  clusterIP: None
-  selector:
-    app: redis
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis
-  namespace: {{ .Values.namespaces.infra }}
+    {{- include "apollo11.labels" . | nindent 4 }}
 spec:
   type: ClusterIP
   selector:
@@ -77,3 +20,79 @@ spec:
   ports:
     - port: 6379
       targetPort: 6379
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-headless
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  serviceName: redis-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        {{- include "apollo11.podLabels" (dict "root" . "name" "redis" "tier" "data") | nindent 8 }}
+    spec:
+      serviceAccountName: redis
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.data }}
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 6379
+              protocol: TCP
+          command:
+            - redis-server
+            - --appendonly yes
+            - --appendfsync everysec
+            - --save 60 100
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+        labels:
+          {{- include "apollo11.labels" . | nindent 10 }}
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.redis.storage }}

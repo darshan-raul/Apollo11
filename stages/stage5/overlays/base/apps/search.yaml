@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: search
+spec:
+  type: ClusterIP
+  selector:
+    app: search
+  ports:
+    - port: 8083
+      targetPort: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: search
+  template:
+    metadata:
+      labels:
+        app: search
+        tier: public
+    spec:
+      serviceAccountName: search
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: search
+          image: apollo11/search:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+          env:
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: JWT_SECRET
+            - name: PORT
+              value: "8083"
+          startupProbe:
+            httpGet:
+              path: /healthz/startup
+              port: 8083
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 8083
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 8083
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi

@@ -1,13 +1,19 @@
-{{- /*
-Dev overlay — 1 replica per service, dev image tag
-*/ -}}
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: apollo11
+# Dev overlay — 1 replica per service, dev image tag.
+# Smallest footprint; cheap for local iteration. Resources, probes, and
+# terminationGracePeriod are inherited from the base.
 
-commonLabels:
-  environment: dev
+namespace: apollo-airlines-apps
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: dev
+
+resources:
+  - ../base
 
 replicas:
   - name: identity

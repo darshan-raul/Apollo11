@@ -1,75 +1,32 @@
-{{- /*
-Base overlay — common resources for all environments
-*/ -}}
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: apollo11
+# Plain-manifest base for Kustomize overlays (dev/staging/prod).
+#
+# Scope: the 6 application Deployments (identity, flight, booking, search,
+# notification) + the frontend Deployment. NO StatefulSets, NO access stack
+# (Envoy + MetalLB), NO seed jobs — those live in the Helm chart and are
+# applied separately by apply.sh --mode helm.
+#
+# Why a plain base, not Helm output: Kustomize can't consume Helm templates
+# directly. The chart is the production path; the kustomize base is a
+# lighter-weight alternative for dev/staging iteration.
 
-commonLabels:
-  app.kubernetes.io/name: apollo11
+namespace: apollo-airlines-apps
+
+labels:
+  - includeSelectors: true
+    pairs:
+      app.kubernetes.io/name: apollo-airlines
+      app.kubernetes.io/part-of: apollo-airlines
+      app.kubernetes.io/managed-by: kustomize
 
 resources:
-  - ../base/helm/apollo11
-
-patches:
-  - patch: |-
-      apiVersion: apps/v1
-      kind: Deployment
-      metadata:
-        name: identity
-      spec:
-        replicas: 1
-    target:
-      kind: Deployment
-      name: identity
-  - patch: |-
-      apiVersion: apps/v1
-      kind: Deployment
-      metadata:
-        name: flight
-      spec:
-        replicas: 1
-    target:
-      kind: Deployment
-      name: flight
-  - patch: |-
-      apiVersion: apps/v1
-      kind: Deployment
-      metadata:
-        name: booking
-      spec:
-        replicas: 1
-    target:
-      kind: Deployment
-      name: booking
-  - patch: |-
-      apiVersion: apps/v1
-      kind: Deployment
-      metadata:
-        name: search
-      spec:
-        replicas: 1
-    target:
-      kind: Deployment
-      name: search
-  - patch: |-
-      apiVersion: apps/v1
-      kind: Deployment
-      metadata:
-        name: notification
-      spec:
-        replicas: 1
-    target:
-      kind: Deployment
-      name: notification
-  - patch: |-
-      apiVersion: apps/v1
-      kind: Deployment
-      metadata:
-        name: frontend
-      spec:
-        replicas: 1
-    target:
-      kind: Deployment
-      name: frontend
+  - apps/identity.yaml
+  - apps/flight.yaml
+  - apps/booking.yaml
+  - apps/search.yaml
+  - apps/notification.yaml
+  # The frontend lives in apollo-airlines-ui (separate ns), so it's a
+  # nested kustomization with its own namespace directive.
+  - ui

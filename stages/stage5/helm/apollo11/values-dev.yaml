@@ -1,0 +1,25 @@
+---
+# Dev environment overrides — minimal footprint for local iteration.
+# Use as: helm upgrade --install apollo11 helm/apollo11 -f values-dev.yaml
+
+image:
+  tag: dev
+
+apps:
+  identity:
+    replicas: 1
+  flight:
+    replicas: 1
+  booking:
+    replicas: 1
+  search:
+    replicas: 1
+  notification:
+    replicas: 1
+
+frontend:
+  replicas: 1
+
+# PodDisruptionBudgets off in dev — we want fast teardowns.
+pdb:
+  enabled: false
