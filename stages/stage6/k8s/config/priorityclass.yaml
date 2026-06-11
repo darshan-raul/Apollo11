@@ -1,7 +1,0 @@
-apiVersion: scheduling.k8s.io/v1
-kind: PriorityClass
-metadata:
-  name: apollo11-app-critical
-description: "Apollo11 app pods — scheduled before default priority, after system-critical"
-value: 100000
-globalDefault: false
