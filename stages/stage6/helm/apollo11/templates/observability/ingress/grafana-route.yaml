@@ -1,0 +1,46 @@
+# Cross-namespace HTTPRoute: Grafana in apollo-observability, served via
+# the Envoy Gateway in apollo-airlines-apps. The ReferenceGrant in the
+# gateway's namespace (apollo-airlines-apps) authorizes this cross-namespace
+# reference.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  parentRefs:
+    - name: apollo-gateway
+      namespace: apollo-airlines-apps
+  hostnames:
+    - "grafana.apollo.local"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: grafana
+          port: 3000
+---
+# Authorization: the gateway is in apollo-airlines-apps; this route
+# references a service in apollo-observability. ReferenceGrant is the
+# Gateway API's cross-namespace RBAC primitive.
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: grafana-route-grant
+  namespace: apollo-airlines-apps
+  labels:
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: apollo-observability
+  to:
+    - group: ""
+      kind: Service
+      name: grafana

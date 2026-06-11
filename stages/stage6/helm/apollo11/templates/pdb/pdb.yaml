@@ -1,0 +1,32 @@
+---
+# PodDisruptionBudget for booking — the flagship service. With 2 replicas,
+# minAvailable=1 ensures voluntary disruptions (node drains, autoscaler
+# scale-downs, cluster upgrades) can never reduce the booking deployment
+# below 1 ready pod.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: booking-pdb
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.booking.minAvailable }}
+  selector:
+    matchLabels:
+      app: booking
+---
+# PodDisruptionBudget for frontend — keeps the UI available during
+# voluntary disruptions.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-pdb
+  namespace: {{ .Values.namespaces.ui }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.frontend.minAvailable }}
+  selector:
+    matchLabels:
+      app: frontend

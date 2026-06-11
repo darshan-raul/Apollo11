@@ -1,0 +1,86 @@
+{{- /*
+6 HTTPRoutes — one per service, plus 1 cross-namespace ReferenceGrant so
+the frontend route in apollo-airlines-ui can attach to the Gateway in
+apollo-airlines-apps.
+
+Each route's hostname is `<service>.<gateway.hostSuffix>`. Defaults to
+`<service>.apollo.local`.
+
+The frontend route is special:
+  * Lives in apollo-airlines-ui
+  * parentRef.namespace MUST be set explicitly to apollo-airlines-apps
+    (cross-namespace attachment)
+  * Backed by the `frontend` Service on port 3000
+*/ -}}
+{{- if .Values.gateway.enabled }}
+{{- $gatewayName := .Values.gateway.gatewayName }}
+{{- $gatewayNs := .Values.namespaces.apps }}
+{{- $services := list
+  (dict "name" "identity"     "port" 8080 "ns" .Values.namespaces.apps)
+  (dict "name" "flight"       "port" 8081 "ns" .Values.namespaces.apps)
+  (dict "name" "booking"      "port" 8082 "ns" .Values.namespaces.apps)
+  (dict "name" "search"       "port" 8083 "ns" .Values.namespaces.apps)
+  (dict "name" "notification" "port" 8084 "ns" .Values.namespaces.apps)
+-}}
+{{- range $svc := $services }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $svc.name }}
+  namespace: {{ $svc.ns }}
+  labels:
+    {{- include "apollo11.labels" $ | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ $gatewayName }}
+      namespace: {{ $gatewayNs }}
+  hostnames:
+    - {{ $svc.name }}.{{ $.Values.gateway.hostSuffix }}
+  rules:
+    - backendRefs:
+        - name: {{ $svc.name }}
+          port: {{ $svc.port }}
+{{- end }}
+---
+# Frontend route — cross-namespace. The route lives in apollo-airlines-ui
+# but attaches to the Gateway in apollo-airlines-apps. ReferenceGrant in
+# apollo-airlines-ui authorizes this.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: frontend
+  namespace: {{ .Values.namespaces.ui }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ $gatewayName }}
+      namespace: {{ $gatewayNs }}
+  hostnames:
+    - {{ .Values.gateway.frontendHost }}
+  rules:
+    - backendRefs:
+        - name: frontend
+          port: {{ .Values.frontend.port }}
+---
+# Cross-namespace ReferenceGrant — required because HTTPRoutes in
+# apollo-airlines-apps (5 of them, above) need to attach to the frontend
+# Service in apollo-airlines-ui, and HTTPRoutes in apollo-airlines-ui
+# (1 of them, frontend) attach to the Gateway in apollo-airlines-apps.
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: apollo-gateway-grant
+  namespace: {{ .Values.namespaces.ui }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: {{ .Values.namespaces.apps }}
+  to:
+    - group: ""
+      kind: Service
+      name: frontend

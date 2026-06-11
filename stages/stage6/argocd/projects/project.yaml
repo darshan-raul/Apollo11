@@ -1,0 +1,78 @@
+# AppProject: apollo-airlines
+#
+# This is the security boundary for our GitOps setup. It restricts what
+# ArgoCD can deploy, where, and from where.
+#
+# Rules:
+#   - Source repos:    only the Apollo11 GitHub repo
+#   - Destinations:    only the in-cluster, and only into 2 namespaces
+#   - Cluster-scoped:  DENIED (no CRDs, no cluster roles, no nodes)
+#   - Namespaced:      everything in the 2 namespaces is allowed
+#   - Signatures:      keys can be added later (ApplicationSet / sigstore)
+#
+# Each Application CR references this project via:
+#   spec.project: apollo-airlines
+#
+# If a misbehaving Application tries to write outside this scope, ArgoCD
+# will reject the sync with a 403.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: apollo-airlines
+  namespace: apollo-airlines
+  labels:
+    app.kubernetes.io/part-of: apollo-airlines
+    app.kubernetes.io/component: gitops
+spec:
+  description: |
+    Apollo Airlines workload delivery.
+    Three Applications (dev, staging, prod) deploy the Stage 5 Helm chart
+    into apollo-airlines-apps and apollo-airlines-ui.
+
+  # Source: this repo. For a kind/dev setup the repoURL is set on each
+  # Application; for a real prod cluster, change to:
+  #   repoURL: https://github.com/darshan/Apollo11
+  #   targetRevision: HEAD
+  # and add a `sourceRepos` entry here. We use a wildcard for the demo
+  # so the same AppProject works for both local-path sources and
+  # git/HTTP sources.
+  sourceRepos:
+    - '*'
+
+  # Destination restrictions: only the in-cluster, only 2 namespaces.
+  destinations:
+    - namespace: apollo-airlines-apps
+      server: https://kubernetes.default.svc
+    - namespace: apollo-airlines-ui
+      server: https://kubernetes.default.svc
+
+  # Allow all namespaced kinds in those two namespaces.
+  # If you want to lock this down further (e.g. deny Pods directly so all
+  # workloads must come via Deployments/StatefulSets), replace the wildcard
+  # with an explicit list. For teaching purposes, the wildcard is fine.
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  # Deny all cluster-scoped resources.
+  clusterResourceWhitelist: []
+
+  # Sync windows: optional. By default ArgoCD will sync 24/7. To add a
+  # maintenance window for prod, uncomment:
+  # syncWindows:
+  #   - kind: deny
+  #     schedule: '0 0 * * 6'   # Saturday 00:00 UTC
+  #     duration: 1h
+  #     applications:
+  #       - apollo11-prod
+  #     manualSync: true
+
+  # Roles: default empty. To grant a CI service account permission to
+  # sync prod, define a role here and a JWT token in argocd-rbac-cm.
+  roles: []
+
+  # Orphaned resource monitoring: alert (via UI) when ArgoCD-managed
+  # resources no longer match any Application. Helps catch delete-by-mistake.
+  orphanedResources:
+    warn: true
+    ignore: []

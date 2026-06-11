@@ -1,0 +1,99 @@
+# Application: apollo11-dev
+#
+# Deploys the Stage 5 Helm chart into the dev environment.
+#
+# Source:   local repo path (works for in-cluster repoServer with the
+#           stage5 dir mounted, or for kind: works because ArgoCD's
+#           repoServer runs inside the cluster and can reach
+#           https://github.com/<owner>/<repo> if you set repoURL
+#           accordingly. See "Local source" note below.)
+# Target:   apollo-airlines-apps + apollo-airlines-ui
+# Sync:     automated, prune, selfHeal (3-min drift window)
+# Values:   helm/apollo11/values-dev.yaml (1 replica, :dev tag, no PDBs)
+#
+# Local source gotcha:
+#   ArgoCD's repoServer runs inside the cluster. It cannot read your laptop's
+#   /home/... path. For dev-on-kind, the cleanest setup is to point
+#   repoURL at the GitHub repo. For a fully offline demo, you can
+#   1) `kind create cluster` with extraMounts to share stages/stage5/ into
+#      the container, 2) patch argocd-repo-server to mount that volume,
+#      3) set repoURL to file:///workspace/stages/stage5/helm/apollo11.
+#   We default to the GitHub URL — set the env var GITOPS_REPO to override
+#   for your fork or local setup.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apollo11-dev
+  namespace: apollo-airlines
+  labels:
+    app.kubernetes.io/part-of: apollo-airlines
+    app.kubernetes.io/component: gitops
+    apollo-airlines/environment: dev
+  # finalizer ensures ArgoCD cleans up resources when the Application is deleted
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: apollo-airlines
+
+  source:
+    # Override at apply time with: --set source.repoURL=...
+    # or via the env file in scripts/bootstrap.sh.
+    repoURL: https://github.com/darshan/Apollo11
+    targetRevision: HEAD
+    # Path within the repo containing the Helm chart
+    path: stages/stage5/helm/apollo11
+    helm:
+      # values-dev.yaml: 1 replica per app, image tag :dev, no PDBs
+      valueFiles:
+        - values-dev.yaml
+      # image.tag can be overridden here if you want to pin dev to a
+      # specific image without editing the values file. Default is
+      # whatever the values file says.
+      parameters:
+        - name: image.tag
+          value: dev
+        - name: pdb.enabled
+          value: "false"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apollo-airlines-apps
+
+  # Sync policy: fully automated for dev. Any push to the repo (or local
+  # file change with a re-push) gets synced within 3 minutes.
+  syncPolicy:
+    automated:
+      prune: true        # delete cluster resources that disappeared from the chart
+      selfHeal: true     # revert out-of-band kubectl changes within 3 min
+      allowEmpty: false   # refuse to sync if the rendered manifest is empty
+    syncOptions:
+      - CreateNamespace=true   # auto-create apollo-airlines-apps / -ui
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true         # prune BEFORE create so we don't strand resources
+      - ServerSideApply=true   # use server-side apply (required for chart's large CRDs)
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  # Ignore differences ArgoCD can't help with (kube-state noise).
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      jsonPointers:
+        - /spec/template/metadata/annotations/checksum    # if we add config-hash
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jsonPointers:
+        - /webhooks/0/clientConfig/service/namespace       # we move webhook ns on chart rerender
+    # Ignore status fields and last-applied by default via this scm
+    - group: '*'
+      kind: 'Pod'
+      jqPathExpressions:
+        - '.spec.containers[].resources'
+
+  # Revision history: keep 10 revisions in history for rollback via UI
+  revisionHistoryLimit: 10

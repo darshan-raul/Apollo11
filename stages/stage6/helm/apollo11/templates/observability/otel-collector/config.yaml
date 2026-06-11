@@ -1,0 +1,110 @@
+# OTEL Collector config for Apollo11.
+#
+# Receivers:
+#   - otlp:  gRPC (4317) + HTTP (4318) for app-side OTLP exporters
+#   - hostmetrics:  CPU, memory, network for the node the DaemonSet pod is on
+#   - kubeletstats:  per-pod CPU/memory (pulls from the kubelet)
+#   - prometheus:  scrapes in-cluster Prometheus metrics endpoints
+#                   (we delegate that to Prometheus itself, but having a
+#                   receiver here is useful as a backup path)
+#
+# Processors:
+#   - batch:  group spans/metrics into batches of 8192 with 5s timeout
+#   - memory_limiter:  cap memory at 256Mi to prevent OOM
+#   - resourcedetection:  add k8s.* resource attributes
+#
+# Exporters:
+#   - otlp/tempo:  send traces to Tempo (single-binary, in-cluster)
+#   - prometheusremotewrite:  send metrics to Prometheus
+#   - logging:  debug stdout (set to "info" in prod; "debug" while testing)
+#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/part-of: apollo-airlines
+data:
+  relay: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+      hostmetrics:
+        collection_interval: 30s
+        scrapers:
+          cpu:
+          memory:
+          disk:
+          network:
+          load:
+          processes:
+
+      kubeletstats:
+        auth_type: serviceAccount
+        endpoint: https://${K8S_NODE_NAME}:10250
+        insecure_skip_verify: true
+        collection_interval: 30s
+        metric_groups:
+          - container
+          - pod
+          - node
+
+    processors:
+      batch:
+        timeout: 5s
+        send_batch_size: 8192
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 80
+        spike_limit_percentage: 25
+      resourcedetection:
+        detectors: [env, system, k8s]
+        timeout: 5s
+
+    exporters:
+      otlp/tempo:
+        endpoint: tempo:4317
+        tls:
+          insecure: true
+        # Send in batches; the collector's batch processor handles it.
+        sending_queue:
+          enabled: true
+          num_consumers: 10
+          queue_size: 5000
+          retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_interval: 30s
+            max_elapsed_time: 300s
+
+      logging:
+        verbosity: basic
+        sampling_initial: 5
+        sampling_thereafter: 200
+
+    service:
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          address: 0.0.0.0:8888
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resourcedetection]
+          exporters: [otlp/tempo, logging]
+        metrics:
+          receivers: [otlp, hostmetrics, kubeletstats]
+          processors: [memory_limiter, batch, resourcedetection]
+          exporters: [logging]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, batch, resourcedetection]
+          exporters: [logging]

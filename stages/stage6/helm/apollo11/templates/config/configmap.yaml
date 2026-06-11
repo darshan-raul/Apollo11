@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apollo-airlines-config
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+data:
+  NS_APPS: {{ .Values.namespaces.apps | quote }}
+  NS_UI:   {{ .Values.namespaces.ui | quote }}
+---
+# UI namespace: keep the VITE_* URLs in a ConfigMap so they're visible to
+# anyone inspecting the cluster (and so a tool can rebuild the image with
+# the right values without hardcoding them in the Dockerfile).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apollo-airlines-config
+  namespace: {{ .Values.namespaces.ui }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+data:
+  VITE_IDENTITY_URL: {{ .Values.config.viteUrls.identity | quote }}
+  VITE_FLIGHT_URL:   {{ .Values.config.viteUrls.flight | quote }}
+  VITE_BOOKING_URL:  {{ .Values.config.viteUrls.booking | quote }}
+  VITE_SEARCH_URL:   {{ .Values.config.viteUrls.search | quote }}

@@ -1,0 +1,37 @@
+---
+# Production environment overrides — pinned tag, max replicas, full PDB coverage.
+# Use as: helm upgrade --install apollo11 helm/apollo11 -f values-prod.yaml
+
+# Production environment overrides — pinned tag, max replicas, full PDB coverage.
+# Use as: helm upgrade --install apollo11 helm/apollo11 -f values-prod.yaml
+
+# In prod, pull images from GHCR rather than the local kind cluster.
+image:
+  repository: ghcr.io/darshan/apollo11
+  tag: v1.0.0
+  pullPolicy: Always
+
+apps:
+  identity:
+    replicas: 3
+  flight:
+    replicas: 3
+  booking:
+    replicas: 3
+  search:
+    replicas: 3
+  notification:
+    replicas: 3
+
+frontend:
+  replicas: 3
+
+# PodDisruptionBudgets on in prod — guarantees the flagship service
+# and UI survive voluntary disruptions. With 3 replicas and
+# minAvailable=2, at most one pod can be evicted at a time.
+pdb:
+  enabled: true
+  booking:
+    minAvailable: 2
+  frontend:
+    minAvailable: 2

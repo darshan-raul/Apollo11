@@ -1,0 +1,74 @@
+# Application: apollo11-observability
+#
+# Deploys the Stage 6 observability stack (Prometheus + Grafana + OTEL
+# Collector + Tempo + Loki + Promtail) into the apollo-observability
+# namespace.
+#
+# Source:   directory source pointing at argocd/observability/manifests/
+#           (plain k8s manifests, no Helm templating). The same files
+#           are rendered by the chart's helm install for the
+#           end-to-end "single chart" path (apply.sh), but for the
+#           ArgoCD path we use plain manifests because:
+#             1. ArgoCD's "directory" source is simpler to reason about
+#             2. The observability stack is largely static — no per-env
+#                templating is needed
+#             3. We avoid the "wrap the chart in a gate" complexity
+#
+# Sync:     automated, prune, selfHeal. Safe to auto-sync because the
+#           observability stack is read-mostly (Prometheus, Grafana,
+#           Loki) and selfHeal reverts the inevitable kubectl-edits.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apollo11-observability
+  namespace: apollo-airlines
+  labels:
+    app.kubernetes.io/part-of: apollo-airlines
+    app.kubernetes.io/component: gitops
+    apollo-airlines/environment: observability
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: apollo-airlines
+
+  source:
+    repoURL: https://github.com/darshan/Apollo11
+    targetRevision: HEAD
+    # `path` is the directory containing plain k8s manifests. ArgoCD
+    # will `kubectl apply` each .yaml file in this directory.
+    path: stages/stage6/argocd/observability/manifests
+    directory:
+      recurse: false
+      include: '{*.yaml,grafana/*.yaml,loki/*.yaml,otel-collector/*.yaml,prometheus/*.yaml,servicemonitors/*.yaml,tempo/*.yaml,ingress/*.yaml}'
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apollo-observability
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - ServerSideApply=true
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+
+  revisionHistoryLimit: 10
+  ignoreDifferences:
+    # StatefulSet status (currentRevision, updateRevision) drifts
+    # automatically; ignore to prevent the controller from rolling pods
+    # just to match.
+    - group: apps
+      kind: StatefulSet
+      jsonPointers:
+        - /status

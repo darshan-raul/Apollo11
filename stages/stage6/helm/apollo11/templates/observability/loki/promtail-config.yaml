@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: promtail
+    app.kubernetes.io/part-of: apollo-airlines
+data:
+  promtail.yaml: |
+    server:
+      http_listen_address: 0.0.0.0
+      http_listen_port: 9080
+      log_level: info
+
+    positions:
+      filename: /tmp/positions.yaml
+
+    client:
+      url: http://loki:3100/loki/api/v1/push
+      batchwait: 1s
+      batchsize: 1048576
+      backoff_config:
+        min_period: 500ms
+        max_period: 5m
+        max_retries: 10
+
+    scrape_configs:
+      # The kubelet's container log path. Works for both docker and
+      # containerd cri runtimes (kind uses containerd).
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        pipeline_stages:
+          - docker: {}
+          - cri: {}
+        relabel_configs:
+          - source_labels: ['__meta_kubernetes_pod_node_name']
+            target_label: node_name
+          - source_labels: ['__meta_kubernetes_namespace']
+            target_label: namespace
+          - source_labels: ['__meta_kubernetes_pod_name']
+            target_label: pod
+          - source_labels: ['__meta_kubernetes_pod_container_name']
+            target_label: container
+          - source_labels: ['__meta_kubernetes_pod_uid']
+            target_label: pod_uid
+        # Only ship logs from Apollo namespaces — keeps the volume low.
+        - source_labels: ['__meta_kubernetes_namespace']
+            regex: 'apollo-observability|apollo-airlines-apps|apollo-airlines-ui'
+            action: keep

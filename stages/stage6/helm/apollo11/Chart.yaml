@@ -1,0 +1,22 @@
+apiVersion: v2
+name: apollo11
+description: Apollo Airlines — flight management system packaged for Kubernetes (Helm + Kustomize)
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - kubernetes
+  - helm
+  - learning
+  - flight-management
+  - apollo-airlines
+
+maintainers:
+  - name: Apollo11
+    email: apollo11@example.com
+
+# Stage 5 is the first stage where Apollo11 is packaged as a chart.
+# Stage 2-4 manifests are still usable raw, but the chart is the
+# production deployment path from here on (Stage 6+ observability,
+# Stage 7+ scaling, etc. all layer on top of the same workloads).

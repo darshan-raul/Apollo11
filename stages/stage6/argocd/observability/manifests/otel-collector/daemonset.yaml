@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-collector
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/part-of: apollo-airlines
+    app.kubernetes.io/component: observability
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: otel-collector
+        app.kubernetes.io/part-of: apollo-airlines
+    spec:
+      serviceAccountName: observability-stack
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: otel-collector
+          # otel/opentelemetry-collector-contrib:0.99.0 — the contrib build
+          # has the hostmetrics, kubeletstats, and prometheus receivers
+          # we need.
+          image: otel/opentelemetry-collector-contrib:0.99.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--config=/conf/relay.yaml"
+          env:
+            # The kubeletstats receiver needs the node name to talk to
+            # the kubelet. The downward API injects it.
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+            - name: self-telemetry
+              containerPort: 8888
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /conf
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  # ClusterIP because the apps reach it via the service DNS name
+  # (otel-collector:4317). DaemonSet means one pod per node, but a
+  # ClusterIP Service with no selector (manually mapped to all pods)
+  # would load-balance across them. For simplicity, headless: each pod
+  # gets its own DNS entry; the apps connect to whichever one is local.
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: otel-collector
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP

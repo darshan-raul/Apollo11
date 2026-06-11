@@ -1,0 +1,19 @@
+{{- /*
+MetalLB native install manifest. v0.14.5 (1935 lines, ~67KB) — bundled
+in the chart for offline-friendly installs.
+
+Annotated as a `pre-install,pre-upgrade` hook so the MetalLB CRDs
+(IPAddressPool, L2Advertisement) are registered before the
+`metallb.yaml` template tries to create instances of them.
+*/ -}}
+{{- if and .Values.metallb.enabled .Values.metallb.bundleInstall }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: metallb-system
+  labels:
+    app.kubernetes.io/part-of: apollo-airlines
+    control-plane: metallb
+---
+{{ .Files.Get "bundles/metallb-native.yaml" | indent 0 }}
