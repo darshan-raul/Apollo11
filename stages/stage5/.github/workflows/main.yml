@@ -1,0 +1,212 @@
+---
+# Stage 5 CI: lint, build, and push Apollo Airlines images to GHCR.
+#
+# Images produced:
+#   ghcr.io/<owner>/apollo11-identity:latest
+#   ghcr.io/<owner>/apollo11-flight:latest
+#   ghcr.io/<owner>/apollo11-booking:latest
+#   ghcr.io/<owner>/apollo11-search:latest
+#   ghcr.io/<owner>/apollo11-notification:latest
+#   ghcr.io/<owner>/apollo11-frontend:latest
+#
+# To consume from values-prod.yaml, override:
+#   image.repository: ghcr.io/<owner>/apollo11-<service>
+#   image.tag: <sha or latest>
+name: stage5
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'stages/stage5/**'
+      - 'stages/stage4/code/**'
+      - '.github/workflows/main.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'stages/stage5/**'
+      - 'stages/stage4/code/**'
+      - '.github/workflows/main.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: apollo11
+
+jobs:
+  lint:
+    name: Lint Helm + Kustomize
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          version: 5.4.3
+
+      - name: Setup kubeconform
+        run: |
+          curl -sSLO https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz
+          tar xf kubeconform-linux-amd64.tar.gz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: helm lint (all values files)
+        working-directory: stages/stage5/helm/apollo11
+        run: |
+          set -euo pipefail
+          for vf in values.yaml values-dev.yaml values-staging.yaml values-prod.yaml; do
+            echo "--- helm lint with $vf ---"
+            helm lint . --values "$vf"
+          done
+
+      - name: kustomize build (all overlays)
+        working-directory: stages/stage5
+        run: |
+          set -euo pipefail
+          for env in base dev staging prod; do
+            echo "--- kustomize build overlays/$env ---"
+            kustomize build "overlays/$env" > "/tmp/overlay-${env}.yaml"
+            echo "  $(wc -l < /tmp/overlay-${env}.yaml) lines"
+          done
+
+      - name: kubeconform (helm template render)
+        working-directory: stages/stage5/helm/apollo11
+        run: |
+          set -euo pipefail
+          for vf in values.yaml values-prod.yaml; do
+            echo "--- kubeconform on helm template with $vf ---"
+            helm template apollo11 . --values "$vf" \
+              | kubeconform -strict -summary -kubernetes-version 1.29.0
+          done
+
+  build-images:
+    name: Build & push ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: identity
+            dockerfile: stages/stage5/code/identity/Dockerfile
+            context: stages/stage5/code/identity
+          - service: flight
+            dockerfile: stages/stage5/code/flight/Dockerfile
+            context: stages/stage5/code/flight
+          - service: booking
+            dockerfile: stages/stage5/code/booking/Dockerfile
+            context: stages/stage5/code/booking
+          - service: search
+            dockerfile: stages/stage5/code/search/Dockerfile
+            context: stages/stage5/code/search
+          - service: notification
+            dockerfile: stages/stage5/code/notification/Dockerfile
+            context: stages/stage5/code/notification
+          - service: frontend
+            dockerfile: stages/stage5/code/frontend/Dockerfile
+            context: stages/stage5/code/frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=apollo11-${{ matrix.service }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build (PR)
+        if: github.event_name != 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push (main)
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  helm-validate:
+    name: helm template (prod values)
+    runs-on: ubuntu-latest
+    needs: build-images
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+
+      - name: Render chart against prod values
+        working-directory: stages/stage5/helm/apollo11
+        run: |
+          set -euo pipefail
+          helm template apollo11 . --values values-prod.yaml > /tmp/rendered.yaml
+          echo "Rendered $(wc -l < /tmp/rendered.yaml) lines"
+          echo "--- resources ---"
+          grep -E '^kind:' /tmp/rendered.yaml | sort | uniq -c
+
+      - name: Confirm core resources present
+        run: |
+          set -euo pipefail
+          for kind in Namespace ServiceAccount ConfigMap Secret \
+                      StatefulSet Deployment Service \
+                      PodDisruptionBudget Job \
+                      GatewayClass Gateway HTTPRoute \
+                      IPAddressPool L2Advertisement; do
+            if ! grep -q "^kind: $kind$" /tmp/rendered.yaml; then
+              echo "::error::Missing $kind in rendered prod output"
+              exit 1
+            fi
+            echo "  ok: $kind"
+          done

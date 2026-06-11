@@ -18,7 +18,7 @@ Apollo11 is a **13-phase Kubernetes/cloud-native learning bootstrap** using **Ap
 | Stage 2 | Guidance/N&C | **4 manifest sets** — Namespaces, DNS, ServiceAccounts, Headless Services, NetworkPolicies (reference), Ingress (Traefik), Gateway API (Envoy), MetalLB |
 | Stage 3 | Mission Data | StatefulSets + 1Gi PVCs for all 4 stateful workloads (3 PG + redis), schema bootstrap via Postgres `/docker-entrypoint-initdb.d/` ConfigMap mount, idempotent seed Jobs. **Envoy Gateway + MetalLB access stack from Stage 2 set 4 carries over verbatim and persists for all later stages.** |
 | Stage 4 | Flight Control | Probes, resource limits, QoS, PodDisruptionBudget |
-| Stage 5 | Payload Integration | Helm chart (full access stack), Kustomize overlays (dev/staging/prod), GitHub Actions CI |
+| Stage 5 | Payload Integration | Helm chart (full access stack), Kustomize overlays (dev/staging/prod), GitHub Actions CI, **ArgoCD GitOps module** (AppProject + 3 Applications) |
 | Stage 6 | Mission Ops | Prometheus, Grafana, OpenTelemetry |
 | Stage 7 | Orbital Maneuvering | HPA, VPA, Redis cache, taints/tolerations, affinity |
 | Stage 8 | Command Module | RBAC, SecurityContext, OPA, Vault |
@@ -94,7 +94,7 @@ Apollo11/
 │   │   ├── code/            # snapshot of stages/stage3/code/  (probes + SIGTERM added)
 │   │   ├── k8s/             # apps/ (probes+resources), pdb/ (NEW), gateway/, metallb/, jobs/, config/
 │   │   └── scripts/         # apply.sh, teardown.sh, verify.sh (129 checks), build-images.sh
-│   ├── stage5/              # Helm charts + Kustomize overlays + GitHub Actions
+│   ├── stage5/              # Helm chart + Kustomize overlays + GitHub Actions + ArgoCD GitOps module
 │   ├── stage6/              # Prometheus + Grafana + OpenTelemetry
 │   ├── stage7/              # HPA, VPA, Redis cache, affinity/taints
 │   ├── stage8/              # RBAC, SecurityContext, OPA, Vault
@@ -473,7 +473,7 @@ drain needed.
 
 **Location:** `stages/stage5/`
 
-**Status:** ✅ Complete. Helm chart (`helm/apollo11/`) provisions the full cluster from a single `helm install` — 2 namespaces, 13 SAs, 3 PG + 1 Redis StatefulSets, 6+1 Deployments, 2 PDBs, 3 seed Jobs, Envoy Gateway + 6 HTTPRoutes + 1 ReferenceGrant, MetalLB IPAddressPool. Kustomize overlays (`overlays/{base,dev,staging,prod}/`) provide a plain-manifest alternative for dev-friendly iteration. GitHub Actions CI (`.github/workflows/main.yml`) lints, builds, and pushes images to GHCR.
+**Status:** ✅ Complete. Helm chart (`helm/apollo11/`) provisions the full cluster from a single `helm install` — 2 namespaces, 13 SAs, 3 PG + 1 Redis StatefulSets, 6+1 Deployments, 2 PDBs, 3 seed Jobs, Envoy Gateway + 6 HTTPRoutes + 1 ReferenceGrant, MetalLB IPAddressPool. Kustomize overlays (`overlays/{base,dev,staging,prod}/`) provide a plain-manifest alternative for dev-friendly iteration. GitHub Actions CI (`.github/workflows/main.yml`) lints, builds, and pushes images to GHCR. **ArgoCD GitOps module** (`argocd/`) is the declarative delivery layer — AppProject + 3 Applications (dev auto-sync, staging auto-sync, prod manual-sync pinned to `v1.0.0`).
 
 **k8s manifest changes:** None at the workload level (Stage 5 is a packaging layer). The chart's `templates/` produce the same Deployments/StatefulSets/Services that Stage 4's `k8s/` tree contains.
 
@@ -489,6 +489,25 @@ drain needed.
 - `scripts/verify.sh` — ~70 checks (namespaces, SAs, ConfigMap, Secret, StatefulSets, Deployments, probes, resources, PDBs, seed jobs, Gateway, HTTPRoutes, MetalLB)
 - `scripts/build-images.sh` — 6 services + frontend with VITE_* URLs from `values.yaml`
 - `.github/workflows/main.yml` — replaces stub. Lint + matrix build + GHCR push (no deploy)
+- `argocd/install.sh` — ArgoCD v2.13.2 install (online by default, `--fetch-bundle` for air-gap)
+- `argocd/uninstall.sh` — symmetric teardown of the ArgoCD system
+- `argocd/projects/project.yaml` — `AppProject` restricting to 2 namespaces, no cluster-scoped
+- `argocd/applications/{dev,staging,prod}.yaml` — 3 Applications, one per env, all sourcing the Stage 5 chart
+- `argocd/scripts/bootstrap.sh` — idempotent registration of project + 3 apps, `--sync` to force-sync
+- `argocd/scripts/verify.sh` — ~25 GitOps checks (system pods, AppProject, Applications, workloads, drift)
+- `argocd/scripts/teardown.sh` — apps-only / `--full` / `--purge` levels
+- `argocd/DEMO.md` — 101 walkthrough (install, bootstrap, sync, drift demo, rollback, teardown)
+- `argocd/ARGOCD.md` — complete ArgoCD reference guide (reconciliation model, architecture, AppProject/Application/ApplicationSet, source types, sync policies, hooks/waves/windows, RBAC, multi-cluster, HA, anti-patterns)
+
+**ArgoCD Application sync policies (per env):**
+
+| Application | Sync | Prune | SelfHeal | Image tag | PDBs |
+|---|---|---|---|---|---|
+| apollo11-dev     | automated | true  | true  | `:dev`     | off |
+| apollo11-staging | automated | true  | true  | `:latest`  | off |
+| apollo11-prod    | **manual** | false (in options) | false | `:v1.0.0` pinned | on |
+
+Dev and staging auto-converge on git push; prod is human-gated. The `targetRevision` on prod is pinned to the `v1.0.0` tag (bump the file to roll forward).
 
 **Code changes vs stage4:** None (snapshot of `stages/stage4/code/`).
 
@@ -646,7 +665,7 @@ Needed but missing: kind, kustomize, k6, trivy, opa, kyverno, prometheus, grafan
 | Stage 2 | ✅ Complete | 4 manifest sets verified: NodePort 25/25, Traefik 25/25, Envoy Gateway 26/26, Envoy+MetalLB 28/28 |
 | Stage 3 | ✅ Complete | 4 StatefulSets + PVCs + entrypoint-hook schema + seed jobs, 53/53 verify (Envoy+MetalLB access stack persists for stages 4–11) |
 | Stage 4 | ✅ Complete | Probes (startup/live/ready) on 6 apps, Guaranteed QoS on all 10 pods, PDBs for booking + frontend, graceful SIGTERM on all backends, 129/129 verify |
-| Stage 5 | ✅ Complete | Helm chart (full access stack) + Kustomize overlays (dev/staging/prod) + GitHub Actions CI, ~70 verify checks |
+| Stage 5 | ✅ Complete | Helm chart (full access stack) + Kustomize overlays (dev/staging/prod) + GitHub Actions CI + ArgoCD GitOps module (AppProject + 3 Applications), ~70 chart verify checks + ~25 GitOps verify checks |
 | Stage 6–11 | ⚠️ Pending | Scope defined in AGENTS.md, not yet implemented |
 
 ---

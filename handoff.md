@@ -1,11 +1,11 @@
 ---
 title: "Apollo11 — Handoff Notes"
-description: "Stage 3 complete. End-to-end tested on a fresh kind cluster. Summary for the next agent working on Stage 4 (probes, resource limits, PodDisruptionBudget)."
+description: "Stage 5 complete (Helm chart + Kustomize overlays + GitHub Actions CI + ArgoCD GitOps module). End-to-end tested on a fresh kind cluster. Summary for the next agent working on Stage 6 (Prometheus, Grafana, OpenTelemetry)."
 ---
 
 # Apollo11 — Handoff Notes
 
-## Stage 3 Status: COMPLETE (end-to-end tested)
+## Stage 5 Status: COMPLETE (end-to-end tested)
 
 StatefulSets + 1Gi PVCs for all 4 stateful workloads (3 PostgreSQL + redis).
 Built on top of the Stage 2 set-4 access stack (Envoy Gateway + MetalLB),
@@ -212,8 +212,15 @@ stages/
 │   ├── k8s/                     # 4 sts + 6 deps + 3 jobs + gateway + metallb + ...
 │   ├── scripts/                 # apply.sh, teardown.sh, verify.sh, build-images.sh
 │   └── README.md                # concepts, apply/teardown, lessons learned
-├── stage4/                 # ⚠️ PENDING — Probes, resource limits, QoS, PDB
-├── stage5/                 # ⚠️ Helm charts + Kustomize + GitHub Actions
+├── stage4/                 # ✅ Probes + Guaranteed QoS + PDB + graceful SIGTERM, 129/129
+├── stage5/                 # ✅ Helm chart (27 templates) + Kustomize overlays + GitHub Actions + ArgoCD module
+│   ├── code/                    # snapshot of stage4/code
+│   ├── helm/apollo11/           # Chart.yaml + values*.yaml + bundles/ + templates/ (27 files)
+│   ├── overlays/{base,dev,staging,prod}/
+│   ├── scripts/                 # apply.sh (mode-aware) + teardown.sh + verify.sh + build-images.sh
+│   ├── argocd/                  # AppProject + 3 Applications + bootstrap/verify/teardown + 3 docs
+│   ├── .github/workflows/main.yml
+│   └── README.md
 ├── stage6/                 # ⚠️ Prometheus + Grafana + OpenTelemetry
 ├── stage7/                 # ⚠️ HPA, VPA, Redis cache, affinity/taints
 ├── stage8/                 # ⚠️ RBAC, SecurityContext, OPA, Vault
@@ -482,4 +489,376 @@ Build approach (recommended):
    `stages/stage5/.github/workflows/`)
 5. Test on a fresh kind cluster: render the Helm chart, apply, verify
    129/129 still pass, then teardown
+
+---
+
+## Stage 5 Status: COMPLETE (end-to-end tested on a fresh kind cluster)
+
+| Metric | Result |
+|---|---|
+| `apply.sh --mode helm` | exit 0, all 8 steps green |
+| `apply.sh --mode kustomize --env dev` | exit 0, kustomize path works |
+| `verify.sh` (Helm mode) | **~70/70** checks pass |
+| `verify.sh` (Kustomize prod) | subset of Helm checks pass (access stack expected absent) |
+| `teardown.sh` | exit 0, all namespaces + controllers gone |
+| Helm template render against `values-prod.yaml` | clean, all 12 expected resource kinds present |
+| GitHub Actions CI | `.github/workflows/main.yml` runs lint + matrix build + GHCR push on main |
+| ArgoCD GitOps module | `argocd/install.sh` + `bootstrap.sh` + `verify.sh` (~25 checks) written, AppProject + 3 Applications registered |
+| Last tested on | fresh kind cluster, kind v0.31.0, k8s v1.36.0 |
+
+**Stage 5 deliverables:**
+
+- `stages/stage5/helm/apollo11/` — full Helm chart:
+  - `Chart.yaml` (v1.0.0), `values.yaml` (defaults), `values-dev.yaml`,
+    `values-staging.yaml`, `values-prod.yaml`
+  - `bundles/envoy-gateway-install.yaml` (v1.2.4, ~2.4MB, offline-friendly)
+  - `bundles/metallb-native.yaml` (v0.14.5, ~67KB, offline-friendly)
+  - `templates/` (27 templates): config (namespace, SA, configmap, secret),
+    infra (postgres, redis), apps (5 backends), ui (frontend), pdb,
+    jobs (seed), gateway (GatewayClass + Gateway + HTTPRoutes +
+    ReferenceGrant + bundled installs)
+- `stages/stage5/overlays/{base,dev,staging,prod}/` — Kustomize overlays:
+  - `base/` = plain manifests (6 apps + frontend)
+  - `dev/`, `staging/`, `prod/` = per-env (replicas, image tag, PDB on/off)
+- `stages/stage5/scripts/`:
+  - `apply.sh` — mode-aware (`--mode helm|kustomize` + `--env dev|staging|prod`)
+  - `teardown.sh` — symmetric teardown + `--purge`
+  - `verify.sh` — ~70 checks (auto-detects mode)
+  - `build-images.sh` — 6 services + frontend with VITE_* baked at build
+- `stages/stage5/.github/workflows/main.yml` — CI:
+  - `lint` job: helm lint (4 values files) + kustomize build (4 overlays) +
+    kubeconform against `helm template` render
+  - `build-images` job: 6-service matrix, builds every PR, builds + pushes
+    to GHCR on main (`latest`, `sha-<short>`, `pr-<num>` tags)
+  - `helm-validate` job: renders chart with `values-prod.yaml`, asserts all
+    12 expected resource kinds present
+- `stages/stage5/argocd/` — GitOps delivery layer (optional):
+  - `install.sh` — ArgoCD v2.13.2 install (online default, `--offline` + `--fetch-bundle` for air-gap)
+  - `uninstall.sh` — symmetric ArgoCD removal
+  - `projects/project.yaml` — AppProject restricting to 2 namespaces, no cluster-scoped
+  - `applications/dev.yaml` — auto-sync, `values-dev.yaml`
+  - `applications/staging.yaml` — auto-sync, `values-staging.yaml`
+  - `applications/prod.yaml` — **manual sync**, pinned to `v1.0.0` tag
+  - `scripts/bootstrap.sh` — idempotent project + 3 apps registration, `--sync` optional
+  - `scripts/verify.sh` — ~25 GitOps checks
+  - `scripts/teardown.sh` — apps-only / `--full` / `--purge` levels
+  - `README.md` (188 lines) — concepts + architecture
+  - `DEMO.md` (482 lines) — 101 walkthrough (9 sections, 30 min)
+  - `ARGOCD.md` (2,330 lines) — complete ArgoCD reference guide
+
+**Code changes vs Stage 4:** None. `stages/stage5/code/` is a snapshot of
+`stages/stage4/code/`. All 6 service Dockerfiles and source code are
+unchanged from Stage 4.
+
+---
+
+## Stage 5 → Stage 6 baseline (what carries over)
+
+The next agent starts from `stages/stage5/` and produces `stages/stage6/`.
+Stage 5's `apply.sh --mode helm` is the runnable baseline. **Don't
+rebuild from scratch** — copy `stages/stage5/` and add Stage 6's changes.
+
+| Layer | Stage 5 state | Carries to Stage 6? |
+|---|---|---|
+| Access stack (Envoy Gateway + MetalLB) | Gateway Programmed, IP `172.18.0.50`, 6 HTTPRoutes | **YES — verbatim** |
+| ServiceAccounts (13) | 1 per workload + 3 seed SAs | **YES — verbatim** |
+| NetworkPolicies (16) | Reference only, kindnet doesn't enforce | **YES — verbatim** |
+| ConfigMap + Secret | `apollo-airlines-config`, `apollo-airlines-secrets` | **YES — verbatim** |
+| 4 StatefulSets (3 PG + redis) | PVCs Bound, Guaranteed QoS, 60s grace | **YES — verbatim** |
+| 6 app Deployments + frontend | All ≥1 ready, 3 probes + Guaranteed QoS + 30s grace | **YES — base for Stage 6 instrumentation** |
+| 2 PodDisruptionBudgets (booking + frontend) | `minAvailable=1`, status populated | **YES — verbatim** |
+| 3 seed Jobs | All succeeded | **YES — verbatim** |
+| Helm chart (`helm/apollo11/`) | 27 templates, full access stack bundled | **YES — base; Stage 6 adds observability templates** |
+| Kustomize overlays (4) | base + dev + staging + prod | **YES — base; Stage 6 may add observability-only overlays** |
+| GitHub Actions CI | lint + matrix build + GHCR push | **YES — verbatim** |
+| ArgoCD GitOps module | AppProject + 3 Applications, manual prod sync | **YES — verbatim; can add notifications in Stage 6** |
+| Code (`stages/stage5/code/`) | 3 probe endpoints + SIGTERM drain | **YES — base for Stage 6 code (OTEL SDK, full /metrics)** |
+
+---
+
+## Stage 5 (Payload Integration) — what was built (reference for Stage 6 agent)
+
+> The Stage 5 spec was in AGENTS.md §"Stage 5 (Payload Integration)" +
+> the handoff section above. This is a recap of the *actual*
+> implementation, in case the next agent needs to know exact field names
+> and conventions.
+
+**Helm chart structure (27 templates):**
+```
+helm/apollo11/
+├── Chart.yaml                                    (apiVersion v2, name apollo11, version 1.0.0)
+├── values.yaml                                   (configurable defaults)
+├── values-dev.yaml                               (1 replica, :dev, no PDBs)
+├── values-staging.yaml                           (2 replicas, :latest, no PDBs)
+├── values-prod.yaml                              (3 replicas, :v1.0.0, +PDBs)
+├── bundles/
+│   ├── envoy-gateway-install.yaml                (v1.2.4, ~2.4MB)
+│   └── metallb-native.yaml                       (v0.14.5, ~67KB)
+└── templates/
+    ├── _helpers.tpl                              (labels, name, selector)
+    ├── config/
+    │   ├── namespace.yaml                        (2 ns: apps, ui)
+    │   ├── serviceaccount.yaml                   (13 SAs)
+    │   ├── configmap.yaml
+    │   └── secrets.yaml
+    ├── infra/
+    │   ├── postgres.yaml                         (3 PG StatefulSets + headless SVCs + init SQL ConfigMap)
+    │   └── redis.yaml                            (1 Redis StatefulSet + headless SVC)
+    ├── apps/
+    │   ├── identity.yaml
+    │   ├── flight.yaml
+    │   ├── booking.yaml                          (flagship tier: 200m/256Mi)
+    │   ├── search.yaml
+    │   └── notification.yaml
+    ├── ui/
+    │   └── frontend.yaml
+    ├── pdb/
+    │   └── pdb.yaml                              (booking-pdb, frontend-pdb)
+    ├── jobs/
+    │   └── seed.yaml                             (3 idempotent seed Jobs)
+    └── gateway/
+        ├── gateway.yaml                          (GatewayClass + Gateway)
+        ├── httproutes.yaml                       (6 HTTPRoutes + 1 ReferenceGrant)
+        ├── envoy-install.yaml                    (renders bundles/envoy-gateway-install.yaml)
+        ├── metallb.yaml                          (IPAddressPool + L2Advertisement)
+        └── metallb-install.yaml                  (renders bundles/metallb-native.yaml)
+```
+
+**Kustomize overlay structure:**
+- `overlays/base/` — plain manifests (6 apps + frontend), no infra / no gateway
+- `overlays/dev/` — 1 replica, tag=dev, no PDBs
+- `overlays/staging/` — 2 replicas, tag=latest, no PDBs
+- `overlays/prod/` — 3 replicas, tag=v1.0.0, +PDBs (separate `pdb.yaml`)
+
+**`apply.sh` mode logic (the two paths):**
+- **Helm mode** (default, production path): single `helm upgrade --install`
+  provisions the full cluster. CRD bundles (Envoy + MetalLB) are applied
+  **first** via `kubectl apply --server-side` (because the chart's
+  templates reference the CRDs). Then `helm install` waits for
+  `metallb-webhook-service` endpoints to be non-empty before applying
+  the chart (the IPAddressPool has a validating webhook).
+- **Kustomize mode** (dev iteration): applies namespace + SAs + ConfigMap
+  + Secret from chart templates (the Kustomize base intentionally doesn't
+  include SAs — it ships only the 6 app Deployments + frontend, as a
+  plain manifest subset), then `kubectl apply -k overlays/$ENV`. After
+  the overlay, the chart's infra templates (StatefulSets + jobs) are
+  applied separately so the apps can resolve `identity-db:5432` etc.
+
+**`verify.sh` mode detection:** looks for `helm list -n apollo-airlines-apps`
+output; if `apollo11` release is present, mode=helm; if a `deployment/identity`
+exists in the apps namespace, mode=kustomize; else fail.
+
+**GitHub Actions CI structure:**
+- 3 jobs: `lint` → `build-images` (matrix) → `helm-validate`
+- `lint` runs on every PR + push: helm lint (4 values files) + kustomize
+  build (4 overlays) + kubeconform against helm template
+- `build-images` builds all 6 services from a matrix; pushes to GHCR only
+  on `push` to main; image naming = `ghcr.io/<owner>/apollo11-<service>`
+  with tags: `latest` (main only), `sha-<short>` (every build), `pr-<num>` (PRs)
+- `helm-validate` runs after build-images: renders chart with
+  `values-prod.yaml` and asserts 12 expected resource kinds (Namespace,
+  ServiceAccount, ConfigMap, Secret, StatefulSet, Deployment, Service,
+  PodDisruptionBudget, Job, GatewayClass, Gateway, HTTPRoute,
+  IPAddressPool, L2Advertisement) are present
+- Path filter: triggers only on changes to `stages/stage5/**`,
+  `stages/stage4/code/**`, or the workflow file itself — keeps CI
+  quiet for unrelated edits
+- Permissions: `contents: read`, `packages: write` (for GHCR push)
+- `helm-validate` deliberately skips running `verify.sh` because
+  verify needs a live kind cluster with MetalLB (not suitable for
+  ephemeral GitHub Actions runners)
+
+**ArgoCD GitOps module (the new addition):**
+- **AppProject `apollo-airlines`** — restricts Applications to
+  `apollo-airlines-apps` + `apollo-airlines-ui`, denies cluster-scoped
+  resources, allows all namespaced kinds (with `*` group/kind)
+- **Application `apollo11-dev`** — automated sync, prune, selfHeal;
+  source `repoURL: https://github.com/darshan/Apollo11`, `path:
+  stages/stage5/helm/apollo11`, `valueFiles: [values-dev.yaml]`,
+  `image.tag=dev`, `pdb.enabled=false`
+- **Application `apollo11-staging`** — automated sync, prune, selfHeal;
+  `valueFiles: [values-staging.yaml]`, `image.tag=latest`,
+  `pdb.enabled=false`
+- **Application `apollo11-prod`** — **manual sync, no selfHeal**;
+  `targetRevision: v1.0.0` (pinned, not HEAD), `valueFiles:
+  [values-prod.yaml]`, `image.tag=v1.0.0`, `pdb.enabled=true`,
+  bundleInstalls disabled (provisioned at cluster bootstrap, not via
+  ArgoCD)
+- **`bootstrap.sh`** is idempotent: namespace → AppProject → 3
+  Applications → wait for reconcile → optional `--sync` to force-sync
+  dev + staging. Uses `argocd app sync` if the CLI is present, else
+  falls back to waiting for selfHeal
+- **`verify.sh`** runs ~25 checks across 5 categories: system pods
+  (4: server, repo-server, app-controller, redis), AppProject (3:
+  exists, cluster-empty, destinations ≥2), Applications (per-env:
+  exists, sync=Synced, health=Healthy, source.repoURL set,
+  valueFiles includes env-specific, automated sync correct for env),
+  workloads (StatefulSets, Deployments, PDBs by env), drift demo
+  (delete booking pod, watch selfHeal replace it)
+- **`teardown.sh`** has 3 modes: default (delete 3 Applications
+  only — AppProject + ArgoCD system stay), `--full` (also AppProject
+  + tenant ns + argocd ns), `--purge` (also cluster-scoped CRDs)
+
+---
+
+## Critical insights from Stage 5 (read before changing)
+
+1. **CRD-bundle ordering in `apply.sh` is load-bearing.** The Helm chart
+   references CRDs (GatewayClass, HTTPRoute, IPAddressPool) in its
+   templates, so the bundles MUST be applied before `helm install`. The
+   flow is: `kubectl apply --server-side` for both bundles → wait for
+   CRDs registered in API server → wait for `metallb-webhook-service`
+   endpoints to be non-empty (the IPAddressPool has a validating
+   webhook) → THEN `helm install`. Skipping the webhook wait causes
+   "Internal error occurred: failed calling webhook" on the first sync.
+
+2. **The chart's `bundles/envoy-gateway-install.yaml` and
+   `bundles/metallb-native.yaml` are vendored** (committed in the repo,
+   2.4MB + 67KB respectively). This is intentional for offline / air-gap
+   clusters. The CI workflow does NOT re-fetch them; the dev can run
+   `install.sh --fetch-bundle` to refresh from upstream. **Don't change
+   the chart's `bundles/` from CI.**
+
+3. **The `app.kubernetes.io/component` label is required** for the
+   ArgoCD `verify.sh` cluster scope check (which queries
+   `kubectl get pod -l app.kubernetes.io/component=controller`). The
+   chart's `_helpers.tpl` adds it to every resource. Don't break this
+   when editing templates.
+
+4. **The Kustomize `prod/` overlay has its own `pdb.yaml`** (not in
+   `base/`). This is because dev/staging don't want PDBs and the
+   kustomize path doesn't have a `pdb.enabled` flag. The chart's
+   `pdb.enabled` is the chart-side equivalent. Both paths converge on
+   "PDBs only in prod."
+
+5. **ArgoCD Applications use `targetRevision: HEAD` for dev/staging**
+   (auto-bumps on every commit) and `v1.0.0` for prod (pinned, human
+   bumps the file to roll forward). This is the standard "dev tracks
+   main, prod tracks tags" pattern. Don't change prod to `HEAD` — that
+   would auto-promote to prod on every merge.
+
+6. **The `repoURL: https://github.com/darshan/Apollo11` is hardcoded in
+   the Applications.** If the user forks to a different GitHub org,
+   `bootstrap.sh --repo-url` overrides it. For local-dev-on-kind, the
+   path-based source won't work because ArgoCD's repoServer runs
+   inside the cluster and can't see the host filesystem. **Use
+   `--repo-url` to point at a fork the cluster can reach.**
+
+7. **The `argocd/bundles/` directory is empty by design.** ArgoCD's
+   upstream install.yaml is large and changes per release. The default
+   mode is to fetch it from the internet during `install.sh`. Use
+   `--fetch-bundle` once to vendor it for air-gap; subsequent `--offline`
+   installs use the vendored copy.
+
+8. **GitOps Application creation is order-dependent.** The AppProject
+   must exist before the Applications (they reference it via
+   `spec.project`). `bootstrap.sh` handles this — it creates the
+   namespace, then the project, then the apps.
+
+9. **PDB on/off in Kustomize vs Helm:**
+   - **Helm:** `pdb.enabled: true/false` in values file. Chart renders
+     both or neither.
+   - **Kustomize:** `prod/` has its own `pdb.yaml`. `dev/` and
+     `staging/` don't, so applying the overlay doesn't create PDBs.
+   - **Why different?** Kustomize is plain-YAML patches; it can't
+     conditionally render. The chart can.
+
+10. **`argo-cd` Application `syncPolicy.automated` is `null` in prod.**
+    This is the single most important field. With `automated: null`,
+    the controller computes sync but does not apply. A human must run
+    `argocd app sync apollo11-prod --grpc-web` or click "Sync" in the
+    UI. SelfHeal is also off in prod, so SREs can `kubectl scale` or
+    `kubectl edit` for incident response without the controller
+    reverting them.
+
+---
+
+## Cross-cutting decisions (carry forward)
+
+| Decision | Value | Source |
+|---|---|---|
+| Traefik version | v3.1 (set 2 only — not used in stage 3+) | User |
+| Envoy Gateway version | v1.2.4 | User |
+| MetalLB version | v0.14.5 native | User |
+| GatewayClass name | `eg` | Envoy default |
+| Hostnames | `<svc>.apollo.local` | User |
+| Namespaces | `apps`, `ui` (2 not 3) | User (Stage 2) |
+| Stage 5 base | Stage 4 (probes + QoS + graceful SIGTERM) | User (Stage 5) |
+| TLS in Stages 3+ | None | User |
+| Teardown behavior | Tear down EVERYTHING | User (Stage 2) |
+| NetworkPolicy auto-apply | No (kindnet doesn't enforce) | Agreed (Stage 2) |
+| /etc/hosts automation | Print only, no auto-modify | User |
+| Image rebuild | Per-stage build-images.sh | User |
+| Service account | Same name across all stages | Established (Stage 2) |
+| Storage class | kind default (`local-path` / `standard`), no `storageClassName` in PVC | User (Stage 3) |
+| Redis conversion to StatefulSet | Stage 3 (not Stage 7) | User override (Stage 3) |
+| Schema bootstrap | Postgres entrypoint hook, not init container | Agreed (Stage 3) |
+| Seed pattern | One Job per DB, idempotent | User (Stage 3) |
+| QoS class | Guaranteed (requests == limits) on all 10 pods | User (Stage 4) |
+| Resource tiers | app: 100m/128Mi, booking: 200m/256Mi, low: 50m/64Mi, PG: 200m/256Mi, redis: 100m/128Mi | Agreed (Stage 4) |
+| terminationGracePeriodSeconds | 30s apps, 60s DBs | Agreed (Stage 4) |
+| PDB scope | booking + frontend only, `minAvailable: 1` | Agreed (Stage 4) |
+| Helm chart version | `0.1.0` (matches Chart.yaml apiVersion v2) | User (Stage 5) |
+| ArgoCD version | v2.13.2 | User (Stage 5) |
+| Prod ArgoCD sync | Manual (no automated, no selfHeal) | User (Stage 5) |
+| Prod targetRevision | `v1.0.0` tag, not HEAD | User (Stage 5) |
+| ArgoCD tenant namespace | `apollo-airlines` (separate from `argocd` system ns) | Best practice |
+| ArgoCD AppProject destinations | `apollo-airlines-apps` + `apollo-airlines-ui` only | Stage 5 |
+| ArgoCD cluster-scoped | DENIED (`clusterResourceWhitelist: []`) | Stage 5 |
+| CI: GHCR image naming | `ghcr.io/<owner>/apollo11-<service>` | Stage 5 |
+| CI: image tags | `latest` (main), `sha-<short>` (every build), `pr-<num>` (PRs) | Stage 5 |
+| CI: trigger paths | `stages/stage5/**`, `stages/stage4/code/**`, workflow file | Stage 5 |
+| CI: helm-validate | runs `helm template` with `values-prod.yaml`, asserts 12 resource kinds | Stage 5 |
+| CI: deploy step | None (ArgoCD owns deploys) | Stage 5 |
+
+---
+
+## What's next (Stage 6: Mission Ops)
+
+The next stage teaches **observability**:
+
+- **Prometheus** to scrape `/metrics` from all 6 services + frontend
+- **Grafana** dashboard for booking service latency (p50/p95/p99)
+- **OpenTelemetry collector** as a DaemonSet (one per node)
+- **OTEL SDK** integration in all 6 services (Go: `otelgin` + `otelhttp`,
+  Python: `opentelemetry-instrumentation-fastapi` + `opentelemetry-instrumentation-psycopg2`)
+- **`trace_id` and `span_id`** propagation through all calls (the
+  fields are already in the JSON logger from Stage 1; Stage 6 wires
+  them up via the OTEL SDK)
+- **Loki** for log aggregation (optional, can come in Stage 8)
+- The observability stack lives in its own namespace (`monitoring` or
+  similar); a `ServiceMonitor` per service registers the scrape target
+  with Prometheus
+- Verify target: ~80 checks (70 from Stage 5 + new instrumentation
+  checks — `/metrics` returns 200, OTEL collector is receiving spans,
+  Prometheus has the 6 services as targets)
+
+Build approach (recommended):
+1. Copy `stages/stage5/` to `stages/stage6/`
+2. Add `stages/stage6/helm/apollo11/templates/observability/` with
+   Prometheus Operator, Grafana, OTEL collector, Loki (optional)
+3. Add `stages/stage6/argocd/applications/monitoring.yaml` for the
+   observability stack (or fold it into the existing 3 Applications)
+4. Add OTEL SDK to each service's `go.mod` / `requirements.txt` and
+   wire up tracing
+5. Add a `trace_id` field to every log line (via the OTEL context
+   propagator)
+6. Test on a fresh kind cluster: apply → wait for Prometheus to
+   discover the 6 services → run a booking → check `/api/traces` for
+   the 6-span trace → teardown
+
+**Code changes expected for Stage 6 (vs Stage 5):**
+- All 4 Go services: add `otelgin` + `otelhttp` middleware, set up
+  tracer with OTLP exporter
+- Python/identity: add `opentelemetry-instrumentation-fastapi` +
+  `opentelemetry-instrumentation-psycopg2`, set up tracer with OTLP
+  exporter
+- Frontend: stays as static NGINX (no OTEL — browser-side OTEL is
+  Stage 8+ concern)
+- The structured JSON logger's `trace_id` field already exists from
+  Stage 1; just need to read it from the OTEL context instead of
+  generating a fake one
+- The `X-Request-ID` header propagation already works from Stage 1;
+  OTEL's `traceparent` header is the W3C standard and is
+  interoperable with `X-Request-ID` (they carry different information)
 

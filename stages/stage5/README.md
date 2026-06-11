@@ -129,7 +129,28 @@ still resolve `identity-db:5432` etc.).
 2. **Build job** — Matrix build of all 6 service images using `docker/build-push-action@v6` with GHA cache. Frontend gets `VITE_*` URLs from `values.yaml` injected as build args.
 3. **Push job** — Only on `main` push or `v*` tag, push to GHCR with `:sha-<gitsha>` + `:latest` tags.
 
-No deploy step — ArgoCD (separate tooling, mentioned in `AGENTS.md`) handles deploys from GHCR.
+No deploy step — ArgoCD (separate tooling, see section 4 below) handles deploys from GHCR.
+
+### 4. ArgoCD GitOps module
+
+`argocd/` (see `argocd/README.md` for the full architecture and
+`argocd/DEMO.md` for the step-by-step walkthrough):
+
+1. **AppProject** `apollo-airlines` — security boundary restricting
+   Applications to `apollo-airlines-apps` + `apollo-airlines-ui`,
+   denying cluster-scoped resources.
+2. **Three Applications** — `apollo11-dev` (automated sync), `apollo11-staging`
+   (automated), `apollo11-prod` (manual sync, pinned to `v1.0.0` tag).
+3. **Install** — `bash argocd/install.sh` (online by default,
+   `--offline` for air-gapped).
+4. **Bootstrap** — `bash argocd/scripts/bootstrap.sh --sync` registers
+   the project + apps and force-syncs dev + staging.
+5. **Verify** — `bash argocd/scripts/verify.sh` runs ~25 GitOps checks.
+6. **Teardown** — `bash argocd/scripts/teardown.sh [--full|--purge]`.
+
+The ArgoCD module is **optional** — `apply.sh` + the CI workflow alone
+are a complete Stage 5. ArgoCD is the production delivery layer for
+clusters that have one.
 
 ---
 
@@ -218,6 +239,28 @@ bash scripts/verify.sh --mode kustomize --env prod
 Push to `main` or open a PR — the workflow at `.github/workflows/main.yml`
 runs lint + build automatically. On `main` pushes it also pushes to GHCR.
 
+### ArgoCD (GitOps, optional)
+
+```bash
+cd stages/stage5/argocd
+
+# One-time: install ArgoCD into the cluster
+bash install.sh
+
+# Register the project + 3 applications, force-sync dev + staging
+bash scripts/bootstrap.sh --sync
+
+# Verify (~25 GitOps checks)
+bash scripts/verify.sh
+
+# Teardown
+bash scripts/teardown.sh                # remove 3 applications
+bash scripts/teardown.sh --full         # also remove ArgoCD system
+bash scripts/teardown.sh --purge        # also remove cluster-scoped CRDs
+```
+
+See `argocd/DEMO.md` for the 101 walkthrough.
+
 ---
 
 ## Files
@@ -246,6 +289,24 @@ stage5/
 │   ├── teardown.sh                  (symmetric teardown + --purge)
 │   ├── verify.sh                    (~70 checks)
 │   └── build-images.sh              (6 services + frontend with VITE_*)
+├── argocd/                          # GitOps delivery layer (optional)
+│   ├── README.md                    (concepts + architecture)
+│   ├── ARGOCD.md                    (complete ArgoCD reference guide)
+│   ├── DEMO.md                      (101 walkthrough)
+│   ├── install.sh                   (ArgoCD v2.13.2 install)
+│   ├── uninstall.sh                 (ArgoCD removal)
+│   ├── bundles/                     (offline install manifest)
+│   ├── projects/
+│   │   └── project.yaml             (AppProject: apollo-airlines)
+│   ├── applications/
+│   │   ├── dev.yaml                 (auto-sync, values-dev.yaml)
+│   │   ├── staging.yaml             (auto-sync, values-staging.yaml)
+│   │   └── prod.yaml                (manual sync, values-prod.yaml, pinned v1.0.0)
+│   └── scripts/
+│       ├── bootstrap.sh             (install + project + 3 apps, idempotent)
+│       ├── verify.sh                (~25 GitOps checks)
+│       └── teardown.sh              (apps-only, --full, --purge)
+├── .github/workflows/main.yml       # CI: lint + matrix build + GHCR push
 └── README.md                        (this file)
 ```
 

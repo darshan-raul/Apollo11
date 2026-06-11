@@ -1,0 +1,84 @@
+# Application: apollo11-prod
+#
+# Production — manual sync ONLY. No automated sync, no selfHeal.
+# A human reviews the diff in the ArgoCD UI (or via `argocd app diff`)
+# and explicitly clicks "Sync" or runs `argocd app sync apollo11-prod`.
+#
+# Values:    values-prod.yaml (3 replicas, PDBs, GHCR pull)
+# Image tag: pinned to v1.0.0 by default. Update this file (or pass
+#            --helm-set image.tag=... in the CLI) to roll forward.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apollo11-prod
+  namespace: apollo-airlines
+  labels:
+    app.kubernetes.io/part-of: apollo-airlines
+    app.kubernetes.io/component: gitops
+    apollo-airlines/environment: prod
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: apollo-airlines
+
+  source:
+    repoURL: https://github.com/darshan/Apollo11
+    # Prod: pin to a tag, not HEAD, so an unrelated merge to main doesn't
+    # auto-promote. Bump this when you want a new release.
+    targetRevision: v1.0.0
+    path: stages/stage5/helm/apollo11
+    helm:
+      valueFiles:
+        - values-prod.yaml
+      parameters:
+        - name: image.tag
+          value: v1.0.0
+        - name: pdb.enabled
+          value: "true"
+        # In prod, the chart's bundled Envoy + MetalLB installs are
+        # disabled because we provision the access stack at cluster
+        # bootstrap time (see terraform/eks or kind setup scripts).
+        - name: gateway.envoy.bundleInstall
+          value: "false"
+        - name: metallb.bundleInstall
+          value: "false"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apollo-airlines-apps
+
+  # NO automated sync, NO selfHeal. A human gates every change.
+  # This is the prod contract: "kubectl edit" still works for incident
+  # response, but ArgoCD won't silently revert it. To revert, sync
+  # against the previous revision via `argocd app rollback apollo11-prod`.
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - ServerSideApply=true
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jsonPointers:
+        - /webhooks/0/clientConfig/service/namespace
+    - group: 'apps'
+      kind: Deployment
+      # Allow SREs to bump replicas by hand for incident response
+      jsonPointers:
+        - /spec/replicas
+    - group: '*'
+      kind: 'Pod'
+      jqPathExpressions:
+        - '.spec.containers[].resources'
+
+  # Keep a longer history in prod so we can roll back further
+  revisionHistoryLimit: 50
