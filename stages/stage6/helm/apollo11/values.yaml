@@ -392,3 +392,68 @@ observability:
     resources:
       requests: { cpu: 50m, memory: 64Mi }
       limits:   { cpu: 200m, memory: 256Mi }
+
+# ----------------------------------------------------------------------------
+# Observability (Stage 6)
+# ----------------------------------------------------------------------------
+# The Mission Ops stack. Single namespace `apollo-observability` with:
+#   - Prometheus + Alertmanager-ready rules (16 alerts)
+#   - Grafana with 5 dashboards + 3 datasources (Prometheus, Loki, Tempo)
+#   - OpenTelemetry Collector (DaemonSet) — receives traces from app SDKs
+#   - Tempo (single pod) — distributed tracing backend
+#   - Loki + Promtail (DaemonSet) — log aggregation
+observability:
+  enabled: true
+  namespace: apollo-observability
+
+  prometheus:
+    enabled: true
+    image: prom/prometheus:v2.51.2
+    retention: 7d
+    storage: 5Gi
+    resources:
+      requests: { cpu: 500m, memory: 1Gi }
+      limits:   { cpu: 1,    memory: 2Gi }
+
+  grafana:
+    enabled: true
+    image: grafana/grafana:10.4.2
+    adminUser: admin
+    adminPassword: apollo-admin
+    storage: 1Gi
+    anonymousAccess: true
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+
+  otelCollector:
+    enabled: true
+    image: otel/opentelemetry-collector-contrib:0.99.0
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+
+  tempo:
+    enabled: true
+    image: grafana/tempo:2.3.1
+    storage: 5Gi
+    retention: 48h
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+
+  loki:
+    enabled: true
+    image: grafana/loki:2.9.8
+    storage: 5Gi
+    retention: 168h
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+      limits:   { cpu: 1,    memory: 1Gi }
+
+  promtail:
+    enabled: true
+    image: grafana/promtail:2.9.8
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits:   { cpu: 200m, memory: 256Mi }

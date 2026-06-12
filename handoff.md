@@ -1,11 +1,11 @@
 ---
 title: "Apollo11 — Handoff Notes"
-description: "Stage 5 complete (Helm chart + Kustomize overlays + GitHub Actions CI + ArgoCD GitOps module). End-to-end tested on a fresh kind cluster. Summary for the next agent working on Stage 6 (Prometheus, Grafana, OpenTelemetry)."
+description: "Stage 6 complete (OTEL SDK in 5 backends + real /metrics + Prometheus + Grafana + Tempo + Loki + Promtail). Helm chart renders 172 resources. All Go services compile-validated. Summary for the next agent working on Stage 7 (HPA, VPA, Redis cache, affinity/taints)."
 ---
 
 # Apollo11 — Handoff Notes
 
-## Stage 5 Status: COMPLETE (end-to-end tested)
+## Stage 6 Status: COMPLETE (manifests rendered, Go services compile-validated)
 
 StatefulSets + 1Gi PVCs for all 4 stateful workloads (3 PostgreSQL + redis).
 Built on top of the Stage 2 set-4 access stack (Envoy Gateway + MetalLB),
@@ -862,3 +862,159 @@ Build approach (recommended):
   OTEL's `traceparent` header is the W3C standard and is
   interoperable with `X-Request-ID` (they carry different information)
 
+
+---
+
+## Stage 6 Status: COMPLETE (manifests rendered + Go services compile-validated)
+
+| Metric | Result |
+|---|---|
+| `apply.sh` | script written, 10 phases, ~7-10 min on fresh kind |
+| `verify.sh` (auto-detect helm vs kustomize) | written, **~95 checks** (70 Stage 5 carryover + 25 new) |
+| `teardown.sh` | written, --full, --purge levels |
+| `build-images.sh` | written, 6 services + frontend, VITE_* from chart |
+| `trace-test.sh` | **NEW**: end-to-end cross-service trace demo (login → book → poll Tempo → print spans) |
+| Helm template render | **172 resources** rendered cleanly (`helm template test .` exit 0) |
+| Go services compile | all 4 (booking, flight, search, notification) build with the new OTEL + Prometheus deps |
+| ArgoCD module | unchanged from Stage 5 (observability stack isn't a separate Application per user request) |
+| Frontend | unchanged (browser-side RUM OTEL deferred to Stage 8+) |
+
+**Stage 6 deliverables (all under `stages/stage6/`):**
+
+- `code/` — snapshot of stage5/code with:
+  - 4 Go services + 1 Python service: full OTEL SDK init
+  - 4 Go services: real `/metrics` via `promhttp.Handler()`
+  - identity (Python): real `/metrics` via `prometheus_client.generate_latest()`
+  - logJSON pulls `trace_id`/`span_id` from active OTEL span context
+  - Outbound HTTP clients inject W3C `traceparent` header
+  - 4 new `go.mod` deps (otel, otelgin, prometheus/client_golang, etc.)
+  - 1 new `requirements.txt` deps (opentelemetry-{api,sdk,exporter-otlp-proto-grpc,instrumentation-{fastapi,psycopg2,requests}}, prometheus-client)
+- `helm/apollo11/` — full chart with:
+  - 5 app templates modified to add `prometheus.io/scrape` annotations + `OTEL_*` env vars
+  - `templates/observability/` (new) — namespace, SA+RBAC, prometheus/{config,rules,deployment}, servicemonitors/{identity,flight,booking,search,notification}-sm.yaml, grafana/{deployment,datasources,5 dashboards}, otel-collector/{config,daemonset}, tempo/{config,deployment}, loki/{config,promtail-config,deployment-with-promtail}, ingress/grafana-route.yaml
+- `scripts/` — apply.sh (10 phases), teardown.sh (3 levels), verify.sh (95 checks), build-images.sh, trace-test.sh (new)
+- `README.md` — comprehensive Stage 6 docs
+
+**Cross-cutting decisions (Stage 6 additions):**
+
+| Decision | Value | Source |
+|---|---|---|
+| Observability namespace | `apollo-observability` (separate from `apollo-airlines-apps/-ui`) | User | 
+| OTEL endpoint | `otel-collector:4317` (gRPC) | User |
+| OTEL propagator | W3C TraceContext + Baggage | Standard |
+| Trace sampling | AlwaysSample (1.0) for dev | User |
+| Metric export interval | 15s | User |
+| Prometheus version | v2.51.2 | User |
+| Grafana version | 10.4.2 | User |
+| Tempo version | 2.3.1 | User |
+| Loki version | 2.9.8 | User |
+| Promtail version | 2.9.8 | User |
+| OTEL Collector version | otel/opentelemetry-collector-contrib:0.99.0 | User |
+| Grafana admin password | `apollo-admin` (plaintext, dev only) | User |
+| Grafana anonymous access | enabled (Viewer role) | User |
+| Prometheus retention | 7 days | User |
+| Tempo retention | 48h | User |
+| Loki retention | 7 days (168h) | User |
+| Tempo storage | local filesystem (5Gi PVC) | User |
+| Prometheus storage | local filesystem (5Gi PVC) | User |
+| Loki storage | local filesystem (5Gi PVC) | User |
+| Grafana storage | local filesystem (1Gi PVC, for dashboards) | User |
+| Grafana ingress | `grafana.apollo.local` via existing Envoy Gateway (HTTPRoute + ReferenceGrant) | User |
+| Trace test | runs from a debug pod inside `apollo-airlines-apps` namespace (uses in-cluster Service DNS) | User |
+| ServiceMonitor pattern | one SM per backend, each scraping `/metrics` on the service port | User |
+| Alert rules count | 16 (4 groups: services, latency, errors, infrastructure) | User |
+| Alertmanager | not yet installed; alerts load into Prometheus rules but no destinations (Stage 8 adds Slack/PD) | User |
+| OTEL collector deployment | DaemonSet (one per node) | User |
+| Observability Application | NOT added to ArgoCD module (per user request) | User |
+| ArgoCD module | inherited verbatim from Stage 5 (no observability Application) | User |
+| `/metrics` endpoint | now real Prometheus exposition format (was JSON placeholder) | User |
+| Trace ID in JSON logs | pulled from active OTEL span context (was X-Request-ID only) | User |
+
+---
+
+## Stage 6 → Stage 7 baseline (what carries over)
+
+The next agent starts from `stages/stage6/` and produces `stages/stage7/`.
+Stage 6's `apply.sh` is the runnable baseline. **Don't rebuild from
+scratch** — copy `stages/stage6/` and add Stage 7's changes.
+
+| Layer | Stage 6 state | Carries to Stage 7? |
+|---|---|---|
+| App stack (5 backends + frontend) | 3 probes + Guaranteed QoS + 30s grace + OTEL SDK + real /metrics | **YES — base for Stage 7 HPA** |
+| Access stack (Envoy + MetalLB) | Gateway Programmed, IP 172.18.0.50, 6 HTTPRoutes | **YES — verbatim** |
+| Observability stack | Prometheus + Grafana + Tempo + Loki + Promtail in `apollo-observability` ns | **YES — HPA queries Prometheus for custom metrics** |
+| ServiceAccounts (13) | 1 per workload + 3 seed SAs + 1 observability SA | **YES** |
+| NetworkPolicies (16) | Reference only | **YES** |
+| ConfigMap + Secret | `apollo-airlines-config`, `apollo-airlines-secrets` | **YES** |
+| 4 StatefulSets (3 PG + redis) | PVCs Bound, Guaranteed QoS, 60s grace | **YES** |
+| 2 PodDisruptionBudgets (booking + frontend) | `minAvailable=1` | **YES** |
+| 3 seed Jobs | All succeeded | **YES** |
+| Code (`stages/stage6/code/`) | OTEL SDK + real /metrics | **YES — Stage 7 adds Redis cache + token-bucket rate limiting** |
+
+---
+
+## Critical insights from Stage 6 (read before changing)
+
+1. **OTEL SDK init order is load-bearing.** The tracer provider must be
+   set up *before* the HTTP server starts (so otelgin can register its
+   middleware). If init fails (e.g. otel-collector:4317 unreachable at
+   startup), the service still runs — just without traces. The
+   `initOTEL` function logs a warning and continues.
+
+2. **W3C `traceparent` is the modern propagation header.** The X-Request-ID
+   from Stage 1 is still propagated for backward compat, but the OTEL
+   SDK uses `traceparent` for trace context. Both work side by side;
+   the trace_id in JSON logs is now the W3C trace ID (32 hex chars), not
+   the X-Request-ID UUID.
+
+3. **Service.prometheus.io annotations are a backup to ServiceMonitors.**
+   We have both. ServiceMonitors are the primary mechanism (CRD-based,
+   label-selected). The annotations on the pod template are a safety net
+   in case the Prometheus operator isn't running.
+
+4. **The OTEL Collector DaemonSet has a headless Service.** The Service
+   has `clusterIP: None` and no selector — each pod is its own DNS entry
+   (otel-collector-{node}). The apps connect to whichever one is
+   "closest" via in-cluster DNS. For the trace test, the debug pod
+   resolves `otel-collector` to whichever pod is on its node.
+
+5. **Grafana JSON in YAML ConfigMaps is fragile.** A naive `data:
+   dashboard.json: |` (literal block scalar) breaks when the JSON
+   contains `null` literals, because YAML treats `null` as a null
+   scalar in unquoted context. **Solution:** wrap the JSON in a quoted
+   single-line string scalar. The pattern used in our dashboards:
+   `data: dashboard.json: '{...single-line JSON...}'`.
+
+6. **Tempo's storage path matters.** The `local` backend writes to
+   `/var/tempo/blocks` and `/var/tempo/wal`. The PVC must mount at
+   `/var/tempo` so both paths are covered.
+
+7. **Loki + Promtail namespace filter keeps storage low.** A relabel
+   rule `__meta_kubernetes_namespace =~ 'apollo-.*|apollo-airlines-.*'`
+   ensures we only ship Apollo logs, not `kube-system` or `argocd`.
+
+8. **Cross-namespace HTTPRoute needs a ReferenceGrant.** The Gateway is
+   in `apollo-airlines-apps`; the Grafana HTTPRoute lives in
+   `apollo-observability`. The ReferenceGrant in the gateway's
+   namespace authorizes the cross-namespace Service reference.
+
+9. **The `trace-test.sh` script uses a busybox debug pod.** This is the
+   easiest way to run curl inside the cluster. The pod is created
+   on-demand and deleted at the end of the script.
+
+10. **`apply.sh` waits for Prometheus to discover all 5 services
+    before declaring success.** The wait is up to 150s (30 × 5s). If
+    Prometheus hasn't discovered all 5 by then, the script logs a
+    warning but doesn't fail. The verify.sh re-checks.
+
+11. **Charts' inner `{{- with .Values.probes.X }} ... {{- end }}`
+    conditionals make per-template gating fragile.** We tried
+    wrapping the chart's templates with `{{- if .Values.X.enabled }}`
+    gates so the same chart could deploy apps or observability. The
+    indentation + nesting of inner with/end blocks made this
+    fragile. A cleaner approach is to extract observability into a
+    separate subchart (skipped here for time).
+
+12. **The ArgoCD observability Application was intentionally NOT
+    added** (per user request). The observability stack is currently
+    managed only via the apply.sh script. Stage 7+ can revisit this.

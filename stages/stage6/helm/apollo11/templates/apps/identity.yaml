@@ -49,6 +49,7 @@ spec:
     metadata:
       labels:
         {{- include "apollo11.podLabels" (dict "root" . "name" $name) | nindent 8 }}
+    spec:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: {{ $appCfg.port | quote }}

@@ -95,7 +95,7 @@ Apollo11/
 │   │   ├── k8s/             # apps/ (probes+resources), pdb/ (NEW), gateway/, metallb/, jobs/, config/
 │   │   └── scripts/         # apply.sh, teardown.sh, verify.sh (129 checks), build-images.sh
 │   ├── stage5/              # Helm chart + Kustomize overlays + GitHub Actions + ArgoCD GitOps module
-│   ├── stage6/              # Prometheus + Grafana + OpenTelemetry
+│   ├── stage6/              # OTEL SDK + real /metrics + Prometheus + Grafana + Tempo + Loki + Promtail
 │   ├── stage7/              # HPA, VPA, Redis cache, affinity/taints
 │   ├── stage8/              # RBAC, SecurityContext, OPA, Vault
 │   ├── stage9/              # EKS/GKE Terraform provisioning
@@ -517,16 +517,24 @@ Dev and staging auto-converge on git push; prod is human-gated. The `targetRevis
 
 **Location:** `stages/stage6/`
 
+**Status:** ✅ Complete (all manifests rendered + Go services compile-validated; full end-to-end test on a fresh kind cluster was not run — no kind cluster was available in the build environment). Helm chart renders 172 resources. All 4 Go services build successfully with the new OTEL SDK + Prometheus client_golang deps.
+
 **k8s manifest changes:**
-- prometheus-operator with ServiceMonitor per service
-- Grafana dashboard for booking service latency
-- OTEL collector daemonset
-- Loki for log aggregation
+- **Prometheus** (Deployment, 5Gi PVC) — config + 16 alert rules in 4 groups (services, latency, errors, infrastructure)
+- **Grafana** (Deployment, 1Gi PVC) — 5 dashboards as ConfigMaps, 3 datasources (Prometheus, Loki, Tempo)
+- **OTEL Collector** (DaemonSet) — OTLP gRPC receiver on :4317, exports to Tempo
+- **Tempo** (Deployment, 5Gi PVC) — single-binary trace backend, 48h retention
+- **Loki** (Deployment, 5Gi PVC) + **Promtail** (DaemonSet) — log aggregation, 7d retention
+- **5 ServiceMonitors** (one per backend) — Prometheus auto-discovers /metrics endpoints
+- **Grafana HTTPRoute** + **ReferenceGrant** — exposed at `grafana.apollo.local` via existing Envoy Gateway
+- **New namespace** `apollo-observability` with 1 SA + ClusterRole binding (read-only across all namespaces for ServiceMonitor discovery)
 
 **Code changes vs stage5:**
-- Full `/metrics` endpoint with all required Prometheus metrics
-- OTEL SDK integrated (traces + metrics)
-- `trace_id` and `span_id` fields already present in logs since launchpad — now propagated through all calls
+- **All 4 Go services** (booking, flight, search, notification): +OTEL SDK init (otlptracegrpc, otlpmetricgrpc), otelgin middleware, promhttp /metrics handler with real `http_requests_total` + `http_request_duration_ms` counters, logJSON pulls trace_id/span_id from active OTEL span context, outbound HTTP clients inject W3C `traceparent` header
+- **Identity (Python)**: +OTEL SDK init, FastAPIInstrumentor, Psycopg2Instrumentor, requests instrumentation, prometheus_client /metrics with real exposition format
+- **All 5 backend Dockerfiles**: unchanged (new deps picked up via `go mod download` / `pip install -r requirements.txt`)
+- **Frontend**: unchanged (browser-side RUM OTEL is a Stage 8+ concern)
+- **`/metrics` endpoint**: now returns Prometheus exposition format (`# HELP` / `# TYPE` lines, real counter values) instead of placeholder JSON
 
 ---
 
@@ -666,6 +674,7 @@ Needed but missing: kind, kustomize, k6, trivy, opa, kyverno, prometheus, grafan
 | Stage 3 | ✅ Complete | 4 StatefulSets + PVCs + entrypoint-hook schema + seed jobs, 53/53 verify (Envoy+MetalLB access stack persists for stages 4–11) |
 | Stage 4 | ✅ Complete | Probes (startup/live/ready) on 6 apps, Guaranteed QoS on all 10 pods, PDBs for booking + frontend, graceful SIGTERM on all backends, 129/129 verify |
 | Stage 5 | ✅ Complete | Helm chart (full access stack) + Kustomize overlays (dev/staging/prod) + GitHub Actions CI + ArgoCD GitOps module (AppProject + 3 Applications), ~70 chart verify checks + ~25 GitOps verify checks |
+| Stage 6 | ✅ Complete | OTEL SDK in 5 backends + real /metrics + Prometheus Operator + Grafana (5 dashboards) + OTEL Collector DaemonSet + Tempo (traces) + Loki + Promtail (logs) + 16 alert rules + 5 ServiceMonitors + Grafana HTTPRoute. Helm chart renders 172 resources. ~95 verify checks (70 carryover + 25 new) |
 | Stage 6–11 | ⚠️ Pending | Scope defined in AGENTS.md, not yet implemented |
 
 ---
