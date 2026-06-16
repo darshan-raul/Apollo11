@@ -1,0 +1,23 @@
+# Traefik static configuration — enables the dashboard and the local API.
+# Mounted at /etc/traefik/traefik.toml in the DaemonSet.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-static-config
+  namespace: kube-system
+data:
+  traefik.toml: |
+    [entryPoints]
+      [entryPoints.web]
+        address = ":8000"
+      [entryPoints.traefik]
+        address = ":8080"
+
+    [providers]
+      [providers.kubernetesIngress]
+        ingressClass = "traefik"
+      [providers.kubernetesCRD]
+
+    [api]
+      dashboard = true
+      insecure = true

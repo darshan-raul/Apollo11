@@ -116,6 +116,15 @@ else
   fail "Login through Traefik failed: $LOGIN_RESP"
 fi
 
+step "Smoke test: Traefik dashboard reachable at traefik.apollo.local"
+DASH_RESP=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: traefik.apollo.local" "$ENTRY/dashboard/" 2>/dev/null || echo "000")
+DASH_API_RESP=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: traefik.apollo.local" "$ENTRY/api/overview" 2>/dev/null || echo "000")
+if [[ "$DASH_RESP" == "200" && "$DASH_API_RESP" == "200" ]]; then
+  pass "Traefik dashboard serves UI (200) and API (200) at traefik.apollo.local"
+else
+  fail "Traefik dashboard broken: /dashboard/=$DASH_RESP /api/overview=$DASH_API_RESP (expected 200/200)"
+fi
+
 echo ""
 echo -e "Passed: ${GREEN}$PASS${NC}  Failed: ${RED}$FAIL${NC}"
 exit $FAIL

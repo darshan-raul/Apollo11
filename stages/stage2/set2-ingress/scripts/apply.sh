@@ -58,21 +58,26 @@ kubectl apply -f "$K8S_DIR/apps/" --recursive
 step "5/7 Init jobs (3 DBs)"
 kubectl apply -f "$K8S_DIR/jobs/"
 
-step "6/7 Traefik (DaemonSet + RBAC + IngressClass + 5 Ingresses)"
+step "6/8 Traefik CRDs (needed for IngressRoute)"
+kubectl apply --server-side -f https://raw.githubusercontent.com/traefik/traefik/v3.1/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml >/dev/null 2>&1 || true
+
+step "7/8 Traefik (ConfigMap + DaemonSet + RBAC + IngressClass + 5 Ingresses + dashboard IngressRoute)"
 kubectl apply -f "$K8S_DIR/ingress/" --recursive
 
-step "7/7 /etc/hosts reminder"
+step "8/8 /etc/hosts reminder"
 cat <<EOF
 
 ${GREEN}Add these lines to your /etc/hosts:${NC}
   127.0.0.1  frontend.apollo.local identity.apollo.local flight.apollo.local \\
-              booking.apollo.local search.apollo.local
+              booking.apollo.local search.apollo.local \\
+              traefik.apollo.local
 
 Then test with:
   curl -H 'Host: identity.apollo.local' http://localhost:30443/api/users/login \\
     -H 'Content-Type: application/json' \\
     -d '{"email":"admin@apolloairlines.com","password":"admin123"}'
   open http://frontend.apollo.local:30443
+  open http://traefik.apollo.local:30443    # Traefik dashboard (no auth)
 EOF
 
 ok "Set 2 applied. Wait ~30s then run ./scripts/verify.sh"

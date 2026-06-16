@@ -22,7 +22,8 @@ if ! kubectl cluster-info >/dev/null 2>&1; then
   exit 1
 fi
 
-step "1/6 Loading images into kind (if cluster is kind)"
+step "1/6 Building frontend image + loading images into kind"
+"${SCRIPT_DIR}/build-images.sh"
 if kind get clusters 2>/dev/null | grep -q "^${CLUSTER}$"; then
   for svc in $SERVICES; do
     kind load docker-image "${REGISTRY}/${svc}:latest" --name "$CLUSTER" 2>/dev/null && \

@@ -1,0 +1,17 @@
+# Routes the Traefik dashboard to http://traefik.apollo.local:30443
+# Uses Traefik's built-in api@internal service — no extra Service or NodePort needed.
+# Requires the traefik.io CRDs (installed separately) and --providers.kubernetescrd.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-dashboard
+  namespace: kube-system
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`traefik.apollo.local`)
+      kind: Rule
+      services:
+        - name: api@internal
+          kind: TraefikService
