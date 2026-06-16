@@ -1,0 +1,15 @@
+# Frontend is a SPA, must be reachable from the browser via NodePort.
+# Allows ingress from any source.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-public-ingress
+  namespace: apollo-airlines-ui
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    - {}

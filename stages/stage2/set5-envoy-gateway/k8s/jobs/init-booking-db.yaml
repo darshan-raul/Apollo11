@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-booking-db
+  namespace: apollo-airlines-apps
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: init-booking-db
+    spec:
+      serviceAccountName: init-booking-db
+      restartPolicy: OnFailure
+      containers:
+        - name: init
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h booking-db.apollo-airlines-apps -U postgres; do echo "Waiting for booking-db.apollo-airlines-apps..."; sleep 2; done
+              psql -h booking-db.apollo-airlines-apps -U postgres -d booking -f /init/init.sql || true
+              echo "booking DB init done"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: POSTGRES_PASSWORD  
+          volumeMounts:
+            - name: init-script
+              mountPath: /init
+      volumes:
+        - name: init-script
+          configMap:
+            name: booking-init-script

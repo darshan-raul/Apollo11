@@ -1,0 +1,20 @@
+# MetalLB IPAddressPool for the Traefik LoadBalancer Service.
+# The pool range MUST NOT overlap with kind's own IPs (172.18.0.1, 2, 3, 4).
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: apollo-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - 172.18.0.50-172.18.0.100
+---
+# L2Advertisement: ARP/NDP, no router config required.
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: apollo-l2
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - apollo-pool

@@ -25,7 +25,9 @@ spec:
         - name: traefik
           image: traefik:v3.1
           args:
+            - --configFile=/etc/traefik/traefik.toml
             - --providers.kubernetesingress
+            - --providers.kubernetescrd
             - --entrypoints.web.address=:8000
             - --log.level=INFO
             - --accesslog=true
@@ -36,3 +38,10 @@ spec:
             requests:
               cpu: 100m
               memory: 50Mi
+          volumeMounts:
+            - name: traefik-static-config
+              mountPath: /etc/traefik
+      volumes:
+        - name: traefik-static-config
+          configMap:
+            name: traefik-static-config

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity-db
+  namespace: apollo-airlines-apps
+spec:
+  type: ClusterIP
+  selector:
+    app: identity-db
+  ports:
+    - port: 5432
+      targetPort: 5432

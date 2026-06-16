@@ -1,0 +1,13 @@
+# EnvoyProxy in the same namespace as the Gateway. With type=LoadBalancer,
+# MetalLB (set 4) assigns the Service a real IP. No NodePort gymnastics.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: envoyproxy-lb-config
+  namespace: apollo-airlines-apps
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: LoadBalancer

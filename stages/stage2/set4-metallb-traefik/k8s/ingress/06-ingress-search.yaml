@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: search
+  namespace: apollo-airlines-apps
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: search.apollo.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: search
+                port:
+                  number: 8083
