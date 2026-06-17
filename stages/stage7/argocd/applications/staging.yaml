@@ -1,0 +1,65 @@
+# Application: apollo11-staging
+#
+# Mirror of dev, but with values-staging.yaml: 2 replicas per app, image
+# tag :latest, no PDBs (staging is for integration testing, not
+# exercising eviction policies).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apollo11-staging
+  namespace: apollo-airlines
+  labels:
+    app.kubernetes.io/part-of: apollo-airlines
+    app.kubernetes.io/component: gitops
+    apollo-airlines/environment: staging
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: apollo-airlines
+
+  source:
+    repoURL: https://github.com/darshan/Apollo11
+    targetRevision: HEAD
+    path: stages/stage5/helm/apollo11
+    helm:
+      valueFiles:
+        - values-staging.yaml
+      parameters:
+        - name: image.tag
+          value: latest
+        - name: pdb.enabled
+          value: "false"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apollo-airlines-apps
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - ServerSideApply=true
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jsonPointers:
+        - /webhooks/0/clientConfig/service/namespace
+    - group: '*'
+      kind: 'Pod'
+      jqPathExpressions:
+        - '.spec.containers[].resources'
+
+  revisionHistoryLimit: 10

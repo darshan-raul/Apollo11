@@ -1,0 +1,22 @@
+{{- /*
+Envoy Gateway install manifest. v1.5.0 (~2.9MB) — bundled
+in the chart for offline-friendly installs.
+
+Annotated as a `pre-install,pre-upgrade` hook so Helm applies the
+Gateway/Envoy CRDs BEFORE the GatewayClass and HTTPRoute resources
+that depend on them. Without this annotation, all 30+ custom resources
+fail with "no matches for kind" because the API server hasn't
+registered the CRDs yet.
+*/ -}}
+{{- if and .Values.gateway.enabled .Values.gateway.envoy.bundleInstall }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: envoy-gateway-system
+  labels:
+    app.kubernetes.io/part-of: apollo-airlines
+    control-plane: envoy-gateway
+---
+{{ .Files.Get "bundles/envoy-gateway-install.yaml" | indent 0 }}
+{{- end }}

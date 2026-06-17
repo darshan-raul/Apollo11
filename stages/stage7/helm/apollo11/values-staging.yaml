@@ -1,0 +1,27 @@
+---
+# Staging environment overrides — production replica count, latest rolling tag.
+# Use as: helm upgrade --install apollo11 helm/apollo11 -f values-staging.yaml
+
+image:
+  tag: latest
+
+apps:
+  identity:
+    replicas: 2
+  flight:
+    replicas: 2
+  booking:
+    replicas: 2
+  search:
+    replicas: 2
+  notification:
+    replicas: 2
+
+frontend:
+  replicas: 2
+
+# PDBs off in staging — voluntary disruption tolerance is higher, no
+# SLOs to protect yet. Enable here when staging gets a test plan that
+# needs them.
+pdb:
+  enabled: false

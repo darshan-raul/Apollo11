@@ -1,0 +1,19 @@
+{{- /*
+Stage 7: metrics-server install (bundled for offline-friendly installs).
+
+metrics-server exposes the `/apis/metrics.k8s.io/v1beta1` API the HPA
+controller needs to compute CPU utilization. On a fresh kind cluster
+it is NOT installed by default — `kubectl top nodes` returns nothing
+and the HPA stays in "unknown" state.
+
+The bundled manifest is upstream `components.yaml` from
+kubernetes-sigs/metrics-server v0.7.x, with the standard `--kubelet-insecure-tls`
+flag set (required for kind's self-signed kubelet certs).
+
+Set `.Values.autoscaling.metricsServer.bundleInstall = false` to skip
+(installed manually via `helm install metrics-server ...`).
+*/ -}}
+{{- if and .Values.autoscaling.search.enabled .Values.autoscaling.metricsServer.bundleInstall }}
+---
+{{ .Files.Get "bundles/metrics-server-install.yaml" | indent 0 }}
+{{- end }}

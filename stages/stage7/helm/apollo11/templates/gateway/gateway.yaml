@@ -1,0 +1,46 @@
+{{- /*
+Envoy Gateway install + GatewayClass + Gateway + HTTPRoutes + ReferenceGrant.
+
+This bundles the Stage 2/3 access stack into the chart so a single
+`helm install` provisions a working cluster with browser-facing URLs like
+`http://frontend.apollo.local` pointing at a real LoadBalancer IP
+(provided by MetalLB L2 in dev / kind).
+
+Envoy Gateway v1.5.0 auto-creates a `LoadBalancer` Service for the
+proxy. We don't override it; MetalLB assigns the IP from the configured
+pool.
+*/ -}}
+{{- if .Values.gateway.enabled }}
+---
+# GatewayClass — referenced by every Gateway. The controller name must
+# match the Envoy Gateway controller's admission webhook.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: {{ .Values.gateway.className }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  controllerName: {{ .Values.gateway.controllerName }}
+---
+# The Gateway itself. Listens on port 80 (HTTP). allowedRoutes.namespaces
+# is set to "All" so HTTPRoutes in any namespace can attach — but cross-
+# namespace attachment still requires a ReferenceGrant in the target
+# namespace (see below).
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Values.gateway.gatewayName }}
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  gatewayClassName: {{ .Values.gateway.className }}
+  listeners:
+    - name: web
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+{{- end }}

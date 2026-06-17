@@ -1,0 +1,36 @@
+---
+# Dev environment overrides — minimal footprint for local iteration.
+# Use as: helm upgrade --install apollo11 helm/apollo11 -f values-dev.yaml
+
+image:
+  tag: dev
+
+apps:
+  identity:
+    replicas: 1
+  flight:
+    replicas: 1
+  booking:
+    replicas: 1
+  search:
+    replicas: 1
+  notification:
+    replicas: 1
+
+frontend:
+  replicas: 1
+
+# PodDisruptionBudgets off in dev — we want fast teardowns.
+pdb:
+  enabled: false
+
+# Stage 7: cheaper autoscaling in dev. min=1 so we don't burn resources
+# on a single-node kind cluster. VPA is off in dev — it adds 3 pods to
+# the vpa-system namespace and on a single-node kind that's just noise.
+autoscaling:
+  search:
+    minReplicas: 1
+    maxReplicas: 3
+vpa:
+  search:
+    enabled: false

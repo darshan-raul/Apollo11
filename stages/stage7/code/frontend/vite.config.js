@@ -9,9 +9,9 @@ export default defineConfig({
     emptyOutDir: true,
   },
   define: {
-    'import.meta.env.VITE_IDENTITY_URL': JSON.stringify('http://localhost:8080'),
-    'import.meta.env.VITE_FLIGHT_URL': JSON.stringify('http://localhost:8081'),
-    'import.meta.env.VITE_BOOKING_URL': JSON.stringify('http://localhost:8082'),
-    'import.meta.env.VITE_SEARCH_URL': JSON.stringify('http://localhost:8083'),
+    'import.meta.env.VITE_IDENTITY_URL': JSON.stringify(process.env.VITE_IDENTITY_URL || 'http://localhost:8080'),
+    'import.meta.env.VITE_FLIGHT_URL': JSON.stringify(process.env.VITE_FLIGHT_URL || 'http://localhost:8081'),
+    'import.meta.env.VITE_BOOKING_URL': JSON.stringify(process.env.VITE_BOOKING_URL || 'http://localhost:8082'),
+    'import.meta.env.VITE_SEARCH_URL': JSON.stringify(process.env.VITE_SEARCH_URL || 'http://localhost:8083'),
   },
 })

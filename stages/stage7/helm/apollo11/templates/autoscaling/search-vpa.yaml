@@ -1,0 +1,51 @@
+{{- /*
+Stage 7: VerticalPodAutoscaler for search.
+
+`updateMode: "Off"` is the key choice. The VPA *recommends* resource
+requests based on observed usage, but does NOT mutate the Deployment.
+This is the standard k8s pattern when running VPA alongside an HPA on
+the same metric — they don't fight each other.
+
+The operator workflow is:
+  1. HPA scales replicas (immediate response to load)
+  2. VPA observes per-pod resource usage over time
+  3. `kubectl describe vpa search-vpa` shows `Recommendation` block
+  4. Operator reads the recommendation, updates the chart's
+     `tiers.default.cpu/memory` (or per-service tier), `helm upgrade`
+
+Why not `updateMode: "Auto"`? VPA in Auto mutates `resources.requests`
+in place, which the HPA reads to compute CPU utilization. The two
+controllers would oscillate: VPA lowers requests → HPA thinks CPU is
+overutilized → scales out → VPA sees the new pods are underutilized
+→ raises requests → HPA scales in. This is a well-known anti-pattern
+documented at https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#use-external-metrics.
+
+Set `.Values.vpa.search.enabled = false` to skip.
+*/ -}}
+{{- if .Values.vpa.search.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: VerticalPodAutoscaler
+metadata:
+  name: search-vpa
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: search
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: search
+        minAllowed:
+          cpu: {{ .Values.vpa.search.minAllowed.cpu }}
+          memory: {{ .Values.vpa.search.minAllowed.memory }}
+        maxAllowed:
+          cpu: {{ .Values.vpa.search.maxAllowed.cpu }}
+          memory: {{ .Values.vpa.search.maxAllowed.memory }}
+        controlledResources: ["cpu", "memory"]
+{{- end }}

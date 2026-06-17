@@ -1,0 +1,32 @@
+{{- /*
+MetalLB IPAddressPool + L2Advertisement. Bundled in the chart so a single
+`helm install` gives the Envoy Gateway a real LoadBalancer IP.
+
+172.18.0.50-100 is the kind docker network range we use across the
+project; the chart's defaults match that. Override `metallb.ipPool.addresses`
+if you're deploying to a different network.
+*/ -}}
+{{- if .Values.metallb.enabled }}
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: apollo-pool
+  namespace: metallb-system
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  addresses:
+    {{- toYaml .Values.metallb.ipPool.addresses | nindent 4 }}
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: apollo-l2
+  namespace: metallb-system
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  ipAddressPools:
+    - apollo-pool
+{{- end }}

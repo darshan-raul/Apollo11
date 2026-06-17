@@ -1,0 +1,17 @@
+{{- /*
+Stage 7: VerticalPodAutoscaler install (bundled for offline-friendly installs).
+
+VPA is 3 components in the `vpa-system` namespace:
+  * recommender — observes metrics, computes recommendations
+  * updater     — mutates pod resources in place (we use Off mode so this is a no-op)
+  * admission-controller — mutates pod resources on creation (same — no-op in Off)
+
+The bundled manifest is a concatenation of the 6 files from
+kubernetes/autoscaler v1.7.0 deploy/ directory.
+
+Set `.Values.vpa.bundleInstall = false` to skip.
+*/ -}}
+{{- if and .Values.vpa.search.enabled .Values.vpa.bundleInstall }}
+---
+{{ .Files.Get "bundles/vpa-install.yaml" | indent 0 }}
+{{- end }}

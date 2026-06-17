@@ -1,0 +1,20 @@
+{{- /*
+Two namespaces: apollo-airlines-apps (everything except the UI) and
+apollo-airlines-ui (the frontend). Labels follow the standard
+app.kubernetes.io/* set so tools like k9s/ArgoCD/OPA can group by part-of.
+*/ -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+    app.kubernetes.io/component: apps
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespaces.ui }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ui
