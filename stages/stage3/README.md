@@ -1,6 +1,6 @@
 ---
 title: "Stage 3: Mission Data — Persistent Storage, StatefulSets"
-description: "Replace emptyDir with PVCs, convert all 4 stateful workloads (3 PG + redis) to StatefulSets, move DB schema to init containers, and keep data seeding as one-shot jobs. The Envoy Gateway + MetalLB access stack from Stage 2 carries over unchanged."
+description: "Replace emptyDir with PVCs, convert all 4 stateful workloads (3 PG + redis) to StatefulSets, move DB schema to the Postgres entrypoint hook (/docker-entrypoint-initdb.d/), and keep data seeding as one-shot jobs. The Envoy Gateway + MetalLB access stack from Stage 2 carries over unchanged."
 ---
 
 # Stage 3: Mission Data
@@ -14,7 +14,7 @@ MetalLB) is unchanged.
 
 | | |
 |---|---|
-| **New concept** | StatefulSet, VolumeClaimTemplate, Headless Service (`clusterIP: None`), Init container schema bootstrap, PVC lifecycle, kind `local-path` StorageClass |
+| **New concept** | StatefulSet, VolumeClaimTemplate, Headless Service (`clusterIP: None`), Postgres entrypoint-hook schema bootstrap (`/docker-entrypoint-initdb.d/`), PVC lifecycle, kind `local-path` StorageClass |
 | **Workloads changed** | 4 (3 PostgreSQL + redis) |
 | **Workloads unchanged** | 6 (all app Deployments, frontend, gateway, MetalLB) |
 | **Code changes** | None (app code doesn't know or care about Deployment vs StatefulSet) |
@@ -93,19 +93,19 @@ kubectl exec -n apollo-airlines-apps identity-db-0 -- \
 
 ---
 
-## What's new vs Stage 2 set 4
+## What's new vs Stage 2 set 5
 
 | Area | Stage 2 | Stage 3 |
 |---|---|---|
 | **Stateful workloads** | `Deployment` + `emptyDir` (4) | `StatefulSet` + `1Gi PVC` (4) |
-| **DB schema** | One-shot `init-*.yaml` Job | Init container inside the StatefulSet pod |
+| **DB schema** | One-shot `init-*.yaml` Job | Postgres `/docker-entrypoint-initdb.d/` hook |
 | **DB data** | Combined with schema in the same Job | Idempotent `seed-*.yaml` Job (runs once) |
 | **Network identity** | Deployment pods have random names | Stable ordinals: `identity-db-0.apollo-airlines-apps` |
 | **App Deployments** | Unchanged | Unchanged (still connect via `identity-db`, `flight-db`, etc.) |
-| **Envoy Gateway + MetalLB** | Set 4 access stack | **Carried over verbatim** — persists for all later stages |
+| **Envoy Gateway + MetalLB** | Stage 2 set 5 access stack | **Carried over verbatim** — persists for all later stages |
 | **Namespaces** | 2 (apps, ui) | 2 (apps, ui) |
 | **ServiceAccounts / NetworkPolicies** | 13 / 16 (reference) | 13 / 16 (reference, unchanged) |
-| **Code (`stages/stage3/code/`)** | Snapshot of stage 2 code | Snapshot of stage 2 code (no edits) |
+| **Code (`stages/stage3/code/`)** | Snapshot of stage 2 code | Snapshot of stage 2 code (vite.config + nginx.conf synced) |
 
 ---
 
@@ -116,8 +116,8 @@ stages/stage3/
 ├── README.md                          # this file
 ├── code/                              # snapshot of stages/stage2/code/  (no changes)
 └── k8s/
-    ├── config/                        # 2 namespaces, configmap, secrets (verbatim from set 4)
-    ├── serviceaccounts/accounts.yaml  # 13 SAs (verbatim from set 4)
+    ├── config/                        # 2 namespaces, configmap, secrets (verbatim from Stage 2 set 5)
+    ├── serviceaccounts/accounts.yaml  # 13 SAs (verbatim from Stage 2 set 5)
     ├── networkpolicies/               # 16 manifests (reference only, unchanged)
     ├── apps/
     │   ├── identity-db/               # NEW: sts + svc + headless + init-script (entrypoint hook, not init container)
@@ -328,22 +328,24 @@ volumeClaimTemplates:
        ┌──────────────────────────────────────────────────────────────┐
        │ StatefulSets (1 replica each)                                │
        │                                                              │
-       │  identity-db  ── pg-data-identity-db-0  (1Gi PVC, Bound)   │
-       │  flight-db    ── pg-data-flight-db-0    (1Gi PVC, Bound)   │
-       │  booking-db   ── pg-data-booking-db-0   (1Gi PVC, Bound)   │
-       │  redis        ── redis-data-redis-0     (1Gi PVC, Bound)   │
-       │                                                              │
-       │  Init container in each DB pod:                              │
-       │    1. Wait for pg_isready                                    │
-       │    2. Run init.sql (idempotent CREATE TABLE IF NOT EXISTS)   │
-       │    3. Exit → main container starts                           │
-       └──────────────────────────────────────────────────────────────┘
-                          |
-                          v
-                  ┌──────────────────┐
-                  │  seed-* Jobs     │  ← one-shot, ON CONFLICT DO NOTHING
-                  │  (3 jobs)        │
-                  └──────────────────┘
+        │  identity-db  ── pg-data-identity-db-0  (1Gi PVC, Bound)   │
+        │  flight-db    ── pg-data-flight-db-0    (1Gi PVC, Bound)   │
+        │  booking-db   ── pg-data-booking-db-0   (1Gi PVC, Bound)   │
+        │  redis        ── redis-data-redis-0     (1Gi PVC, Bound)   │
+        │                                                              │
+        │  Schema bootstrap (Postgres pods only):                      │
+        │    Mounts init.sql at /docker-entrypoint-initdb.d/. The      │
+        │    Postgres entrypoint runs it during initdb on FIRST start   │
+        │    (data dir empty). Skips it on every subsequent restart    │
+        │    (data dir non-empty). Idempotent — CREATE TABLE IF NOT    │
+        │    EXISTS.                                                  │
+        └──────────────────────────────────────────────────────────────┘
+                           |
+                           v
+                   ┌──────────────────┐
+                   │  seed-* Jobs     │  ← one-shot, ON CONFLICT DO NOTHING
+                   │  (3 jobs)        │
+                   └──────────────────┘
 ```
 
 ---
@@ -355,7 +357,7 @@ cd stages/stage3
 ./scripts/apply.sh
 ```
 
-`apply.sh` runs 10 steps:
+`apply.sh` runs 10 steps (after a preflight cluster check):
 1. **Build images** — frontend + 5 backend services
 2. **Namespaces + config + secrets**
 3. **ServiceAccounts** (13)
@@ -367,11 +369,13 @@ cd stages/stage3
 9. **Envoy Gateway** install + GatewayClass + Gateway + 6 HTTPRoutes
 10. **Wait for MetalLB to assign a LoadBalancer IP**, then print `/etc/hosts` reminder
 
-**Why does step 5 exist?** The init container inside each StatefulSet pod
-runs the schema. We block until `kubectl rollout status` reports
-`ready=1` before applying the seed Jobs. If the init container is still
-running when the seed Job tries to connect, the seed will retry via its
-`pg_isready` loop — but blocking upfront gives a clean linear log.
+**Why does step 5 exist?** The Postgres entrypoint runs the schema
+during `initdb` on first start (empty data dir). The pod's readiness
+probe (a `pg_isready` exec check) only passes once initdb has finished
+and Postgres is accepting connections. We block on
+`kubectl rollout status` until `ready=1` and on `kubectl wait
+--for=condition=Ready` until the actual readiness probe passes, so
+the seed Jobs in step 6 connect to a fully-initialized DB.
 
 After the script prints the MetalLB IP, set up local DNS:
 
@@ -477,8 +481,8 @@ Gateway, and MetalLB. Safe to re-run.
 1. Why does a StatefulSet require a Headless Service (`clusterIP: None`)?
 2. What's the difference between `volumeClaimTemplates` and a normal
    `volumes:` entry?
-3. Why does the init container use `127.0.0.1` for `pg_isready` instead
-   of `identity-db`?
+3. Why is the schema mounted at `/docker-entrypoint-initdb.d/` instead
+   of running in a separate `initContainers[]` block?
 4. What would break if we kept the schema in a Job (Stage 2 style) and
    only added a PVC?
 5. Why does Stage 3 still have Jobs at all (the seed jobs)?

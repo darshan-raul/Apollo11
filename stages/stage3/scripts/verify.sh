@@ -1,6 +1,6 @@
 #!/bin/bash
 # Verify Stage 3: 30+ checks covering StatefulSets, PVCs, headless DNS,
-# seed jobs, plus the full Stage 2 set-4 access stack.
+# seed jobs, plus the full Stage 2 set-5 access stack.
 set -e
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; CYAN='\033[0;36m'; NC='\033[0m'

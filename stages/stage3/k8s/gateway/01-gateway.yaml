@@ -12,6 +12,5 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-  # NOTE: v1.2.x has no infrastructure.serviceOverride field. apply.sh
-  # patches the auto-created Service to NodePort after the controller
-  # creates it (see apply.sh step 7.5).
+  # Envoy Gateway v1.5.0: the auto-created Service defaults to
+  # type=LoadBalancer. MetalLB (in k8s/metallb/) assigns a real IP.

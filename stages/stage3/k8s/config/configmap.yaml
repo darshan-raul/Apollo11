@@ -7,8 +7,8 @@ data:
   NS_APPS: "apollo-airlines-apps"
   NS_UI:   "apollo-airlines-ui"
 ---
-# Set 4: drop the dev port. MetalLB gives Envoy a real cluster IP, and the
-# browser hits it directly.
+# Stage 2 set 5: drop the dev port. MetalLB gives Envoy a real cluster
+# IP, and the browser hits it directly.
 apiVersion: v1
 kind: ConfigMap
 metadata:

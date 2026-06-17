@@ -1,6 +1,6 @@
 #!/bin/bash
-# Apply Stage 3: StatefulSets + PVCs + init-container schema, on top of
-# Stage 2's set-4 access stack (Envoy Gateway + MetalLB).
+# Apply Stage 3: StatefulSets + PVCs + entrypoint-hook schema, on top of
+# Stage 2's set-5 access stack (Envoy Gateway + MetalLB).
 # Run from stages/stage3: ./scripts/apply.sh
 set -e
 
@@ -17,7 +17,7 @@ step()  { echo -e "${CYAN}▶ $1${NC}"; }
 ok()    { echo -e "${GREEN}✓ $1${NC}"; }
 fail()  { echo -e "${RED}✗ $1${NC}"; exit 1; }
 
-step "0/10 Checking cluster"
+step "Checking cluster (preflight)"
 if ! kubectl cluster-info >/dev/null 2>&1; then
   fail "kubectl cannot reach a cluster. Did you 'kind create cluster'?"
 fi
@@ -25,7 +25,7 @@ ok "cluster reachable"
 
 step "1/10 Building + loading app images"
 if kind get clusters 2>/dev/null | grep -q "^${CLUSTER}$"; then
-  # Frontend: same VITE_* URLs as Stage 2 set 4 (MetalLB gives a real IP).
+  # Frontend: same VITE_* URLs as Stage 2 set 5 (MetalLB gives a real IP).
   docker build -t "${REGISTRY}/frontend:latest" \
     --build-arg VITE_IDENTITY_URL="http://identity.apollo.local" \
     --build-arg VITE_FLIGHT_URL="http://flight.apollo.local" \
@@ -56,7 +56,7 @@ kubectl apply -f "$K8S_DIR/serviceaccounts/"
 step "4/10 Apps (6 Deployments + 4 StatefulSets + 4 headless SVCs + 4 ClusterIP SVCs)"
 kubectl apply -f "$K8S_DIR/apps/" --recursive
 
-step "5/10 Waiting for StatefulSet pods to be Ready (schema runs in init container)"
+step "5/10 Waiting for StatefulSet pods to be Ready (schema runs in entrypoint hook)"
 # The init container in each DB pod waits for `pg_isready` and then runs init.sql.
 # We block until the StatefulSet reports readyReplicas==replicas.
 for sts in identity-db flight-db booking-db redis; do
