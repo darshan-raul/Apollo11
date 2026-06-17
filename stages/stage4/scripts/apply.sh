@@ -1,7 +1,7 @@
 #!/bin/bash
 # Apply Stage 4: probes (startup/live/ready), resource limits (Guaranteed
 # QoS), PodDisruptionBudgets, and graceful SIGTERM shutdown, on top of
-# Stage 3's StatefulSets + Stage 2's set-4 access stack (Envoy Gateway
+# Stage 3's StatefulSets + Stage 2's set-5 access stack (Envoy Gateway
 # + MetalLB).
 # Run from stages/stage4: ./scripts/apply.sh
 set -e
@@ -27,7 +27,7 @@ ok "cluster reachable"
 
 step "1/10 Building + loading app images"
 if kind get clusters 2>/dev/null | grep -q "^${CLUSTER}$"; then
-  # Frontend: same VITE_* URLs as Stage 2 set 4 (MetalLB gives a real IP).
+  # Frontend: same VITE_* URLs as Stage 2 set 5 (MetalLB gives a real IP).
   docker build -t "${REGISTRY}/frontend:latest" \
     --build-arg VITE_IDENTITY_URL="http://identity.apollo.local" \
     --build-arg VITE_FLIGHT_URL="http://flight.apollo.local" \
@@ -61,7 +61,7 @@ kubectl apply -f "$K8S_DIR/apps/" --recursive
 # (after the Deployments exist) so the PDB selector can match them.
 kubectl apply -f "$K8S_DIR/pdb/"
 
-step "5/10 Waiting for StatefulSet pods to be Ready (schema runs in init container)"
+step "5/10 Waiting for StatefulSet pods to be Ready (schema runs in entrypoint hook on first start)"
 # The init container in each DB pod waits for `pg_isready` and then runs init.sql.
 # We block until the StatefulSet reports readyReplicas==replicas.
 for sts in identity-db flight-db booking-db redis; do
@@ -158,7 +158,7 @@ Then test with:
 ${CYAN}Alternative DNS (no /etc/hosts edit):${NC}
   Use nip.io: http://frontend.$ENVOY_IP.nip.io/  (auto-resolves to the IP)
 
-${CYAN}Stage 3 new: verify PVCs and persistent data${NC}
+${CYAN}Stage 4 new: verify PDBs and graceful SIGTERM behaviour${NC}
   kubectl get pvc -n apollo-airlines-apps
   kubectl get statefulset -n apollo-airlines-apps
   kubectl exec -n apollo-airlines-apps identity-db-0 -- psql -U postgres -d identity -c 'SELECT count(*) FROM users;'
@@ -172,4 +172,4 @@ ${RED}MetalLB did not assign an IP. Check:${NC}
 EOF
 fi
 
-ok "Stage 3 applied. Run ./scripts/verify.sh"
+ok "Stage 4 applied. Run ./scripts/verify.sh"

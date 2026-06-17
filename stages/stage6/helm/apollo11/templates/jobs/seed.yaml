@@ -59,3 +59,4 @@ spec:
         - name: seed-script
           configMap:
             name: {{ $db }}-db-seed
+{{- end }}

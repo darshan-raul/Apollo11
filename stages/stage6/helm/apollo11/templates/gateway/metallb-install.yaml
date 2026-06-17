@@ -17,3 +17,4 @@ metadata:
     control-plane: metallb
 ---
 {{ .Files.Get "bundles/metallb-native.yaml" | indent 0 }}
+{{- end }}

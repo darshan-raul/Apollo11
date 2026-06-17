@@ -84,3 +84,4 @@ spec:
     - group: ""
       kind: Service
       name: frontend
+{{- end }}

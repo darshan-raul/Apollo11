@@ -29,3 +29,4 @@ metadata:
 spec:
   ipAddressPools:
     - apollo-pool
+{{- end }}

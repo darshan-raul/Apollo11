@@ -1,3 +1,4 @@
+{{- if .Values.pdb.enabled }}
 ---
 # PodDisruptionBudget for booking — the flagship service. With 2 replicas,
 # minAvailable=1 ensures voluntary disruptions (node drains, autoscaler
@@ -30,3 +31,4 @@ spec:
   selector:
     matchLabels:
       app: frontend
+{{- end }}

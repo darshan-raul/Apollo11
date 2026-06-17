@@ -151,3 +151,4 @@ spec:
         resources:
           requests:
             storage: {{ $.Values.postgres.storage }}
+{{- end }}

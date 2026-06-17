@@ -36,7 +36,7 @@ helm/apollo11/
 ├── values-staging.yaml                 (env-specific: 2 replicas, :latest tag, no PDBs)
 ├── values-prod.yaml                    (env-specific: 3 replicas, :v1.0.0 tag, full PDBs, GHCR pull)
 ├── bundles/
-│   ├── envoy-gateway-install.yaml      (v1.2.4, 2.4MB — offline-friendly)
+│   ├── envoy-gateway-install.yaml      (v1.5.0, 2.9MB — offline-friendly)
 │   └── metallb-native.yaml             (v0.14.5, 67KB — offline-friendly)
 └── templates/
     ├── _helpers.tpl                    (label, selector, name helpers)

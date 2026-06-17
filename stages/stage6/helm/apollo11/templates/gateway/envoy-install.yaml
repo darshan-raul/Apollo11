@@ -1,5 +1,5 @@
 {{- /*
-Envoy Gateway install manifest. v1.2.4 (39040 lines, ~2.4MB) — bundled
+Envoy Gateway install manifest. v1.5.0 (~2.9MB) — bundled
 in the chart for offline-friendly installs.
 
 Annotated as a `pre-install,pre-upgrade` hook so Helm applies the
@@ -19,3 +19,4 @@ metadata:
     control-plane: envoy-gateway
 ---
 {{ .Files.Get "bundles/envoy-gateway-install.yaml" | indent 0 }}
+{{- end }}
