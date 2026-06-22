@@ -17,9 +17,26 @@ spec:
       containers:
         - name: frontend
           image: apollo11/frontend:latest
+          # imagePullPolicy stays IfNotPresent. The frontend image is
+          # loaded into the kind node cache by apply.sh via `kind load
+          # docker-image`; the kubelet's IfNotPresent then reads from
+          # that cache. Always would try to pull from a remote registry
+          # (docker.io/apollo11/...) which doesn't exist for a local
+          # kind setup and would ImagePullBackOff. The combination of
+          # `docker build --no-cache` (forces a fresh image) + `kind
+          # load` (puts the fresh image in the cache) + `kubectl
+          # rollout restart deployment/frontend` (forces the kubelet
+          # to re-evaluate the cache) is the correct update flow for
+          # kind. Production would use a real registry and imagePullPolicy:
+          # Always (or, better, content-hash tags).
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
+          # The Vite build bakes VITE_* URLs into the JS bundle at
+          # `docker build` time via --build-arg. The envFrom below is
+          # a placeholder for future runtime config (stage 8+ may add
+          # values that ARE runtime-relevant); it does NOT change the
+          # backend URLs the browser calls.
           envFrom:
             - configMapRef:
                 name: apollo-airlines-config

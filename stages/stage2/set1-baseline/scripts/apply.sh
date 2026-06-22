@@ -11,25 +11,34 @@ REGISTRY="apollo11"
 SERVICES="identity flight booking search notification frontend"
 
 # Colors
-GREEN='\033[0;32m'; CYAN='\033[0;36m'; NC='\033[0m'
+GREEN='\033[0;32m'; CYAN='\033[0;36m'; RED='\033[0;31m'; NC='\033[0m'
 
 step()  { echo -e "${CYAN}▶ $1${NC}"; }
 ok()    { echo -e "${GREEN}✓ $1${NC}"; }
+fail()  { echo -e "${RED}✗ $1${NC}"; exit 1; }
 
-step "0/6 Checking cluster"
+step "0/7 Checking cluster"
 if ! kubectl cluster-info >/dev/null 2>&1; then
-  echo "kubectl cannot reach a cluster. Did you 'kind create cluster'?"
-  exit 1
+  fail "kubectl cannot reach a cluster. Did you 'kind create cluster'?"
 fi
 
-step "1/6 Building frontend image + loading images into kind"
+step "1/7 Building frontend image + loading images into kind"
 "${SCRIPT_DIR}/build-images.sh"
 if kind get clusters 2>/dev/null | grep -q "^${CLUSTER}$"; then
   for svc in $SERVICES; do
-    kind load docker-image "${REGISTRY}/${svc}:latest" --name "$CLUSTER" 2>/dev/null && \
-      ok "loaded ${REGISTRY}/${svc}:latest" || \
-      echo "  (skip) ${REGISTRY}/${svc}:latest"
+    if kind load docker-image "${REGISTRY}/${svc}:latest" --name "$CLUSTER"; then
+      ok "loaded ${REGISTRY}/${svc}:latest"
+    else
+      fail "kind load failed for ${REGISTRY}/${svc}:latest — the cluster will run a stale image. Check that the cluster is running and your user has docker perms."
+    fi
   done
+  # Force a pod restart so the new image content is loaded. The frontend
+  # Deployment has imagePullPolicy: Always, so this works even with the
+  # Docker layer cache (which can return a stale image if the build-args
+  # only changed content baked by Vite, not Dockerfile layers).
+  kubectl rollout restart deployment/frontend -n apollo-airlines-ui >/dev/null
+  kubectl rollout status deployment/frontend -n apollo-airlines-ui --timeout=120s >/dev/null
+  ok "frontend rolled out with fresh image"
 else
   echo "  Cluster '$CLUSTER' is not a kind cluster, skipping image load"
 fi
