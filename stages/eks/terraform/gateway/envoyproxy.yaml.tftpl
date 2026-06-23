@@ -1,0 +1,37 @@
+# EnvoyProxy with AWS Load Balancer Controller annotations for EKS.
+#
+# This is the same EnvoyProxy as stages/stage2/set5-envoy-gateway/k8s/gateway/00b-envoyproxy.yaml
+# with 5 service.beta.kubernetes.io/aws-load-balancer-* annotations added so the
+# AWS Load Balancer Controller provisions an NLB (instead of MetalLB) for the
+# Envoy data plane Service.
+#
+# Annotations:
+#   aws-load-balancer-type: external         — LBC owns the NLB (not the in-tree
+#                                              cloud provider, which is removed
+#                                              from k8s 1.27+).
+#   aws-load-balancer-nlb-target-type: ip    — route to pod IPs directly. Requires
+#                                              the VPC CNI in ip mode (default on
+#                                              EKS). Saves the NodePort hop.
+#   aws-load-balancer-scheme: ${nlb_scheme}  — internet-facing for dev, internal
+#                                              for prod (saves public IPv4 fees).
+#   aws-load-balancer-ip-address-type: ipv4  — explicit; default is ipv4.
+#   aws-load-balancer-name: ${nlb_name}      — stable NLB name so a re-apply
+#                                              doesn't create a new NLB.
+
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: envoyproxy-lb-config
+  namespace: apollo-airlines-apps
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: LoadBalancer
+        annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: "external"
+          service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "${nlb_ip_target_type}"
+          service.beta.kubernetes.io/aws-load-balancer-scheme: "${nlb_scheme}"
+          service.beta.kubernetes.io/aws-load-balancer-ip-address-type: "ipv4"
+          service.beta.kubernetes.io/aws-load-balancer-name: "${nlb_name}"

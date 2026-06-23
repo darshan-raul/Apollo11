@@ -22,6 +22,7 @@ Apollo11 is a **13-phase Kubernetes/cloud-native learning bootstrap** using **Ap
 | Stage 6 | Mission Ops | Prometheus, Grafana, OpenTelemetry |
 | Stage 7 | Orbital Maneuvering | HPA, VPA, Redis cache, taints/tolerations, affinity |
 | Stage 8 | Command Module | RBAC, SecurityContext, OPA, Vault |
+| Stage EKS | Cloud Target — EKS | Stage 2 set 5 + Stage 3 workloads on real AWS: EKS cluster (terraform-aws-modules/eks v21.x), AWS NLB via AWS Load Balancer Controller, EBS CSI driver + ebs-gp3 StorageClass (WaitForFirstConsumer), ECR per service. One-command spin-up/teardown. The Stage 2 set 5 manifests are reused verbatim; the only changes are 5 LBC annotations on the `EnvoyProxy` + the `ebs-gp3` StorageClass. |
 | Stage 9 | Lunar Orbit | EKS/GKE via Terraform, Cluster Autoscaler, HA |
 | Stage 10 | Mission Extensions | Linkerd, Argo Rollouts, Chaos Mesh, DevSecOps |
 | Stage 11 | Towards Mars | CRDs/Operators, k3s homelab, KEDA |
@@ -102,7 +103,11 @@ Apollo11/
 │   ├── stage8/              # RBAC, SecurityContext, OPA, Vault
 │   ├── stage9/              # EKS/GKE Terraform provisioning
 │   ├── stage10/             # Linkerd, Argo Rollouts, Chaos Mesh
-│   └── stage11/             # CRD operator, k3s, KEDA
+│   ├── stage11/             # CRD operator, k3s, KEDA
+│   └── eks/                 # Stage 2 set 5 + Stage 3 workloads on AWS EKS (NLB + EBS CSI)
+│       ├── README.md
+│       ├── terraform/       # vpc/, cluster/, storage/, gateway/, network/, ecr.tf
+│       └── scripts/         # up.sh, down.sh, apply-workloads.sh, verify.sh, ebs-sweep.sh
 │
 └── test/                     # Automated verification scripts per stage
 ```
@@ -615,6 +620,56 @@ Dev and staging auto-converge on git push; prod is human-gated. The `targetRevis
 - Non-root user in all Dockerfiles
 - Service account annotations on pods
 - Trace context propagation fully wired
+
+---
+
+### Stage EKS (Cloud Target — EKS)
+
+**Location:** `stages/eks/`
+
+**New files:**
+- `terraform/network/` — `terraform-aws-modules/vpc/aws`, `10.0.0.0/16`, 2 public + 2 private subnets, 1 NAT in AZ-0 (saves $33/mo)
+- `terraform/cluster/eks.tf` — `terraform-aws-modules/eks/aws` v21.x, k8s 1.31, encryption-at-rest with KMS, access entries replace aws-auth ConfigMap
+- `terraform/cluster/node-groups.tf` — 2 × t3.small spot across 2 AZs, AL2023 AMI
+- `terraform/cluster/addons.tf` — 6 EKS managed addons: vpc-cni, coredns, kube-proxy, eks-pod-identity-agent, aws-ebs-csi-driver, aws-load-balancer-controller
+- `terraform/cluster/pod-identity.tf` — 4 IAM roles + EKS Pod Identity associations (EBS CSI, LBC, VPC CNI, Pod Identity agent)
+- `terraform/cluster/policies/lbc-policy.json` — vendored LBC IAM policy from `kubernetes-sigs/aws-load-balancer-controller`
+- `terraform/cluster/kms.tf` — KMS key for EKS secrets encryption
+- `terraform/storage/storageclass.tf` — `ebs-gp3` StorageClass (default, `WaitForFirstConsumer`)
+- `terraform/gateway/envoy-gateway.tf` — LBC Helm release + 11 `kubectl_manifest` applies for the Stage 2 set 5 Envoy Gateway stack
+- `terraform/gateway/envoyproxy.yaml.tftpl` — the **only** Apollo11 k8s manifest that's different from Stage 2 set 5: 5 LBC annotations on the EnvoyProxy so the LBC materialises an NLB instead of relying on MetalLB
+- `terraform/gateway/{envoy-gateway-install,gatewayclass,gateway,reference-grant,httproute-*}.yaml` — verbatim copies of the Stage 2 set 5 manifests
+- `terraform/ecr.tf` — 6 ECR repos (one per service), MUTABLE tags, scan-on-push, lifecycle policy (keep last 10)
+- `scripts/up.sh` — terraform init + apply + kubeconfig + wait-for-NLB-active
+- `scripts/apply-workloads.sh` — Stage 3 apply.sh ported for EKS (ECR push instead of kind load; MetalLB and gateway install steps skipped)
+- `scripts/down.sh` — ordered teardown (namespaces → Envoy stack → LBC Helm → terraform destroy → ECR purge → EBS sweep → ENI sweep)
+- `scripts/verify.sh` — ~40 checks across 5 groups (cluster+addons, StatefulSets+PVCs+EBS PVs, deployments, NLB+Envoy, end-to-end + PVC persistence demo)
+- `scripts/ebs-sweep.sh` — delete orphaned EBS volumes left over from interrupted destroys
+
+**Status:** Stage EKS defines the EKS deployment shape for Stage 2 set 5 + Stage 3. The TF and scripts were not yet applied to a real AWS account from this build environment; structural correctness was verified by reading the Stage 2 set 5 and Stage 3 scripts/manifests to preserve apply/teardown ordering verbatim.
+
+**Key design choices:**
+
+1. **Single NAT in AZ-0 only.** Saves ~$33/mo vs 2 NATs. AZ-1 nodes pay cross-AZ data transfer on NAT-routed egress (~$0.01/GB; cents for dev). Toggle via `single_nat_gateway = true` (default) / `false`.
+2. **EKS Pod Identity, not IRSA.** Newer, simpler, AWS-recommended. The eks_aws module's `service_account_role_arn` field is wired to Pod Identity roles.
+3. **NLB scheme toggleable.** `nlb_scheme = "internet-facing"` (default, public DNS) or `"internal"` (saves $7.20/mo public IPv4 fees, needs VPN/bastion).
+4. **`nlb-ip-target-type: ip`** so the NLB routes to pod IPs directly (requires VPC CNI in ip mode, the EKS default). Saves the NodePort hop.
+5. **`deletion_protection = false`** so `terraform destroy` works in one shot. Flip to `true` for prod.
+6. **State backend is local.** ~5-10MB state file. Documented swap path to S3 + DynamoDB for shared dev.
+7. **`aws-auth` ConfigMap replaced by access entries.** Modern path on EKS 1.30+. The single admin principal gets `cluster-admin` policy via access entries.
+8. **No MetalLB install.** The LBC + NLB replaces it. Stage 2 set 5's MetalLB manifest was deliberately NOT copied.
+9. **Frontend images built and pushed to ECR.** `apply-workloads.sh` rewrites `apollo11/*:latest` → `<ECR_REGISTRY>/apollo11-dev/*:latest` on the fly via `sed`, then `kubectl apply -f` with the rewritten manifests.
+10. **Frontend VITE_* URLs use `nip.io` by default** so the user doesn't have to edit `/etc/hosts` to hit the cluster. Override with `FRONTEND_HOST_SUFFIX=.apollo.local` if you want the canonical Apollo Airlines URL pattern.
+
+**What this stage does NOT do:**
+
+- No GKE module (Stage 9 covers GKE).
+- No production HA (single NAT, no multi-region, no cluster autoscaler, no PodDisruptionBudgets).
+- No Stage 4 probes + resource limits — the manifests in `stages/stage4/` are layered on top of Stage 3, not EKS. To add them on EKS, copy the probe paths from Stage 4 manifests into the apply-workloads.sh image-rewrite step.
+- No observability stack (Stage 6 covers Prometheus + Grafana + OTEL).
+- No service mesh (Stage 10 covers Linkerd).
+
+**The Stage 2 set 5 manifests are reused verbatim; the only changes are 5 LBC annotations on the `EnvoyProxy` + the `ebs-gp3` StorageClass.**
 
 ---
 

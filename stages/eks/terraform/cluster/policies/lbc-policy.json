@@ -1,0 +1,192 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateServiceLinkedRole"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "iam:AWSServiceName": "elasticloadbalancing.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeAccountAttributes",
+        "ec2:DescribeAddresses",
+        "ec2:DescribeAvailabilityZones",
+        "ec2:DescribeInternetGateways",
+        "ec2:DescribeVpcs",
+        "ec2:DescribeVpcPeeringConnections",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeInstances",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:DescribeTags",
+        "ec2:GetCoipPoolUsage",
+        "ec2:DescribeCoipPools",
+        "ec2:GetManagedPrefixListEntries",
+        "ec2:DescribePrefixLists",
+        "ec2:DescribeRouteTables",
+        "ec2:DescribeLaunchTemplateVersions",
+        "elasticloadbalancing:DescribeLoadBalancers",
+        "elasticloadbalancing:DescribeLoadBalancerAttributes",
+        "elasticloadbalancing:DescribeListeners",
+        "elasticloadbalancing:DescribeListenerAttributes",
+        "elasticloadbalancing:DescribeListenerCertificates",
+        "elasticloadbalancing:DescribeRules",
+        "elasticloadbalancing:DescribeTargetGroups",
+        "elasticloadbalancing:DescribeTargetGroupAttributes",
+        "elasticloadbalancing:DescribeTargetHealth",
+        "elasticloadbalancing:DescribeTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cognito-idp:DescribeUserPoolClient",
+        "acm:ListCertificates",
+        "acm:DescribeCertificate",
+        "iam:ListServerCertificates",
+        "waf-regional:GetWebACL",
+        "waf-regional:GetWebACLForResource",
+        "waf-regional:AssociateWebACL",
+        "waf-regional:DisassociateWebACL",
+        "wafv2:GetWebACL",
+        "wafv2:GetWebACLForResource",
+        "wafv2:AssociateWebACL",
+        "wafv2:DisassociateWebACL",
+        "shield:GetSubscriptionState",
+        "shield:DescribeProtection",
+        "shield:CreateProtection",
+        "shield:DeleteProtection"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateSecurityGroup",
+        "ec2:CreateTags"
+      ],
+      "Resource": "arn:aws:ec2:*:*:security-group/*",
+      "Condition": {
+        "Null": {
+          "aws:RequestTag/elbv2.k8s.aws/cluster": "false"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateTags",
+        "ec2:DeleteTags"
+      ],
+      "Resource": "arn:aws:ec2:*:*:security-group/*",
+      "Condition": {
+        "Null": {
+          "aws:ResourceTag/elbv2.k8s.aws/cluster": "false"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupIngress",
+        "ec2:DeleteSecurityGroup"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Null": {
+          "aws:ResourceTag/elbv2.k8s.aws/cluster": "false"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateLaunchTemplate",
+        "ec2:DeleteLaunchTemplate",
+        "ec2:CreateLaunchTemplateVersion",
+        "ec2:DeleteLaunchTemplateVersion",
+        "ec2:ModifyLaunchTemplate"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Null": {
+          "aws:RequestTag/elbv2.k8s.aws/cluster": "false"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "elasticloadbalancing:CreateLoadBalancer",
+        "elasticloadbalancing:CreateTargetGroup",
+        "elasticloadbalancing:CreateListener",
+        "elasticloadbalancing:CreateRule"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Null": {
+          "aws:RequestTag/elbv2.k8s.aws/cluster": "false"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "elasticloadbalancing:DeleteLoadBalancer",
+        "elasticloadbalancing:DeleteTargetGroup",
+        "elasticloadbalancing:DeleteListener",
+        "elasticloadbalancing:DeleteRule"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Null": {
+          "aws:ResourceTag/elbv2.k8s.aws/cluster": "false"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "elasticloadbalancing:AddTags",
+        "elasticloadbalancing:RemoveTags"
+      ],
+      "Resource": [
+        "arn:aws:elasticloadbalancing:*:*:loadbalancer/*",
+        "arn:aws:elasticloadbalancing:*:*:targetgroup/*",
+        "arn:aws:elasticloadbalancing:*:*:listener/*",
+        "arn:aws:elasticloadbalancing:*:*:listener-rule/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "elasticloadbalancing:ModifyLoadBalancerAttributes",
+        "elasticloadbalancing:ModifyTargetGroup",
+        "elasticloadbalancing:ModifyTargetGroupAttributes",
+        "elasticloadbalancing:ModifyListener",
+        "elasticloadbalancing:ModifyRule",
+        "elasticloadbalancing:ModifyListenerAttributes"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "elasticloadbalancing:SetIpAddressType",
+        "elasticloadbalancing:SetSecurityGroups",
+        "elasticloadbalancing:SetSubnets"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
