@@ -61,6 +61,10 @@ spec:
         - name: {{ $name }}
           image: "{{ .Values.image.repository }}/{{ $name }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: {{ $appCfg.port }}
               protocol: TCP

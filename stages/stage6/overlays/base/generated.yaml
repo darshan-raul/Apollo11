@@ -2,6 +2,39 @@
 # Source: helm/apollo11, with controller bundles and PDBs disabled.
 # Regenerate deliberately when the verified chart workload contract changes.
 ---
+# Source: apollo11/templates/config/priorityclass.yaml
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: apollo-airlines-app-critical
+  labels:
+    app.kubernetes.io/name: apollo11
+    app.kubernetes.io/instance: apollo11
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: apollo-airlines
+    hermes: managed
+value: 1000000
+globalDefault: false
+description: "Apollo Airlines app-critical pods (booking, search)."
+---
+# Source: apollo11/templates/config/priorityclass.yaml
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: apollo-airlines-app-low
+  labels:
+    app.kubernetes.io/name: apollo11
+    app.kubernetes.io/instance: apollo11
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: apollo-airlines
+    hermes: managed
+value: -100000
+globalDefault: false
+description: "Apollo Airlines app-low pods (notification)."
+
+---
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -231,6 +264,25 @@ metadata:
 type: Opaque
 stringData:
   JWT_SECRET: "apollo-airlines-dev-secret-change-in-production"
+
+---
+# Source: apollo11/templates/gateway/gateway.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: apollo-tls-secret
+  namespace: apollo-airlines-apps
+  labels:
+    app.kubernetes.io/name: apollo11
+    app.kubernetes.io/instance: apollo11
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: apollo-airlines
+    hermes: managed
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKVENDQWcyZ0F3SUJBZ0lSQUlJK3ZoTGY5bzM2dGdkajQwRytSYzh3RFFZSktvWklodmNOQVFFTEJRQXcKR1RFWE1CVUdBMVVFQXd3T0tpNWhjRzlzYkc4dWJHOWpZV3d3SGhjTk1qWXhNREEwTVRjMU5UTXlXaGNOTXpZeApNREF4TVRjMU5UTXlXakFaTVJjd0ZRWURWUVFEREE0cUxtRndiMnhzYnk1c2IyTmhiRENDQVNJd0RRWUpLb1pJCmh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTkdWZ3dOSHJLdEU0czR1L3RsR2RTUHVjQ0d1WUQwa2ZPdGcKeVBoV29XNFZjUUxiK3gwa2NlQ3JwZndFTGlFZkFuWG93SlVrOEFVb1dpVmJ1bFhaYWxBcGFVTkFiS0hEWUxXOApUdHZVdUNzazExL3ZHUE1LbmRVOWRmZ3doM1VDQ0hpVHhsSGQ4RzB6bDl6WFQrTTNzZUZtZm95T092UUdhTWFpClJ0SHdGclh4L0lPdWRlblFkazluUUtqMHUzejlUS05qYkkwMStiQjFRV0dkMGxjZ1l5TWJCR0lGQzNidjBScVIKUlA2Ui9Yc25SZXNTMndJbGloKytROFppeFVBbzlYc0N3bjNwRTlVUnVKWTRETkdUU2gxTFRuNDVBRUduUGJ5MApqUXBCUlAzODhBTEZzTStOU3ZnNFI4eUQyUG1UWEgrR0paMTJweVZGMjVCcDQwTSthTVVDQXdFQUFhTm9NR1l3CkRnWURWUjBQQVFIL0JBUURBZ1dnTUIwR0ExVWRKUVFXTUJRR0NDc0dBUVVGQndNQkJnZ3JCZ0VGQlFjREFqQU0KQmdOVkhSTUJBZjhFQWpBQU1DY0dBMVVkRVFRZ01CNkNEaW91WVhCdmJHeHZMbXh2WTJGc2dneGhjRzlzYkc4dQpiRzlqWVd3d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFHQldsQk5ZMTNCTEJLS3hpWW45QStQUUxQZnpFOVk2Cm56bldzT1RVcGo3ZEJGZ3dsMTczNm9TZkx1OHE5a1ZLR0FSSEFOMGxZVDlJK0U2WHNsYmZZNDN6NTZHU1ZqakMKZWZRcGxxQ2xyM0ZLK0l5dm9zclBPdHcxR296QnpaNXc1QUJLWlZwVEg1akVCaHB4MVVEeEpIMGQ2QlBubzRpbwpnNWx5ME81ZXFHVWtTTElxczRaZy8weFZtRXc4NStBWVdnWmVDUnJXeU01N1cvbHRIQUoycC9OK2VERmtFR1F2CnphU2VYNXNrc2wwR2x2T1paZ1NvelJ2ZVh2Nk9tWkp2SXI3Mk93aW5HMnFKczY0ZWlHMWR1NTdUamVxbVdCcU4KZ09tUVIyd3VMTnNHK3BJTGxIdloxUVVCMFl6K2tUSHpOcjBWcUxSbjRnK01vNENOdVZZb216QT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcEFJQkFBS0NBUUVBMFpXREEwZXNxMFRpemk3KzJVWjFJKzV3SWE1Z1BTUjg2MkRJK0ZhaGJoVnhBdHY3CkhTUng0S3VsL0FRdUlSOENkZWpBbFNUd0JTaGFKVnU2VmRscVVDbHBRMEJzb2NOZ3RieE8yOVM0S3lUWFgrOFkKOHdxZDFUMTErRENIZFFJSWVKUEdVZDN3YlRPWDNOZFA0emV4NFdaK2pJNDY5QVpveHFKRzBmQVd0Zkg4ZzY1MQo2ZEIyVDJkQXFQUzdmUDFNbzJOc2pUWDVzSFZCWVozU1Z5QmpJeHNFWWdVTGR1L1JHcEZFL3BIOWV5ZEY2eExiCkFpV0tINzVEeG1MRlFDajFld0xDZmVrVDFSRzRsamdNMFpOS0hVdE9mamtBUWFjOXZMU05Da0ZFL2Z6d0FzV3cKejQxSytEaEh6SVBZK1pOY2Y0WWxuWGFuSlVYYmtHbmpRejVveFFJREFRQUJBb0lCQUNkUVlmYU1DOTVHdWpyTwpBdjB6NDhaZE5FaUZJc1ZsWWs5dTVOUDh3Q1JidmtxNGhCYlgzc3F6dUJ1Wmx5T2NZd1JHS0ZYeHkxcFVVdkNlCkQ4cUowWkQrNjZGelpNMUZUbzlZcHZ4Q24xZHNma0FmSkRGM0JOdGF2NVhTV0o2QXhxRURxMWh4QnVnZEhQZ08KcFl3c1J1Qk9yeDlqa0xoMHVWUEZYZjZFaUdZUml4SEhPWURhL0RSWExFY1dtRmpwZmVoVWIrRG9GUGh2Qng4RgplbFkxeE5VdjZXTjRma0ZlVHY3VmtmeVRzL1pOYnIzRWFZSFpzakNvM3dyU1ZxWGIzdlJMNTE0Mm50OTVENG9oCjhjY1FDcWRZVG5obk4vbGJETUZTVjV2c2RDMk0zR1dzd0RuMzZnbEVTbkp5Y2xlY2ltaXVadDVqQVlFdkptdEwKTEEyQU1ZRUNnWUVBNU5XdmR6dTBiTjFEZmRlU0NXMXJiR05qcVpGNUgyWm53OVpCVmk0c2kwNE9Ya3R6ek8yVAozcU95bVVncFY5VVAxN0NEVG9IN0ZrWUtQVDNrd252Z2dNVHRScDY2RU1EZmNmRkJYSkovLzhtV3p1RnlaWHcrCjBJRnpJeDdXOUVRanVFeUN0SElvc28xOUc4RHo1NkRvZDlMZUwwMUp6YThaNGlGSmo4aGdha0VDZ1lFQTZuYkwKd0dJbmQ5RVczbFRXK21ub1lmZHJrdG9XUUxPUmFNMTV0dWFOamYyK3JwNDNxa01XVXlzSEFyWlNULy9nWHZpVApuK2MxajdIeTY1VTMydmZLZENWQmdKNEQzNC9FZUg0NGk5aUtxMzZDZVA4VS84YkZlZnA2KzdGTFRtZHRId3VRCmJBVERWWWx0NlJkTWY0Z1F3T1RuM0E3NlVuOUtHc09iZmkrMzlZVUNnWUVBNE1Ha21yYVFpdEIwQnJqaG5kTFQKek54OXVjSEJObjhOY2NNUjMwUnd5YzQ3dkkvZFNDMGNySE1aNndWK1hkOU50U3FRZlY2Yk1CQlE1RC9UWE5Ydwo5bWoxS0FTa2Vlb0dUVktKUVJRL0ZndDR6TytQdlcvZi9rajJ2a3IvRTJHTnQrbW1BdmVSVTNZMnFEakhGdnpxCjl5MnN2c2JwczFURlZsNGRjMVI2cGtFQ2dZQnNJdElpTHFMcFhlUGdNdHpiclpEaDdnME5NOHhqbHU0UG1nVHkKMkM2ZE9GU0RrTEUzczYxT09tQUhYak5rZGl6ellFNGx4NnNxVlBZbXRUR0hxaFVUc0VNZm9NRkVrTGdhb294Tgo0MWRCZFIyVDFJSEkzZElpU2VZQ3cyaHFCc1dMTmZncitaNWxpdmJJTkZpeDBQMTVHWm5lSW9KTkhpdjlZQTROCkN0RWJTUUtCZ1FDY0dWTzAzbm1EYlozMXVCYWRGRnhabHIzMGFTOWZqd2d4QUtGTGpXejZjQklIM05NdXJKMWsKdjVMR3FZOGN5UXF2d0FTZEhRV2hUbk9lOGdxRGtTTHh1aWd3TFhiTDBMRVZrWlo4dm11Tk9RZVNHU010K3d6eQp1N2tpQUVwNmlRUmFWLzRIWmZZYUhEKzFwNGdKd2pwQ2FwbUJNOHltVVhVZmM2cU5iT0UzY2c9PQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo=
 
 ---
 # Source: apollo11/templates/observability/grafana/deployment.yaml
@@ -1463,7 +1515,7 @@ metadata:
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: booking
@@ -1483,12 +1535,24 @@ spec:
         prometheus.io/port: "8082"
         prometheus.io/path: "/metrics"
     spec:
+      priorityClassName: apollo-airlines-app-critical
       serviceAccountName: booking
       terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: booking
       containers:
         - name: booking
           image: "apollo11/booking:latest"
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: 8082
               protocol: TCP
@@ -1562,7 +1626,7 @@ metadata:
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: flight
@@ -1584,10 +1648,21 @@ spec:
     spec:
       serviceAccountName: flight
       terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: flight
       containers:
         - name: flight
           image: "apollo11/flight:latest"
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: 8081
               protocol: TCP
@@ -1655,7 +1730,7 @@ metadata:
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: identity
@@ -1677,10 +1752,21 @@ spec:
     spec:
       serviceAccountName: identity
       terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: identity
       containers:
         - name: identity
           image: "apollo11/identity:latest"
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: 8080
               protocol: TCP
@@ -1748,7 +1834,7 @@ metadata:
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: notification
@@ -1768,12 +1854,24 @@ spec:
         prometheus.io/port: "8084"
         prometheus.io/path: "/metrics"
     spec:
+      priorityClassName: apollo-airlines-app-low
       serviceAccountName: notification
       terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: notification
       containers:
         - name: notification
           image: "apollo11/notification:latest"
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: 8084
               protocol: TCP
@@ -1833,7 +1931,7 @@ metadata:
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: search
@@ -1853,12 +1951,24 @@ spec:
         prometheus.io/port: "8083"
         prometheus.io/path: "/metrics"
     spec:
+      priorityClassName: apollo-airlines-app-critical
       serviceAccountName: search
       terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: search
       containers:
         - name: search
           image: "apollo11/search:latest"
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: 8083
               protocol: TCP
@@ -2144,7 +2254,7 @@ metadata:
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: frontend
@@ -2162,10 +2272,21 @@ spec:
     spec:
       serviceAccountName: frontend
       terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: frontend
       containers:
         - name: frontend
           image: "apollo11/frontend:latest"
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: 3000
               protocol: TCP
@@ -2742,13 +2863,22 @@ metadata:
 spec:
   gatewayClassName: eg
   listeners:
-    - name: web
+    - name: http
       port: 80
       protocol: HTTP
       allowedRoutes:
         namespaces:
           from: All
-
+    - name: https
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: apollo-tls-secret
+      allowedRoutes:
+        namespaces:
+          from: All
 ---
 # Source: apollo11/templates/gateway/gateway.yaml
 # GatewayClass — referenced by every Gateway. The controller name must

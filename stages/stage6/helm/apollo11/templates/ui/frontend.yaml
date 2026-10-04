@@ -42,10 +42,21 @@ spec:
     spec:
       serviceAccountName: frontend
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: frontend
       containers:
         - name: frontend
           image: "{{ .Values.image.repository }}/frontend:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: {{ .Values.frontend.port }}
               protocol: TCP

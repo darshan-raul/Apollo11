@@ -42,9 +42,20 @@ spec:
     spec:
       serviceAccountName: frontend
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: frontend
       containers:
         - name: frontend
           image: "{{ .Values.image.repository }}/frontend:{{ .Values.image.tag }}"
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           # imagePullPolicy stays at the global default (IfNotPresent).
           # The frontend image is loaded into the kind node cache by
           # apply.sh via `kind load docker-image`; the kubelet's

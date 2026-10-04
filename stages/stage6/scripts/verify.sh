@@ -390,6 +390,63 @@ for sts in identity-db flight-db booking-db redis; do
 done
 
 # ---------------------------------------------------------------------------
+# PriorityClasses (apollo-airlines-app-critical, apollo-airlines-app-low)
+# ---------------------------------------------------------------------------
+step "PriorityClasses (apollo-airlines-app-critical, apollo-airlines-app-low)"
+for pc in apollo-airlines-app-critical apollo-airlines-app-low; do
+    if kubectl get priorityclass "$pc" >/dev/null 2>&1; then
+        pass "priorityclass/$pc exists"
+    else
+        fail "priorityclass/$pc missing"
+    fi
+done
+
+step "Stage 4 Contract Verification (lifecycle.preStop and topologySpreadConstraints)"
+for dep in identity flight booking search notification; do
+    prestop=$(kubectl get deployment "$dep" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.containers[0].lifecycle.preStop.exec.command}' 2>/dev/null || echo "")
+    if [[ "$prestop" =~ "sleep" ]]; then
+        pass "deployment/$dep lifecycle.preStop configured"
+    else
+        fail "deployment/$dep lifecycle.preStop missing ($prestop)"
+    fi
+
+    tsc=$(kubectl get deployment "$dep" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.topologySpreadConstraints[0].topologyKey}' 2>/dev/null || echo "")
+    if [[ -n "$tsc" ]]; then
+        pass "deployment/$dep topologySpreadConstraints configured"
+    else
+        fail "deployment/$dep topologySpreadConstraints missing"
+    fi
+done
+
+fe_prestop=$(kubectl get deployment frontend -n apollo-airlines-ui -o jsonpath='{.spec.template.spec.containers[0].lifecycle.preStop.exec.command}' 2>/dev/null || echo "")
+if [[ "$fe_prestop" =~ "sleep" ]]; then
+    pass "deployment/frontend lifecycle.preStop configured"
+else
+    fail "deployment/frontend lifecycle.preStop missing ($fe_prestop)"
+fi
+fe_tsc=$(kubectl get deployment frontend -n apollo-airlines-ui -o jsonpath='{.spec.template.spec.topologySpreadConstraints[0].topologyKey}' 2>/dev/null || echo "")
+if [[ -n "$fe_tsc" ]]; then
+    pass "deployment/frontend topologySpreadConstraints configured"
+else
+    fail "deployment/frontend topologySpreadConstraints missing"
+fi
+
+for app in booking search; do
+    pc=$(kubectl get deployment "$app" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.priorityClassName}' 2>/dev/null || echo "")
+    if [[ "$pc" == "apollo-airlines-app-critical" ]]; then
+        pass "deployment/$app priorityClassName=apollo-airlines-app-critical"
+    else
+        fail "deployment/$app priorityClassName=$pc (expected apollo-airlines-app-critical)"
+    fi
+done
+pc_notif=$(kubectl get deployment notification -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.priorityClassName}' 2>/dev/null || echo "")
+if [[ "$pc_notif" == "apollo-airlines-app-low" ]]; then
+    pass "deployment/notification priorityClassName=apollo-airlines-app-low"
+else
+    fail "deployment/notification priorityClassName=$pc_notif (expected apollo-airlines-app-low)"
+fi
+
+# ---------------------------------------------------------------------------
 # PodDisruptionBudgets (chart applies both; kustomize prod applies both)
 # ---------------------------------------------------------------------------
 step "PodDisruptionBudgets match the selected environment"
@@ -590,6 +647,17 @@ if [[ "$GATEWAY_EXPECTED" == "true" ]]; then
             -d '{"email":"admin@apolloairlines.com","password":"admin123"}' \
             "http://$envoy_ip/api/users/login" 2>/dev/null || echo "")
         if grep -q '"token":"[^"]' <<<"$login"; then pass "login flow through Envoy returned a token"; else fail "login flow through Envoy did not return a token"; fi
+        for host in identity.apollo.local booking.apollo.local frontend.apollo.local; do
+            code=$(curl -k -s -o /dev/null -w "%{http_code}" --resolve "$host:443:$envoy_ip" "https://$host/healthz" 2>/dev/null || echo 000)
+            if [[ "$code" == "200" ]]; then
+                pass "Envoy HTTPS -> $host /healthz -> 200"
+            elif [[ "$host" == "frontend.apollo.local" ]]; then
+                code=$(curl -k -s -o /dev/null -w "%{http_code}" --resolve "$host:443:$envoy_ip" "https://$host/" 2>/dev/null || echo 000)
+                if [[ "$code" == "200" ]]; then pass "Envoy HTTPS -> $host / -> 200"; else fail "Envoy HTTPS -> $host / -> $code"; fi
+            else
+                fail "Envoy HTTPS -> $host /healthz -> $code"
+            fi
+        done
     fi
 fi
 

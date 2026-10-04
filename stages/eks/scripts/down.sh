@@ -68,14 +68,11 @@ terraform apply -destroy -auto-approve -input=false \
   -var "cluster_name=$CLUSTER_NAME" 2>&1 | tail -20 || true
 ok "Envoy Gateway stack uninstalled"
 
-# ---- 3/7 uninstall LBC (Helm release) ----
+# ---- 3/7 wait for NLB removal ----
 
-step "3/7 Uninstall AWS Load Balancer Controller (Helm release)"
-terraform apply -destroy -auto-approve -input=false \
-  -target 'helm_release.aws_load_balancer_controller' \
-  -var "region=$REGION" \
-  -var "cluster_name=$CLUSTER_NAME" 2>&1 | tail -20 || true
-ok "LBC Helm release removed (the NLB may take 30-60s to actually delete)"
+step "3/7 Wait for Envoy Gateway NLB deletion"
+echo "  EnvoyProxy destruction initiates NLB teardown by the AWS Load Balancer Controller (EKS addon)"
+ok "Envoy Gateway LB configuration uninstalled (the NLB may take 30-60s to actually delete)"
 
 # Wait for the NLB to actually disappear. Otherwise the next apply's
 # security group dependencies will block.
@@ -120,7 +117,7 @@ fi
 # ---- 6/7 sweep orphaned EBS volumes ----
 
 step "6/7 Sweep orphaned EBS volumes (released PVs)"
-./scripts/ebs-sweep.sh || true
+./scripts/ebs-sweep.sh "$REGION" "$CLUSTER_NAME" || true
 
 # ---- 7/7 sweep orphaned ENIs ----
 

@@ -22,6 +22,7 @@ kube delete ingressclass traefik --ignore-not-found >/dev/null 2>&1 || true
 kube delete clusterrolebinding traefik --ignore-not-found >/dev/null 2>&1 || true
 kube delete clusterrole traefik --ignore-not-found >/dev/null 2>&1 || true
 kube delete serviceaccount traefik -n kube-system --ignore-not-found >/dev/null 2>&1 || true
+kube delete gatewayclass eg --ignore-not-found >/dev/null 2>&1 || true
 
 # Delete core namespaces
 for ns in apollo-airlines-apps apollo-airlines-ui envoy-gateway-system metallb-system; do

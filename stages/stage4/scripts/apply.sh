@@ -88,6 +88,10 @@ kubectl apply --server-side -f "${K8S_DIR}/gateway/00-envoy-gateway-install.yaml
 kubectl wait --for=condition=Ready pod -l control-plane=envoy-gateway -n envoy-gateway-system --timeout=120s
 kubectl apply -f "${K8S_DIR}/gateway/00a-gatewayclass.yaml"
 kubectl apply -f "${K8S_DIR}/gateway/00b-envoyproxy.yaml"
+if ! kubectl get secret apollo-tls-secret -n apollo-airlines-apps &>/dev/null; then
+    echo "Generating TLS certificate for Envoy Gateway HTTPS listener..."
+    bash "${STAGE_DIR}/../stage2/k8s/substages/03-traefik-ingress-tls/generate-certs.sh"
+fi
 kubectl apply -f "${K8S_DIR}/gateway/01-gateway.yaml"
 kubectl apply -f "${K8S_DIR}/gateway/01a-referencegrant.yaml"
 kubectl apply -f "${K8S_DIR}/gateway/02-httproute-identity.yaml"

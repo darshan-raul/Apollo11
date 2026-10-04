@@ -393,6 +393,36 @@ for sts in identity-db flight-db booking-db redis; do
     if [[ "$grace" == "60" ]]; then pass "statefulset/$sts terminationGracePeriodSeconds=60"; else fail "statefulset/$sts terminationGracePeriodSeconds=$grace (expected 60)"; fi
 done
 
+step "Stage 4 Contract Verification (lifecycle.preStop and topologySpreadConstraints)"
+for dep in identity flight booking search notification; do
+    prestop=$(kubectl get deployment "$dep" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.containers[0].lifecycle.preStop.exec.command}' 2>/dev/null || echo "")
+    if [[ "$prestop" =~ "sleep" ]]; then
+        pass "deployment/$dep lifecycle.preStop configured"
+    else
+        fail "deployment/$dep lifecycle.preStop missing ($prestop)"
+    fi
+
+    tsc=$(kubectl get deployment "$dep" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.topologySpreadConstraints[0].topologyKey}' 2>/dev/null || echo "")
+    if [[ -n "$tsc" ]]; then
+        pass "deployment/$dep topologySpreadConstraints configured"
+    else
+        fail "deployment/$dep topologySpreadConstraints missing"
+    fi
+done
+
+fe_prestop=$(kubectl get deployment frontend -n apollo-airlines-ui -o jsonpath='{.spec.template.spec.containers[0].lifecycle.preStop.exec.command}' 2>/dev/null || echo "")
+if [[ "$fe_prestop" =~ "sleep" ]]; then
+    pass "deployment/frontend lifecycle.preStop configured"
+else
+    fail "deployment/frontend lifecycle.preStop missing ($fe_prestop)"
+fi
+fe_tsc=$(kubectl get deployment frontend -n apollo-airlines-ui -o jsonpath='{.spec.template.spec.topologySpreadConstraints[0].topologyKey}' 2>/dev/null || echo "")
+if [[ -n "$fe_tsc" ]]; then
+    pass "deployment/frontend topologySpreadConstraints configured"
+else
+    fail "deployment/frontend topologySpreadConstraints missing"
+fi
+
 # ---------------------------------------------------------------------------
 # PodDisruptionBudgets (chart applies both; kustomize prod applies both)
 # ---------------------------------------------------------------------------
@@ -594,6 +624,17 @@ if [[ "$GATEWAY_EXPECTED" == "true" ]]; then
             -d '{"email":"admin@apolloairlines.com","password":"admin123"}' \
             "http://$envoy_ip/api/users/login" 2>/dev/null || echo "")
         if grep -q '"token":"[^"]' <<<"$login"; then pass "login flow through Envoy returned a token"; else fail "login flow through Envoy did not return a token"; fi
+        for host in identity.apollo.local booking.apollo.local frontend.apollo.local; do
+            code=$(curl -k -s -o /dev/null -w "%{http_code}" --resolve "$host:443:$envoy_ip" "https://$host/healthz" 2>/dev/null || echo 000)
+            if [[ "$code" == "200" ]]; then
+                pass "Envoy HTTPS -> $host /healthz -> 200"
+            elif [[ "$host" == "frontend.apollo.local" ]]; then
+                code=$(curl -k -s -o /dev/null -w "%{http_code}" --resolve "$host:443:$envoy_ip" "https://$host/" 2>/dev/null || echo 000)
+                if [[ "$code" == "200" ]]; then pass "Envoy HTTPS -> $host / -> 200"; else fail "Envoy HTTPS -> $host / -> $code"; fi
+            else
+                fail "Envoy HTTPS -> $host /healthz -> $code"
+            fi
+        done
     fi
 fi
 

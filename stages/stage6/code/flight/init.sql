@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS airports (
 
 CREATE TABLE IF NOT EXISTS flights (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    flight_number    VARCHAR(20) UNIQUE NOT NULL,
+    flight_number    VARCHAR(20) NOT NULL,
     origin           VARCHAR(5) REFERENCES airports(code),
     destination      VARCHAR(5) REFERENCES airports(code),
     departure_time   TIMESTAMP NOT NULL,
@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS flights (
     available_seats  INT NOT NULL,
     status           VARCHAR(20) DEFAULT 'SCHEDULED',
     created_at       TIMESTAMP DEFAULT NOW(),
-    updated_at       TIMESTAMP DEFAULT NOW()
+    updated_at       TIMESTAMP DEFAULT NOW(),
+    UNIQUE (flight_number, departure_time)
 );
 
 -- Seed airports (deterministic UUIDs)
@@ -44,7 +45,7 @@ INSERT INTO flights (id, flight_number, origin, destination, departure_time, arr
     ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbcc', 'AA202', 'DXB', 'DEL', (CURRENT_DATE + INTERVAL '0 hour' + TIME '22:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '02:30:00')::timestamp, 220, 220, 'SCHEDULED'),
     ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'AA301', 'BOM', 'LHR', (CURRENT_DATE + INTERVAL '0 hour' + TIME '01:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '10:00:00')::timestamp, 300, 300, 'SCHEDULED'),
     ('cccccccc-cccc-cccc-cccc-ccccccccccdd', 'AA401', 'DEL', 'JFK', (CURRENT_DATE + INTERVAL '0 hour' + TIME '02:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '14:00:00')::timestamp, 280, 280, 'SCHEDULED')
-ON CONFLICT (flight_number) DO NOTHING;
+ON CONFLICT (flight_number, departure_time) DO NOTHING;
 
 -- Insert flights for next 30 days (same times, same routes)
 INSERT INTO flights (flight_number, origin, destination, departure_time, arrival_time, total_capacity, available_seats, status)
@@ -66,4 +67,4 @@ FROM (VALUES
     ('AA401', 'DEL', 'JFK', 280)
 ) AS f(flight_number, origin, destination, total_capacity)
 CROSS JOIN generate_series(1, 30) AS n
-ON CONFLICT (flight_number) DO NOTHING;
+ON CONFLICT (flight_number, departure_time) DO NOTHING;

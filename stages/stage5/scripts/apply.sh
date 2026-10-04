@@ -74,10 +74,27 @@ while [[ $# -gt 0 ]]; do
         --tag)         TAG="$2"; TAG_EXPLICIT=true; shift 2 ;;
         --skip-build)  SKIP_BUILD=true; shift ;;
         --release)     RELEASE_NAME="$2"; shift 2 ;;
+        --cluster)     CLUSTER="$2"; shift 2 ;;
         --help)        usage ;;
         *) echo "Unknown option: $1"; usage ;;
     esac
 done
+
+ALLOWED_CONTEXTS=("kind-${CLUSTER}" "kind-${CLUSTER}-dev")
+CURRENT_CTX="$(kubectl config current-context 2>/dev/null || true)"
+ctx_matched=false
+for allowed in "${ALLOWED_CONTEXTS[@]}"; do
+    if [[ "$CURRENT_CTX" == "$allowed" ]]; then
+        ctx_matched=true
+        break
+    fi
+done
+
+if [[ "$ctx_matched" != "true" ]]; then
+    echo "Refusing to run against context '$CURRENT_CTX'."
+    echo "This script only targets one of: ${ALLOWED_CONTEXTS[*]}"
+    exit 1
+fi
 
 # Validate env early so a typo doesn't surface mid-install
 case "$ENV" in

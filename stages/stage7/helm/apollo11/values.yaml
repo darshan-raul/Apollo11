@@ -341,6 +341,9 @@ gateway:
   hostSuffix: apollo.local
   # Frontend host is special — it lives in apollo-airlines-ui ns.
   frontendHost: frontend.apollo.local
+  tls:
+    enabled: true
+    secretName: apollo-tls-secret
   envoy:
     # Toggles whether the Envoy install YAML is bundled in the chart
     # (offline-friendly) or pulled at apply-time. Default bundled.

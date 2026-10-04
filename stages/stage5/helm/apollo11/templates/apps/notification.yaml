@@ -34,12 +34,26 @@ spec:
       labels:
         {{- include "apollo11.podLabels" (dict "root" . "name" $name) | nindent 8 }}
     spec:
+      {{- if $appCfg.priorityClassName }}
+      priorityClassName: {{ $appCfg.priorityClassName }}
+      {{- end }}
       serviceAccountName: {{ $name }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: {{ $name }}
       containers:
         - name: {{ $name }}
           image: "{{ .Values.image.repository }}/{{ $name }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: {{ $appCfg.port }}
               protocol: TCP

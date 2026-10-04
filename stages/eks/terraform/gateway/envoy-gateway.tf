@@ -24,7 +24,7 @@ resource "kubectl_manifest" "envoy_gateway_install" {
   force       = true
 
   depends_on = [
-    helm_release.aws_load_balancer_controller,
+    module.eks,
   ]
 }
 

@@ -138,11 +138,8 @@ Apollo11/
 │   │   ├── README.md         # Top-level stage 2 guide
 │   │   ├── NOTES.md          # Research notes: Envoy Gateway version-sweep results, caveats
 │   │   ├── code/             # shared source (no code changes in stage 2)
-│   │   ├── set1-baseline/                # NodePort (no controller)                  — 25/25 verify
-│   │   ├── set2-ingress/                 # Traefik v3 + Ingress + NodePort 30443     — 26/26 verify
-│   │   ├── set3-traefik-dashboard/       # set 2 + Traefik dashboard via IngressRoute — 27/27 verify
-│   │   ├── set4-metallb-traefik/         # set 2 + Service type=LoadBalancer + MetalLB — 26/26 verify
-│   │   └── set5-envoy-gateway/           # Envoy Gateway v1.5.0 + MetalLB              — 29/29 verify
+│   │   ├── k8s/              # config, infra, jobs, apps, and substages (01-05)
+│   │   └── scripts/          # apply.sh (--substage 1-5), teardown.sh, verify.sh (46–57 checks), build-images.sh
 │   ├── stage3/              # StatefulSets, PVCs, PG entrypoint hook, Headless SVCs
 │   │   ├── README.md
 │   │   ├── code/            # snapshot of stages/stage2/code/  (no code changes)
@@ -152,7 +149,7 @@ Apollo11/
 │   │   ├── README.md
 │   │   ├── code/            # snapshot of stages/stage3/code/  (probes + SIGTERM added)
 │   │   ├── k8s/             # apps/ (probes+resources), pdb/ (NEW), gateway/, metallb/, jobs/, config/
-│   │   └── scripts/         # apply.sh, teardown.sh, verify.sh (130 checks), build-images.sh
+│   │   └── scripts/         # apply.sh, teardown.sh, verify.sh (148 checks), build-images.sh
 │   ├── stage5/              # Helm chart + Kustomize overlays + GitHub Actions + ArgoCD GitOps module
 │   ├── stage6/              # OTEL SDK + real /metrics + Prometheus + Grafana + Tempo + Loki + Alloy
 │   ├── stage7/              # HPA/VPA, Redis cache, practical scheduling lab
@@ -574,7 +571,7 @@ drain needed.
 - `stages/stage4/code/` is a snapshot of `stages/stage3/code/` with
   the above edits
 
-**Verify target:** 130 checks (43 carried baseline + 87 Stage 4 checks):
+**Verify target:** 148 checks (43 carried baseline + 105 Stage 4 checks: probes, QoS, preStop, PriorityClasses, topology spread, PDB Eviction API proof, and placement lab):
 - 18: probes configured on 6 app Deployments (3 probes × 6 deps)
 - 12: probes on 4 sts (liveness + readiness each, NO startupProbe)
 - 10: resources.requests/limits on all 10 workloads
@@ -899,12 +896,12 @@ advertise an uninstalled tool as part of the current learner environment.
 
 | Phase | Status | Details |
 |---|---|---|
-| Launchpad | ✅ Complete | 10 default workloads, non-root/read-only app containers, dependency-aware readiness, Prometheus text endpoints, reversible flagship workflow, 73/73 verify |
+| Launchpad | ✅ Complete | 10 default workloads, non-root/read-only app containers, dependency-aware readiness, Prometheus text endpoints, full 30-day flight schedule (186 rows), reversible flagship workflow, 74/74 verify |
 | Ignition | ✅ Complete | Fresh three-node lifecycle; 14/14 checks cover the evidence ladder, container restart, bare-Pod deletion, and behavioral recovery |
 | Stage 1 | ✅ Complete | 42 resources; 13 tokenless workload identities; 167/167 checks cover Jobs, flagship workflow, Pod replacement, failed rollout, rollback, and clean teardown |
-| Stage 2 | ✅ Complete | 5 manifest sets verified: NodePort 25/25, Traefik Ingress 26/26, Traefik+dashboard 27/27, Traefik+MetalLB 26/26, Envoy Gateway+MetalLB 29/29. Version sweep chose Envoy Gateway v1.5.0. NOTES.md documents the methodology + caveats. |
+| Stage 2 | ✅ Complete | 5-substage progressive access ladder: 01-internal-dns 46/46, 02-nodeport 48/48, 03-traefik-ingress-tls 49/49, 04-metallb 46/46, 05-envoy-gateway 57/57. Envoy Gateway v1.5.0 + MetalLB carries forward. |
 | Stage 3 | ✅ Complete | 4 StatefulSets + PVCs + entrypoint-hook schema + seed jobs, 53/53 verify (Envoy+MetalLB access stack persists for stages 4–11) |
-| Stage 4 | ✅ Complete | Probes (startup/live/ready) on 6 apps, Guaranteed QoS on all 10 pods, PDBs for booking + frontend, graceful SIGTERM on all backends, frontend build-time URLs, 130/130 verify |
+| Stage 4 | ✅ Complete | Probes (startup/live/ready) on 6 apps, Guaranteed QoS on all 10 pods, PDBs for booking + frontend, graceful SIGTERM on all backends, topology spread, PriorityClasses, Eviction API proof, 148/148 verify |
 | Stage 5 | ✅ Complete locally | Helm 153/153, Kustomize 142/142, Argo CD 74/74; all clean lifecycle tests passed. Hosted Actions/GHCR publication awaits the next push/tag. |
 | Stage 6 | ✅ Complete locally | Helm 190/190 and Kustomize dev 180/180; full metrics/traces/logs behavior and clean purges verified. Argo CD's 4-Application layout validates statically; live reconciliation awaits the next explicitly authorized Git revision. |
 | Stage 7 | ✅ Complete locally | Helm/dev 211/211 + practical scale 1→3→1 across 2 workers; Kustomize/dev 200/200; clean purges and zero lab residue. Earlier Helm/staging 211/211 proved live VPA; current renders validate statically. |

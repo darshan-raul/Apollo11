@@ -83,7 +83,13 @@
       "required": ["enabled", "ipPool", "bundleInstall"]
     },
     "imagePullSecrets": { "type": "array" },
-    "priorityClassName": { "type": "string" }
+    "priorityClassName": { "type": "string" },
+    "priorityClasses": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" }
+      }
+    }
   },
   "definitions": {
     "app": {
@@ -93,6 +99,7 @@
         "tier": { "enum": ["default", "flagship", "low", "edge"] },
         "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
         "replicas": { "type": "integer", "minimum": 1 },
+        "priorityClassName": { "type": "string" },
         "dependsOn": { "type": "array", "items": { "type": "string" } }
       }
     }

@@ -90,6 +90,8 @@ if [[ "$PURGE" == "true" ]]; then
     done
 
     # CRDs (cluster-scoped — left behind by helm uninstall sometimes)
+    kubectl delete gatewayclass eg --ignore-not-found >/dev/null 2>&1 || true
+    kubectl delete priorityclass apollo-airlines-app-critical apollo-airlines-app-low --ignore-not-found >/dev/null 2>&1 || true
     for crd in $(kubectl get crd -o name 2>/dev/null | grep -E 'envoyproxy|gateway\.networking|metallb' || true); do
         kubectl delete "$crd" --ignore-not-found 2>&1 | tail -1
     done

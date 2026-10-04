@@ -137,6 +137,10 @@ case "${SUBSTAGE}" in
 
     kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/00a-gatewayclass.yaml"
     kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/00b-envoyproxy.yaml"
+    if ! kube get secret apollo-tls-secret -n apollo-airlines-apps &>/dev/null; then
+      printf 'Generating TLS certificate for Envoy Gateway HTTPS listener...\n'
+      bash "${STAGE_DIR}/k8s/substages/03-traefik-ingress-tls/generate-certs.sh"
+    fi
     kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/01-gateway.yaml"
     kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/01a-referencegrant.yaml"
     kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/02-httproute-identity.yaml"

@@ -11,9 +11,19 @@ spec:
       kind: EnvoyProxy
       name: envoyproxy-lb-config
   listeners:
-    - name: web
+    - name: http
       port: 80
       protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: https
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: apollo-tls-secret
       allowedRoutes:
         namespaces:
           from: All

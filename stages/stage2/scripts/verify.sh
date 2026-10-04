@@ -273,6 +273,22 @@ case "$DETECTED_STACK" in
       else
         fail "Envoy Gateway frontend route failed (HTTP $fe_code)"
       fi
+
+      for host in "identity.apollo.local" "booking.apollo.local"; do
+        https_code=$(curl -k -s -o /dev/null -w "%{http_code}" -H "Host: $host" --connect-timeout 2 "https://${eg_ip}/healthz" 2>/dev/null || echo "000")
+        if [[ "$https_code" == "200" ]]; then
+          pass "Envoy Gateway HTTPS listener (port 443 TLS) to $host returned HTTP $https_code"
+        else
+          fail "Envoy Gateway HTTPS listener to $host failed (HTTP $https_code)"
+        fi
+      done
+
+      fe_https_code=$(curl -k -s -o /dev/null -w "%{http_code}" -H "Host: frontend.apollo.local" --connect-timeout 2 "https://${eg_ip}/" 2>/dev/null || echo "000")
+      if [[ "$fe_https_code" == "200" ]]; then
+        pass "Envoy Gateway HTTPS listener (port 443 TLS) to frontend returned HTTP $fe_https_code"
+      else
+        fail "Envoy Gateway HTTPS listener to frontend failed (HTTP $fe_https_code)"
+      fi
     fi
     ;;
 esac

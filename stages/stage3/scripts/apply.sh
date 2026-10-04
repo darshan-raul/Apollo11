@@ -81,6 +81,10 @@ kube wait --namespace envoy-gateway-system --for=condition=ready pod --selector=
 printf '\n[7/7] Applying GatewayClass, EnvoyProxy, Gateway, ReferenceGrant, and HTTPRoutes\n'
 kube apply -f "${K8S_DIR}/gateway/00a-gatewayclass.yaml"
 kube apply -f "${K8S_DIR}/gateway/00b-envoyproxy.yaml"
+if ! kube get secret apollo-tls-secret -n apollo-airlines-apps &>/dev/null; then
+  printf 'Generating TLS certificate for Envoy Gateway HTTPS listener...\n'
+  bash "${STAGE_DIR}/../stage2/k8s/substages/03-traefik-ingress-tls/generate-certs.sh"
+fi
 kube apply -f "${K8S_DIR}/gateway/01-gateway.yaml"
 kube apply -f "${K8S_DIR}/gateway/01a-referencegrant.yaml"
 kube apply -f "${K8S_DIR}/gateway/02-httproute-identity.yaml"

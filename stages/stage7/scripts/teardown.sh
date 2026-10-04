@@ -124,6 +124,10 @@ if [[ "$PURGE" == "true" ]]; then
         kubectl delete "$crd" --ignore-not-found 2>&1 | tail -1
     done
 
+    # Cluster-scoped resources
+    kubectl delete gatewayclass eg --ignore-not-found >/dev/null 2>&1 || true
+    kubectl delete priorityclass apollo-airlines-app-critical apollo-airlines-app-low --ignore-not-found >/dev/null 2>&1 || true
+
     ok "purge complete"
 fi
 

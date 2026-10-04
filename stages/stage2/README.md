@@ -27,7 +27,7 @@ Endpoints & Slices         30080–30084           Local TLS termination     Por
 |---|---|---|---|
 | **01-internal-dns** | `Service type: ClusterIP` | Virtual internal IPs | CoreDNS FQDN resolution, `Endpoints` vs `EndpointSlice`, selector binding |
 | **02-nodeport** | `Service type: NodePort` | `localhost:30080–30084` | L4 host-to-container forwarding via `kube-proxy`, port target mapping |
-| **03-traefik-ingress-tls** | Traefik v3 IngressController | `*.apollo.local:30088 / 30443` | L7 Host routing, Ingress resources, wildcard TLS termination with Secrets |
+| **03-traefik-ingress-tls** | Traefik v3 IngressController | `*.apollo.local:30080 / 30443` | L7 Host routing, Ingress resources, wildcard TLS termination with Secrets |
 | **04-metallb** | MetalLB L2 + `type: LoadBalancer` | `*.apollo.local` on MetalLB IP | ARP-based external IP allocation in local clusters, elimination of high NodePorts |
 | **05-envoy-gateway** | Envoy Gateway v1.5.0 + MetalLB | `*.apollo.local` on MetalLB IP | Gateway API standard: GatewayClass, Gateway, HTTPRoute, cross-namespace ReferenceGrant |
 

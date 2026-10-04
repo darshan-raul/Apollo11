@@ -1,3 +1,6 @@
+# GENERATED PLAIN-MANIFEST BASE FOR THE STAGE 7 KUSTOMIZE PATH.
+# Source: helm/apollo11, with controller bundles and PDBs disabled.
+# Regenerate deliberately when the verified chart workload contract changes.
 ---
 # Source: apollo11/templates/config/priorityclass.yaml
 apiVersion: scheduling.k8s.io/v1
@@ -263,6 +266,25 @@ stringData:
   JWT_SECRET: "apollo-airlines-dev-secret-change-in-production"
 
 ---
+# Source: apollo11/templates/gateway/gateway.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: apollo-tls-secret
+  namespace: apollo-airlines-apps
+  labels:
+    app.kubernetes.io/name: apollo11
+    app.kubernetes.io/instance: apollo11
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: apollo-airlines
+    hermes: managed
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKVENDQWcyZ0F3SUJBZ0lSQU5STmhlTTJjazNVSk9KbzdFbVM4akl3RFFZSktvWklodmNOQVFFTEJRQXcKR1RFWE1CVUdBMVVFQXd3T0tpNWhjRzlzYkc4dWJHOWpZV3d3SGhjTk1qWXhNREEwTVRjMU56UXpXaGNOTXpZeApNREF4TVRjMU56UXpXakFaTVJjd0ZRWURWUVFEREE0cUxtRndiMnhzYnk1c2IyTmhiRENDQVNJd0RRWUpLb1pJCmh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTGR0RUFZRStmYTNRaDFFMmkzV2Z6S2JWY3RDdnpVaHhJVEEKU2N6Q1plMUd2a0FtUzVFcXVQem0wV1BDY2N3dUUvbjJnMUU0ODZpYXpqRjR2ZmlMb0gycm1POVlrbGZnTTFCYwprYzdXaDFTZjB4TUxPUkRKOFM2TDhMZU5XSlpsTHNyQjZMdEdSNUZQMVU3NVpXS2kvenBjSUJMdVR5QUgySzJkCmVvT2hQc09VT1lta2VNRkhmeUU4bWc3c09XYksxTHU4YlZMbG1tcXJKVjZHV1BSSWFHdkp4OUZtdkJYcU5TSWMKSlg1Vmh0cTJSVVhCQkQzNEp1cVV6SUx2cWkwcVFJSVVKZTRRRnp2dytpL0JSd1RFWERxQjB1elBOZDdadlVmOQo0VFIwWVhXMEsxdlFoNnhPSjc2Wm8zUWg4ZkUzL3RKa01PVlFiV3FIUUFpMmEyRkpvV1VDQXdFQUFhTm9NR1l3CkRnWURWUjBQQVFIL0JBUURBZ1dnTUIwR0ExVWRKUVFXTUJRR0NDc0dBUVVGQndNQkJnZ3JCZ0VGQlFjREFqQU0KQmdOVkhSTUJBZjhFQWpBQU1DY0dBMVVkRVFRZ01CNkNEaW91WVhCdmJHeHZMbXh2WTJGc2dneGhjRzlzYkc4dQpiRzlqWVd3d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFEY0wrUXpEYStiMmtHNWZtalFuZDRnN1l0Y3g4ckUzCllpdnhmNTNGWTdYeUh0T25hd0hKdDlleUxpeStKTTJwU2lCY2N2UVRpMkpMUDllTnhseDRDNDIvM0J0RktCMFQKM0w0Ym9HV0ViUG5XTmVRTm5BbXc2Z09Ubm9XbTNiUEd2QmhvV3E3VGdVQ0w1ZHg3RFJ3bnVoeVl3ZG1EWm92MgpLQjQwVVRhU0pwRitTaTlpdjY3TER1dzgzaUE5SnFZbGtGUmVpVFJ5MDY4dzFnMVl5am1ZajJuc3dhTXBGK1V3CkpGMUxqaG1VZkhhWjVmWndsK21VcDc5S0hNOGI3QWdTLzdEUkpGVWhRdHFFdlBXNkFuYkZISWRUZlZaRWFhZW8KRGFnUHhUS09vMFJhOHYrQ2E2Vlp3OGh1b1BzdThUOTRVb0wvQUZ2alIrNTFnTVZSWDY3d3Y4MD0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb3dJQkFBS0NBUUVBdDIwUUJnVDU5cmRDSFVUYUxkWi9NcHRWeTBLL05TSEVoTUJKek1KbDdVYStRQ1pMCmtTcTQvT2JSWThKeHpDNFQrZmFEVVRqenFKck9NWGk5K0l1Z2ZhdVk3MWlTVitBelVGeVJ6dGFIVkovVEV3czUKRU1ueExvdnd0NDFZbG1VdXlzSG91MFpIa1UvVlR2bGxZcUwvT2x3Z0V1NVBJQWZZcloxNmc2RSt3NVE1aWFSNAp3VWQvSVR5YUR1dzVac3JVdTd4dFV1V2FhcXNsWG9aWTlFaG9hOG5IMFdhOEZlbzFJaHdsZmxXRzJyWkZSY0VFClBmZ202cFRNZ3UrcUxTcEFnaFFsN2hBWE8vRDZMOEZIQk1SY09vSFM3TTgxM3RtOVIvM2hOSFJoZGJRclc5Q0gKckU0bnZwbWpkQ0h4OFRmKzBtUXc1VkJ0YW9kQUNMWnJZVW1oWlFJREFRQUJBb0lCQUZFLzZFY2lVUzh1QWdWQgpDSHdoZFhxUFFET25QMWRqdTg4cDlnYlRYWjc3SlM3NVI2UG9Ec1ZINFJ5VmR4OEFraXk1TzNYeENrMTNOVHJJCnh5MmZlOW51OXZHZWhFU1V0V1kxZXdqcUVrd3o5NldKNVI5QXRLcnZwaE5JY3lNN2NyeXhwRXZBVjlkUVM2YU4KNXBFSXJwSEZXUmZKcEJjR0lyN1U4UDM1b1BtMG4yZ24xSHdLZnFvWXgrWWpQQjlPa1ltUU82OTJoSGo0RXhkbwpwYWNsVmUwczZzUGhSUnVtOXFCWks3RjN3KytuY0NISUhBUFRNTXR6OGQvOUJiUm5raDY5Uy9FKy9WVnppcDJ6CnRwUVFjUU1JaWc2KzhGTno4YWNqRWdkc1BJSmxvQmJPTjYvWHp3SXNiZk83bEY0Ynl5UFhwc0U5bVQwTG1vTlAKR3FhNXYwa0NnWUVBOUNWS1d1T25sWXF0MWgwQ2Y3VU9qZzBjejNKbFV1dVhOL0VOTncweEV2VWc0MFpTaXBQQQpUdnZidmY2QmNBUlBmcnVnRVdNUlkwWStRYmYyUU02b0RhT25yUmxzRlJWdDdUQzIrYzQ0WGdlZ294dEw4ZWM5CnBsbVhXRERiYkV3RXpKalhsK1FITnMreVQrUGNqdGpYazJmbXEvd21FMVorb2ZQb3JiNENLRDhDZ1lFQXdGVUkKUWc3T0wzN2swT1puV2RVeWZTM1hOd1ZsVUNBWklUdFo4T1E1cWRvSlVIbG9COWVHbUtRbFVFaVRwaTJORVRRYwpmUUYyZHVYalUzZG5FQ1lsdVVKdUpEaTBVVVFMeWcyYS9oUUJOMVJTdmNqS2xHeG1LZXFzT2Q5d2Y4aVRMcHZuClpyVWxQMEpMeElKT2hhcVYyVFdGQnZtcnBOcG9DWVJ5NUsvOTdWc0NnWUJyYys0aHlvaDdmS205enM3R3ZqMUYKcitlNk5iTDZwODNLUlVGM3RVcWYrVnNjTEZzdnVvK3RNNVFuTHRoeElMU01KcS93ZHhXMEI3cG0yang3a1hqTgpaL1hvYllQd1U1b3FCb0xCdDAxL3RRT3lSZFZMQm1kUHk2YWNuZ1EweWRCaTYvSVhXN2tCR3JCMEVPbUZ4Vkk4CkFrSzM5eVlhNUxxZk5PWjNjV1VwcVFLQmdRQ0JlZno0TTIxY2pnbE9GSDJvL1J4akp2UUdKMHkvOXd2VDBsZkgKRW0wN1Nmd1JQOW5ueFpEbnUwRWZYZXgvNTVSYTY0RHVLb2pzbS9CQVpWWnRpYkRGbWRINThtNTVjdHlZNWpYYwpLKzF4cVFPV25kQzZ3SXE2VnpBZ09hcExhK1NoY1BVRHNKamxrQ1Rmb25Wb0NLR2VPeWhWdk1odlQxVFFhMmpKClNTMGhsd0tCZ0dSUFdGMjNpZ0VXSUpnaGxmMHV3QUxQbTN2VzRCMHJackJwVnBNVU1pcC9TZXcvaDVmS1pHcW4KYVhqSXoyT3dabml1dVVqQUNqNzJGZC9TRlNxSkNpbFZZWHozVHZKNGxRTzU2S2l2aE9pUnZHTHlqRTFlZ2VnawpUbkVTRityUGVZblp3VTN0Uk0zOVI4YzZFMWhyaXpHZDJEa3ZIeDFwTytzdVI5bTMvWWhBCi0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg==
+
+---
 # Source: apollo11/templates/observability/grafana/deployment.yaml
 apiVersion: v1
 kind: Secret
@@ -331,7 +353,7 @@ metadata:
 data:
   init.sql: |-
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
+    
     CREATE TABLE IF NOT EXISTS users (
         id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         email            VARCHAR(255) UNIQUE NOT NULL,
@@ -384,7 +406,7 @@ metadata:
 data:
   init.sql: |-
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
+    
     CREATE TABLE IF NOT EXISTS airports (
         id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         code      VARCHAR(3) UNIQUE NOT NULL,
@@ -393,7 +415,7 @@ data:
         country   VARCHAR(100) NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
     );
-
+    
     CREATE TABLE IF NOT EXISTS flights (
         id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         flight_number     VARCHAR(10) NOT NULL,
@@ -432,7 +454,7 @@ data:
         ('55555555-5555-5555-1111-111111111111'::uuid, 'LHR', 'Heathrow Airport', 'London', 'UK'),
         ('66666666-6666-6666-1111-111111111111'::uuid, 'JFK', 'John F. Kennedy International', 'New York', 'USA')
     ON CONFLICT (code) DO NOTHING;
-
+    
     INSERT INTO flights (flight_number, origin, destination, departure_time, arrival_time, total_capacity, available_seats, status)
     SELECT
         f.flight_number, f.origin, f.destination,
@@ -465,7 +487,7 @@ metadata:
 data:
   init.sql: |-
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
+    
     CREATE TABLE IF NOT EXISTS bookings (
         id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         booking_reference VARCHAR(20) UNIQUE NOT NULL,
@@ -1516,10 +1538,21 @@ spec:
       serviceAccountName: booking
       priorityClassName: apollo-airlines-app-critical
       terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: booking
       containers:
         - name: booking
           image: "apollo11/booking:latest"
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: 8082
               protocol: TCP
@@ -1615,10 +1648,21 @@ spec:
     spec:
       serviceAccountName: flight
       terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: flight
       containers:
         - name: flight
           image: "apollo11/flight:latest"
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: 8081
               protocol: TCP
@@ -1708,10 +1752,21 @@ spec:
     spec:
       serviceAccountName: identity
       terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: identity
       containers:
         - name: identity
           image: "apollo11/identity:latest"
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: 8080
               protocol: TCP
@@ -1802,10 +1857,21 @@ spec:
       serviceAccountName: notification
       priorityClassName: apollo-airlines-app-low
       terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: notification
       containers:
         - name: notification
           image: "apollo11/notification:latest"
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: 8084
               protocol: TCP
@@ -1914,6 +1980,10 @@ spec:
         - name: search
           image: "apollo11/search:latest"
           imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           ports:
             - containerPort: 8083
               protocol: TCP
@@ -2220,9 +2290,20 @@ spec:
     spec:
       serviceAccountName: frontend
       terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: frontend
       containers:
         - name: frontend
           image: "apollo11/frontend:latest"
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
           # imagePullPolicy stays at the global default (IfNotPresent).
           # The frontend image is loaded into the kind node cache by
           # apply.sh via `kind load docker-image`; the kubelet's
@@ -2859,13 +2940,22 @@ metadata:
 spec:
   gatewayClassName: eg
   listeners:
-    - name: web
+    - name: http
       port: 80
       protocol: HTTP
       allowedRoutes:
         namespaces:
           from: All
-
+    - name: https
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: apollo-tls-secret
+      allowedRoutes:
+        namespaces:
+          from: All
 ---
 # Source: apollo11/templates/gateway/gateway.yaml
 # GatewayClass — referenced by every Gateway. The controller name must

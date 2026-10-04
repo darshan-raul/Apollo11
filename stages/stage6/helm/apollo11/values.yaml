@@ -207,16 +207,19 @@ apps:
     tier: flagship
     port: 8082
     replicas: 2
+    priorityClassName: apollo-airlines-app-critical
     dependsOn: [booking-db, flight, identity, notification]
   search:
     tier: default
     port: 8083
     replicas: 2
+    priorityClassName: apollo-airlines-app-critical
     dependsOn: []
   notification:
     tier: low
     port: 8084
     replicas: 2
+    priorityClassName: apollo-airlines-app-low
     dependsOn: []
 
 frontend:
@@ -305,6 +308,9 @@ gateway:
   hostSuffix: apollo.local
   # Frontend host is special — it lives in apollo-airlines-ui ns.
   frontendHost: frontend.apollo.local
+  tls:
+    enabled: true
+    secretName: apollo-tls-secret
   envoy:
     # Toggles whether the Envoy install YAML is bundled in the chart
     # (offline-friendly) or pulled at apply-time. Default bundled.
@@ -325,8 +331,10 @@ metallb:
 imagePullSecrets: []
 
 # ----------------------------------------------------------------------------
-# Pod priority (reserved for Stage 7+ when we add PriorityClasses)
+# Pod priority & PriorityClasses (carried from Stage 4)
 # ----------------------------------------------------------------------------
+priorityClasses:
+  enabled: true
 priorityClassName: ""
 
 # ----------------------------------------------------------------------------
