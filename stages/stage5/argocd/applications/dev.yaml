@@ -62,6 +62,8 @@ spec:
           value: apollo-airlines-dev-ui
         - name: pdb.enabled
           value: "false"
+        - name: priorityClasses.enabled
+          value: "false"
         - name: gateway.createClass
           value: "false"
         - name: gateway.envoy.bundleInstall

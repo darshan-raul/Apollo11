@@ -57,10 +57,10 @@ config:
   # match the HTTPRoute hostnames below. If you change `gateway.hostSuffix`,
   # the image has to be rebuilt (or `apply.sh` will rebuild it for you).
   viteUrls:
-    identity: "http://identity.apollo.local"
-    flight:   "http://flight.apollo.local"
-    booking:  "http://booking.apollo.local"
-    search:   "http://search.apollo.local"
+    identity: "https://identity.apollo.local"
+    flight:   "https://flight.apollo.local"
+    booking:  "https://booking.apollo.local"
+    search:   "https://search.apollo.local"
 
 secret:
   postgresPassword: "postgres"
@@ -216,6 +216,7 @@ apps:
     priorityClassName: apollo-airlines-app-critical
     dependsOn: [booking-db, flight, identity, notification]
   search:
+    cacheEnabled: true
     tier: default
     port: 8083
     # HPA manages replicas at runtime; this is the floor.
@@ -343,7 +344,7 @@ gateway:
   frontendHost: frontend.apollo.local
   tls:
     enabled: true
-    secretName: apollo-tls-secret
+    secretName: apollo-edge-tls
   envoy:
     # Toggles whether the Envoy install YAML is bundled in the chart
     # (offline-friendly) or pulled at apply-time. Default bundled.
@@ -432,7 +433,7 @@ observability:
   prometheus:
     enabled: true
     image: quay.io/prometheus/prometheus:v3.13.1
-    retention: 7d
+    retention: 30d
     storage: 1Gi
     resources:
       requests: { cpu: 200m, memory: 256Mi }

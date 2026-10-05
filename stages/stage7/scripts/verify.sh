@@ -16,6 +16,9 @@
 #   ./scripts/verify.sh --mode kustomize --env prod
 set -euo pipefail
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context.sh"
+apollo_context_guard
+
 GREEN='\033[0;32m'; RED='\033[0;31m'; CYAN='\033[0;36m'; NC='\033[0m'
 PASS=0; FAIL=0
 pass() { echo -e "${GREEN}[PASS]${NC} $1"; PASS=$((PASS+1)); }
@@ -511,7 +514,7 @@ bundle_urls=$(kubectl exec -n apollo-airlines-ui deployment/frontend -- \
     /usr/share/nginx/html/assets 2>/dev/null || echo "")
 missing_hosts=()
 for host in identity flight booking search; do
-    if ! grep -q "http://${host}.apollo.local" <<<"$bundle_urls"; then missing_hosts+=("$host.apollo.local"); fi
+    if ! grep -q "https://${host}.apollo.local" <<<"$bundle_urls"; then missing_hosts+=("$host.apollo.local"); fi
 done
 if grep -q 'http://localhost:' <<<"$bundle_urls"; then
     fail "frontend bundle contains localhost API URLs"
@@ -727,6 +730,14 @@ if [[ "$STAGE7_EXPECTED" == "true" ]]; then
         metrics=$(kubectl exec -n apollo-airlines-apps "$search_pod" -- wget -qO- http://localhost:8083/metrics 2>/dev/null || echo "")
         grep -q '^# HELP cache_hits_total' <<<"$metrics" && pass "cache_hits_total exposed" || fail "cache_hits_total missing"
         grep -q '^# HELP cache_misses_total' <<<"$metrics" && pass "cache_misses_total exposed" || fail "cache_misses_total missing"
+    fi
+fi
+
+if [[ "$GATEWAY_EXPECTED" == true ]]; then
+    if bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then
+        pass "trusted HTTPS API workflow and hostname rejection"
+    else
+        fail "trusted HTTPS API workflow or hostname rejection failed"
     fi
 fi
 

@@ -35,6 +35,7 @@ description: "Apollo Airlines app-low pods (notification)."
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: identity
   namespace: apollo-airlines-apps
@@ -49,6 +50,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: flight
   namespace: apollo-airlines-apps
@@ -63,6 +65,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: booking
   namespace: apollo-airlines-apps
@@ -77,6 +80,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: search
   namespace: apollo-airlines-apps
@@ -91,6 +95,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: notification
   namespace: apollo-airlines-apps
@@ -105,6 +110,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: identity-db
   namespace: apollo-airlines-apps
@@ -119,6 +125,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: flight-db
   namespace: apollo-airlines-apps
@@ -133,6 +140,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: booking-db
   namespace: apollo-airlines-apps
@@ -147,6 +155,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: redis
   namespace: apollo-airlines-apps
@@ -161,6 +170,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: init-identity-db
   namespace: apollo-airlines-apps
@@ -175,6 +185,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: init-flight-db
   namespace: apollo-airlines-apps
@@ -189,6 +200,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: init-booking-db
   namespace: apollo-airlines-apps
@@ -203,6 +215,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: frontend
   namespace: apollo-airlines-ui
@@ -253,25 +266,6 @@ stringData:
   JWT_SECRET: "apollo-airlines-dev-secret-change-in-production"
 
 ---
-# Source: apollo11/templates/gateway/gateway.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: apollo-tls-secret
-  namespace: apollo-airlines-apps
-  labels:
-    app.kubernetes.io/name: apollo11
-    app.kubernetes.io/instance: apollo11
-    app.kubernetes.io/version: "1.0.0"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: apollo-airlines
-    hermes: managed
-type: kubernetes.io/tls
-data:
-  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKRENDQWd5Z0F3SUJBZ0lRQ1VuZGM0VXgrTFBUREtndEpFbTlUakFOQmdrcWhraUc5dzBCQVFzRkFEQVoKTVJjd0ZRWURWUVFEREE0cUxtRndiMnhzYnk1c2IyTmhiREFlRncweU5qRXdNRFF3TmpJNU5ESmFGdzB6TmpFdwpNREV3TmpJNU5ESmFNQmt4RnpBVkJnTlZCQU1NRGlvdVlYQnZiR3h2TG14dlkyRnNNSUlCSWpBTkJna3Foa2lHCjl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUE4dmFGWVQrMXd0ZkFTTTNZa016ZThmSUcrcjBOblh2UnF2eTIKcks5eFNpeXNvY3pOS2lmSldOdVdtaHlwWGpHSUd1VW11YnI3K09rcWFnRStDS3ZmZFlIdlNqMVZTSW5ValBkRgpyN2p2VkdhWXliZ3BDY0NoSEhVWFNvandIWnREcTZrNWlONUtiVlZ5WkpPR1lBcVpsaG5IdVByUUdpSXgzVEttCjRzVktOdi9UVmpsWGRMb1dJbGpORXR3ck42ZDZocXN1WklXVzV4WW85NFk5Rk53M3AwQjQrVFp1RkdReWI1RnkKWVFEdzBkc01tRmZ3UXI4b3I4UFJMTVVnKzkwSk41dGw3aTJNdS84TE1KMjUvVDI5cEhkMlRHZ2IwTC8xbTAxOQprMGg4K1A3U09YdDE3bW05RllnKzhRbWlBNC9OT29YbVhpc0gvbHF0M1RGVkFBSnFYUUlEQVFBQm8yZ3daakFPCkJnTlZIUThCQWY4RUJBTUNCYUF3SFFZRFZSMGxCQll3RkFZSUt3WUJCUVVIQXdFR0NDc0dBUVVGQndNQ01Bd0cKQTFVZEV3RUIvd1FDTUFBd0p3WURWUjBSQkNBd0hvSU9LaTVoY0c5c2JHOHViRzlqWVd5Q0RHRndiMnhzYnk1cwpiMk5oYkRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQXAzL3k4aTBJckg0REZHVmZiaE9ZWVhpaS9lZFBvNjdMCmxwWjFUVTNscVdqc3VPb1RwS1ZtckdvMnhiZmxGakcvRk5zZXZYajdQQmFiOGVBQ1MvL3RnNEJNWlB1RW1OOTAKSWJNMHlzL3ZndUo4d0R0WTBwMGNJQ0hYSU0xdHBJamdjcndGVnNRS1FvV0NHeDd3ank4d0pOdFh5VEhicU5ZSwpvRkU2ZFlIblVzZmNLVWFGaVNTNzJWZ3JGYm83MDF6ditQbEpiSlZzbkVHVmRTanhFZFZZRXpHYTJpZmw2a3ZlCk5mbENpMHpzRnlKRkxkcEdUNzFqa1VoVWY5VjVTWUZTN3pOR1R5YWJVYUVicnBXaGRId1J0U293OW0yV0ZrYmIKMy9Vam0yN1BlQ3J3YnV5V0hKVGhxVXVwOWVmRjVNSktQRE1DNDlFQzZqaXpyMkQ2VHJybTZ3PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
-  tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb2dJQkFBS0NBUUVBOHZhRllUKzF3dGZBU00zWWtNemU4ZklHK3IwTm5YdlJxdnkycks5eFNpeXNvY3pOCktpZkpXTnVXbWh5cFhqR0lHdVVtdWJyNytPa3FhZ0UrQ0t2ZmRZSHZTajFWU0luVWpQZEZyN2p2VkdhWXliZ3AKQ2NDaEhIVVhTb2p3SFp0RHE2azVpTjVLYlZWeVpKT0dZQXFabGhuSHVQclFHaUl4M1RLbTRzVktOdi9UVmpsWApkTG9XSWxqTkV0d3JONmQ2aHFzdVpJV1c1eFlvOTRZOUZOdzNwMEI0K1RadUZHUXliNUZ5WVFEdzBkc01tRmZ3ClFyOG9yOFBSTE1VZys5MEpONXRsN2kyTXUvOExNSjI1L1QyOXBIZDJUR2diMEwvMW0wMTlrMGg4K1A3U09YdDEKN21tOUZZZys4UW1pQTQvTk9vWG1YaXNIL2xxdDNURlZBQUpxWFFJREFRQUJBb0lCQUcvVGIwaDNYbDB6bUZqcQpCWWVBQkEwdjdHNXpuVlNpckxvYVhxblVoand4bTdOTTVCRkhCckZUUUZubVh6M3Zaa21hdHR3OVo4UUU3WFNrCjVieHYvd1hDckRSclRsbDR0cys2NytRVkpuS2VWaXhpQ3VGbU84RXhVMnNHNUIxOFhRVWhlazI0b21ENE54SjcKcEJtSVIzQ0NwUjVLc29XVXY0YWp6WlFLWWtJMVQ2ZythcG1GY0o1UThDL1pJdzdkTzZPa240TjRnamp0cGpLRAplOWpkMFFmOXNqcWJUbEZiVkg5V1FVSWdoT1ZMa3VYWFNjK0R5VEMxMWVZVEVKUnQySEVuTndoaDNJRDhITENBCklzOEViWlVHTnd0d2p4R3pHREc3SmRjOGpJRHBGZHVicnU2c1NHaXEzV0tRRWlod1dCRWNnVFpMbC9yM1pwQWgKQ0R1WVE3RUNnWUVBK2NUUkpUSzk2eU8raEZkczNJaWExdS8zN254QzFtSkgzbG9sN3FqOEV1WUhvV3lMWnJPSQowUzBndzYxOXR3WFFIWEJNemFkc0xEQlk0MVY1MC9EVzdLR1pDM29CM3pVNVVxL3ZSSnhaZ1o5RFBHRDY3YmpqCktxUlJaV0lmYkFjOEZsZllmbFhPWHZvdC9pMG1ydXhLcE9NQUxpS2R4aXd2eURxUWFoQ1p1ajhDZ1lFQStRWTgKMGliMldEKzhOZXNld2pVK0M3THhSNExCdkhkLzJIc2tnUm8zazY1QmpEZURtNDMrVkpNSzc1c29MNnBMYnV4NwpCNm1SbEhwRUVoa1RvMWV3OXB0Z042QjNBQmpnMUt5UnBJb0NQVHJwUEM0YWJaY2RQbGlmd3ArYktyTEdMRTk2CmV0b2grbTJkTnVpQStHSG1aN1hCcHRQZVZzZHBVRjc1WWVxdm5HTUNnWUEzeUlKaGlYU3JTSjlyVlU5RjdlaVAKS3FjNEIxNnlITjhxUlA0RjBJNEQ5b1lyd2w5Yi82c0Y5TXRGaU1EMEdJTkRuK28zWURZanBHU2wyVmhOUXBQdAo0NldYejVjTmNBaXVkQWEvVHlBYWVDUi9IclhNVkNmQVJWUzhqTzZ4cE9nQm9Yc0R0RXhVSUJJWG02UHhHMnNNCmFucUcwMHBqa1VqV3NtWEFtcGFLNXdLQmdFR3luWlVyNWszOThwK2UraXh1YzRJT29ZMG1PQXFLMUZXK2x6RGcKUTgxWWFiNmVYc0JKUTlINFFTaFpuTTZHZFFROHEzQ29FZHBFTDNVKzNHbDVseHhZZlpmdlk3WEkybmdCVnlNNwpyYitOclQ3TlF2ZXFxSEpzV3ltemhmSkwyL0NRdjFWdCt3emdvbHQ4RjVwdjZhTnUxam8zSnk5cHlLVUZpWEdGCnd2TFZBb0dBUWc4Slc3LzlRZ3c3V052Z0RNNDR4UjlXbHZGNTh0YkYxcU9lNStzRndnOUxoZzBSZng4Q3FRb2oKSjhuamJKb0cwNC9WMStLU3VLUnFhRzVtREJldmpSQTZWRG5HWXlKbjZUZmxmSzh6VEhuWHJDN2wwdEFKL0UxSAp0bnczTlFuaGIrTDAwL0hqVFJyQnFWb2V0T21ycERIL0V5dXNpS0V1MzhiT2VMd1gzbTg9Ci0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg==
-
----
 # Source: apollo11/templates/config/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -306,10 +300,10 @@ metadata:
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
 data:
-  VITE_IDENTITY_URL: "http://identity.apollo.local"
-  VITE_FLIGHT_URL:   "http://flight.apollo.local"
-  VITE_BOOKING_URL:  "http://booking.apollo.local"
-  VITE_SEARCH_URL:   "http://search.apollo.local"
+  VITE_IDENTITY_URL: "https://identity.apollo.local"
+  VITE_FLIGHT_URL:   "https://flight.apollo.local"
+  VITE_BOOKING_URL:  "https://booking.apollo.local"
+  VITE_SEARCH_URL:   "https://search.apollo.local"
 
 ---
 # Source: apollo11/templates/infra/postgres.yaml
@@ -1921,7 +1915,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
-          - name: apollo-tls-secret
+          - name: apollo-edge-tls
       allowedRoutes:
         namespaces:
           from: All

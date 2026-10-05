@@ -4,6 +4,14 @@
 **Audited commit:** Apollo11 `7b693c9` (`main`, clean worktree except this file); apollo11-docs `a5b29c1`.
 **Rules for this document:** it is analysis only. No repo file other than this one was changed, nothing was committed, and **no cluster, container, or cloud resource was created or mutated** to produce it. Read-only `kubectl get`, `git`, `grep`, `ls` only.
 
+## Current disposition
+
+This is the historical pre-fix audit of `7b693c9`, not a current open-issue list.
+The October fix commit and subsequent working-tree corrections supersede some
+findings and decisions. Use `verification-runs/GAP_CLOSURE.md` for disposition,
+current checks, and remaining runtime gates; do not reuse the pinned commands
+below as verification of a newer revision.
+
 ## How to read this file
 
 Every item has an ID and a confidence class. Do not act on an item without checking its class.

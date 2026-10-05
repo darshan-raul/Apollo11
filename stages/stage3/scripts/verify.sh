@@ -262,6 +262,12 @@ curl -s -X DELETE "http://${EG_IP}/api/bookings/${BOOKING_ID}" \
   -H "Host: booking.apollo.local" \
   -H "Authorization: Bearer ${TOKEN}" >/dev/null 2>&1 || true
 
+if KUBE_CONTEXT="${CONTEXT:-${CURRENT_CTX:-}}" bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then
+  pass "trusted HTTPS workflow and hostname rejection"
+else
+  fail "trusted HTTPS workflow or hostname rejection failed"
+fi
+
 step "Verification Summary"
 echo -e "  Total Passed: ${GREEN}${PASS}${NC}"
 echo -e "  Total Failed: ${RED}${FAIL}${NC}"

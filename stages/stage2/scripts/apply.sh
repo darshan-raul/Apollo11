@@ -37,7 +37,9 @@ kube cluster-info >/dev/null
 
 if [[ "${SKIP_BUILD}" == false ]]; then
   cluster_name="${CONTEXT#kind-}"
-  "${SCRIPT_DIR}/build-images.sh" --cluster "${cluster_name}"
+  scheme=http
+  [[ "$SUBSTAGE" == 5 ]] && scheme=https
+  "${SCRIPT_DIR}/build-images.sh" --cluster "${cluster_name}" --scheme "$scheme"
 fi
 
 printf '\n[1/5] Applying namespaces, configuration, secrets, and ServiceAccounts\n'
@@ -99,7 +101,7 @@ case "${SUBSTAGE}" in
     ;;
   3)
     printf 'Applying Substage 3: Traefik Ingress + Local TLS\n'
-    "${STAGE_DIR}/k8s/substages/03-traefik-ingress-tls/generate-certs.sh"
+    "${STAGE_DIR}/k8s/substages/03-traefik-ingress-tls/generate-certs.sh" --context "$CONTEXT"
     kube apply -f "${STAGE_DIR}/k8s/substages/03-traefik-ingress-tls/00-traefik-rbac-and-class.yaml"
     kube apply -f "${STAGE_DIR}/k8s/substages/03-traefik-ingress-tls/01-traefik-daemonset.yaml"
     kube apply -f "${STAGE_DIR}/k8s/substages/03-traefik-ingress-tls/01b-traefik-service.yaml"
@@ -109,7 +111,7 @@ case "${SUBSTAGE}" in
     ;;
   4)
     printf 'Applying Substage 4: MetalLB + Traefik LoadBalancer\n'
-    "${STAGE_DIR}/k8s/substages/03-traefik-ingress-tls/generate-certs.sh"
+    "${STAGE_DIR}/k8s/substages/03-traefik-ingress-tls/generate-certs.sh" --context "$CONTEXT"
     kube apply -f "${STAGE_DIR}/k8s/substages/04-metallb/00-metallb-native.yaml"
     kube wait --namespace metallb-system --for=condition=ready pod --selector=app=metallb,component=controller --timeout=120s
     kube apply -f "${STAGE_DIR}/k8s/substages/04-metallb/01-ip-pool.yaml"
@@ -139,7 +141,7 @@ case "${SUBSTAGE}" in
     kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/00b-envoyproxy.yaml"
     if ! kube get secret apollo-tls-secret -n apollo-airlines-apps &>/dev/null; then
       printf 'Generating TLS certificate for Envoy Gateway HTTPS listener...\n'
-      bash "${STAGE_DIR}/k8s/substages/03-traefik-ingress-tls/generate-certs.sh"
+      bash "${STAGE_DIR}/k8s/substages/03-traefik-ingress-tls/generate-certs.sh" --context "$CONTEXT"
     fi
     kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/01-gateway.yaml"
     kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/01a-referencegrant.yaml"

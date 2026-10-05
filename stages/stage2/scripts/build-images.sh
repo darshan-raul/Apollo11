@@ -15,9 +15,11 @@ usage() {
     exit 1
 }
 
+SCHEME=http
 SKIP_KIND=false
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --scheme) SCHEME="$2"; shift 2 ;;
         --cluster) CLUSTER="$2"; shift 2 ;;
         --skip-kind-load) SKIP_KIND=true; shift ;;
         --help) usage ;;
@@ -25,16 +27,18 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+[[ "$SCHEME" == http || "$SCHEME" == https ]] || { echo "Invalid scheme" >&2; exit 2; }
+
 echo "=== Building Apollo Airlines service images (Stage 2) ==="
 
 for svc in "${SERVICES[@]}"; do
     if [[ "$svc" == "frontend" ]]; then
         echo "Building $svc..."
         docker build -t "${REGISTRY}/${svc}:latest" \
-            --build-arg VITE_IDENTITY_URL=http://identity.apollo.local \
-            --build-arg VITE_FLIGHT_URL=http://flight.apollo.local \
-            --build-arg VITE_BOOKING_URL=http://booking.apollo.local \
-            --build-arg VITE_SEARCH_URL=http://search.apollo.local \
+            --build-arg VITE_IDENTITY_URL=${SCHEME}://identity.apollo.local \
+            --build-arg VITE_FLIGHT_URL=${SCHEME}://flight.apollo.local \
+            --build-arg VITE_BOOKING_URL=${SCHEME}://booking.apollo.local \
+            --build-arg VITE_SEARCH_URL=${SCHEME}://search.apollo.local \
             -f "${STAGE_DIR}/code/${svc}/Dockerfile" \
             "${STAGE_DIR}/code/${svc}/"
     else

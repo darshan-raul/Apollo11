@@ -24,6 +24,8 @@
 #     platform manifest creates them before the Applications reconcile.
 
 set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/context.sh"
+apollo_context_guard
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ARGOCD_DIR="$(dirname "$SCRIPT_DIR")"

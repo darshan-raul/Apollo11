@@ -57,10 +57,10 @@ config:
   # match the HTTPRoute hostnames below. If you change `gateway.hostSuffix`,
   # the image has to be rebuilt (or `apply.sh` will rebuild it for you).
   viteUrls:
-    identity: "http://identity.apollo.local"
-    flight:   "http://flight.apollo.local"
-    booking:  "http://booking.apollo.local"
-    search:   "http://search.apollo.local"
+    identity: "https://identity.apollo.local"
+    flight:   "https://flight.apollo.local"
+    booking:  "https://booking.apollo.local"
+    search:   "https://search.apollo.local"
 
 secret:
   postgresPassword: "postgres"
@@ -310,7 +310,7 @@ gateway:
   frontendHost: frontend.apollo.local
   tls:
     enabled: true
-    secretName: apollo-tls-secret
+    secretName: apollo-edge-tls
   envoy:
     # Toggles whether the Envoy install YAML is bundled in the chart
     # (offline-friendly) or pulled at apply-time. Default bundled.

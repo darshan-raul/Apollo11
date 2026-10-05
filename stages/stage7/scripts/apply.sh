@@ -34,7 +34,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGE_DIR="$(dirname "$SCRIPT_DIR")"
 CHART_DIR="$STAGE_DIR/helm/apollo11"
 CODE_DIR="$STAGE_DIR/code"
-CLUSTER="${CLUSTER:-apollo11}"
+CLUSTER="${CLUSTER:-}"
 REGISTRY="apollo11"
 
 MODE="helm"
@@ -85,21 +85,14 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-ALLOWED_CONTEXTS=("kind-${CLUSTER}" "kind-${CLUSTER}-dev")
-CURRENT_CTX="$(kubectl config current-context 2>/dev/null || true)"
-ctx_matched=false
-for allowed in "${ALLOWED_CONTEXTS[@]}"; do
-    if [[ "$CURRENT_CTX" == "$allowed" ]]; then
-        ctx_matched=true
-        break
-    fi
-done
-
-if [[ "$ctx_matched" != "true" ]]; then
-    echo "Refusing to run against context '$CURRENT_CTX'."
-    echo "This script only targets one of: ${ALLOWED_CONTEXTS[*]}"
-    exit 1
+source "${SCRIPT_DIR}/context.sh"
+apollo_context_guard
+if [[ -n "$CLUSTER" && "kind-$CLUSTER" != "$APOLLO_CONTEXT" ]]; then
+    echo "Cluster $CLUSTER does not match context $APOLLO_CONTEXT" >&2
+    exit 2
 fi
+CLUSTER="${APOLLO_CONTEXT#kind-}"
+
 
 # Validate env early so a typo doesn't surface mid-install
 case "$ENV" in
@@ -349,6 +342,8 @@ if [[ "$MODE" == "helm" ]]; then
     # deliberately owns neither namespace, so create the cross-namespace UI
     # target before Helm submits its resources.
     kubectl create namespace apollo-airlines-ui --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+    kubectl create namespace apollo-airlines-apps --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+    bash "$SCRIPT_DIR/generate-certs.sh" --context "$APOLLO_CONTEXT"
     HELM_CMD=(helm upgrade --install "$RELEASE_NAME" "$CHART_DIR"
         --namespace apollo-airlines-apps
         --create-namespace
@@ -464,6 +459,7 @@ metadata:
     app.kubernetes.io/component: ui
 EOF
     ok "namespaces ready"
+    bash "$SCRIPT_DIR/generate-certs.sh" --context "$APOLLO_CONTEXT"
 
     step "4/8 Kustomize build ($ENV overlay)"
     echo "  Building kustomize overlay at $OVERLAY_DIR..."

@@ -24,6 +24,8 @@
 #     have CreateNamespace=true.
 
 set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/context.sh"
+apollo_context_guard
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ARGOCD_DIR="$(dirname "$SCRIPT_DIR")"
@@ -98,6 +100,10 @@ kubectl wait --for=condition=Established crd/ipaddresspools.metallb.io --timeout
 kubectl rollout status deployment/controller -n metallb-system --timeout=120s >/dev/null || fail "MetalLB controller not ready"
 kubectl apply -f "$PLATFORM_FILE" >/dev/null
 ok "shared platform and isolated namespaces ready"
+for tenant in dev staging prod; do
+  bash "$(dirname "$ARGOCD_DIR")/scripts/generate-certs.sh" --context "$APOLLO_CONTEXT" \
+    --apps-namespace "apollo-airlines-${tenant}-apps" --ui-namespace "apollo-airlines-${tenant}-ui"
+done
 
 step "2/6 Registering AppProject"
 # AppProject must be created BEFORE the Applications, because Applications

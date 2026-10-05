@@ -117,7 +117,10 @@ fi
 # ---- 6/7 sweep orphaned EBS volumes ----
 
 step "6/7 Sweep orphaned EBS volumes (released PVs)"
-./scripts/ebs-sweep.sh "$REGION" "$CLUSTER_NAME" || true
+if ! ./scripts/ebs-sweep.sh "$REGION" "$CLUSTER_NAME" --delete; then
+  echo "EBS cleanup failed; teardown is incomplete. Resolve the error and rerun." >&2
+  exit 1
+fi
 
 # ---- 7/7 sweep orphaned ENIs ----
 

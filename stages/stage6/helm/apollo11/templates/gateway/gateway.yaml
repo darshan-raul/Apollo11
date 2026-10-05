@@ -25,10 +25,10 @@ spec:
   controllerName: {{ .Values.gateway.controllerName }}
 {{- end }}
 ---
-# The Gateway itself. Listens on port 80 (HTTP). allowedRoutes.namespaces
+# The Gateway itself. Listens on HTTP and optional HTTPS. allowedRoutes.namespaces
 # is set to "All" so HTTPRoutes in any namespace can attach — but cross-
-# namespace attachment still requires a ReferenceGrant in the target
-# namespace (see below).
+# namespace backend references require a ReferenceGrant; attachment is
+# authorized by allowedRoutes.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -45,29 +45,16 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
+{{- if .Values.gateway.tls.enabled }}
     - name: https
       port: 443
       protocol: HTTPS
       tls:
         mode: Terminate
         certificateRefs:
-          - name: {{ (index .Values.gateway "tls" "secretName") | default "apollo-tls-secret" }}
+          - name: {{ (index .Values.gateway "tls" "secretName") | default "apollo-edge-tls" }}
       allowedRoutes:
         namespaces:
           from: All
-{{- if and .Values.gateway.tls (index .Values.gateway "tls" "enabled") }}
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {{ (index .Values.gateway "tls" "secretName") | default "apollo-tls-secret" }}
-  namespace: {{ .Values.namespaces.apps }}
-  labels:
-    {{- include "apollo11.labels" . | nindent 4 }}
-type: kubernetes.io/tls
-{{- $cert := genSelfSignedCert "*.apollo.local" nil (list "*.apollo.local" "apollo.local") 3650 }}
-data:
-  tls.crt: {{ $cert.Cert | b64enc }}
-  tls.key: {{ $cert.Key | b64enc }}
 {{- end }}
 {{- end }}

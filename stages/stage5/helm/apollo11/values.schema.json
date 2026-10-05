@@ -2,105 +2,263 @@
   "$schema": "https://json-schema.org/draft-07/schema#",
   "type": "object",
   "required": [
-    "image", "namespaces", "serviceAccounts", "config", "secret",
-    "postgres", "redis", "apps", "frontend", "tiers", "probes",
-    "terminationGracePeriod", "pdb", "gateway", "metallb"
+    "image",
+    "namespaces",
+    "serviceAccounts",
+    "config",
+    "secret",
+    "postgres",
+    "redis",
+    "apps",
+    "frontend",
+    "tiers",
+    "probes",
+    "terminationGracePeriod",
+    "pdb",
+    "gateway",
+    "metallb"
   ],
   "properties": {
     "image": {
       "type": "object",
-      "required": ["repository", "pullPolicy", "tag"],
+      "required": [
+        "repository",
+        "pullPolicy",
+        "tag"
+      ],
       "properties": {
-        "repository": { "type": "string", "minLength": 1 },
-        "pullPolicy": { "enum": ["Always", "IfNotPresent", "Never"] },
-        "tag": { "type": "string", "minLength": 1 }
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pullPolicy": {
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ]
+        },
+        "tag": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "namespaces": {
       "type": "object",
-      "required": ["apps", "ui"],
+      "required": [
+        "apps",
+        "ui"
+      ],
       "properties": {
-        "apps": { "type": "string", "minLength": 1 },
-        "ui": { "type": "string", "minLength": 1 }
+        "apps": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ui": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
-    "serviceAccounts": { "type": "object" },
-    "config": { "type": "object" },
+    "serviceAccounts": {
+      "type": "object"
+    },
+    "config": {
+      "type": "object"
+    },
     "secret": {
       "type": "object",
-      "required": ["postgresPassword", "jwtSecret"]
+      "required": [
+        "postgresPassword",
+        "jwtSecret"
+      ]
     },
     "postgres": {
       "type": "object",
-      "required": ["storage", "resources", "initScripts", "seedSql"]
+      "required": [
+        "storage",
+        "resources",
+        "initScripts",
+        "seedSql"
+      ]
     },
     "redis": {
       "type": "object",
-      "required": ["storage", "resources"]
+      "required": [
+        "storage",
+        "resources"
+      ]
     },
     "apps": {
       "type": "object",
-      "required": ["identity", "flight", "booking", "search", "notification"],
+      "required": [
+        "identity",
+        "flight",
+        "booking",
+        "search",
+        "notification"
+      ],
       "properties": {
-        "identity": { "$ref": "#/definitions/app" },
-        "flight": { "$ref": "#/definitions/app" },
-        "booking": { "$ref": "#/definitions/app" },
-        "search": { "$ref": "#/definitions/app" },
-        "notification": { "$ref": "#/definitions/app" }
+        "identity": {
+          "$ref": "#/definitions/app"
+        },
+        "flight": {
+          "$ref": "#/definitions/app"
+        },
+        "booking": {
+          "$ref": "#/definitions/app"
+        },
+        "search": {
+          "$ref": "#/definitions/app"
+        },
+        "notification": {
+          "$ref": "#/definitions/app"
+        }
       }
     },
     "frontend": {
       "type": "object",
-      "required": ["port", "replicas"],
+      "required": [
+        "port",
+        "replicas"
+      ],
       "properties": {
-        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
-        "replicas": { "type": "integer", "minimum": 1 }
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "replicas": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
-    "tiers": { "type": "object" },
+    "tiers": {
+      "type": "object"
+    },
     "probes": {
       "type": "object",
-      "required": ["startup", "liveness", "readiness"]
+      "required": [
+        "startup",
+        "liveness",
+        "readiness"
+      ]
     },
     "terminationGracePeriod": {
       "type": "object",
-      "required": ["apps", "data"],
+      "required": [
+        "apps",
+        "data"
+      ],
       "properties": {
-        "apps": { "type": "integer", "minimum": 1 },
-        "data": { "type": "integer", "minimum": 1 }
+        "apps": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "data": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "pdb": {
       "type": "object",
-      "required": ["enabled", "booking", "frontend"]
+      "required": [
+        "enabled",
+        "booking",
+        "frontend"
+      ]
     },
     "gateway": {
       "type": "object",
-      "required": ["enabled", "controllerName", "className", "gatewayName", "hostSuffix", "frontendHost", "envoy"]
+      "required": [
+        "enabled",
+        "controllerName",
+        "className",
+        "gatewayName",
+        "hostSuffix",
+        "frontendHost",
+        "envoy"
+      ],
+      "properties": {
+        "tls": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "secretName"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "secretName": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
     },
     "metallb": {
       "type": "object",
-      "required": ["enabled", "ipPool", "bundleInstall"]
+      "required": [
+        "enabled",
+        "ipPool",
+        "bundleInstall"
+      ]
     },
-    "imagePullSecrets": { "type": "array" },
-    "priorityClassName": { "type": "string" },
+    "imagePullSecrets": {
+      "type": "array"
+    },
+    "priorityClassName": {
+      "type": "string"
+    },
     "priorityClasses": {
       "type": "object",
       "properties": {
-        "enabled": { "type": "boolean" }
+        "enabled": {
+          "type": "boolean"
+        }
       }
     }
   },
   "definitions": {
     "app": {
       "type": "object",
-      "required": ["tier", "port", "replicas"],
+      "required": [
+        "tier",
+        "port",
+        "replicas"
+      ],
       "properties": {
-        "tier": { "enum": ["default", "flagship", "low", "edge"] },
-        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
-        "replicas": { "type": "integer", "minimum": 1 },
-        "priorityClassName": { "type": "string" },
-        "dependsOn": { "type": "array", "items": { "type": "string" } }
+        "tier": {
+          "enum": [
+            "default",
+            "flagship",
+            "low",
+            "edge"
+          ]
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "replicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "priorityClassName": {
+          "type": "string"
+        },
+        "dependsOn": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     }
   }

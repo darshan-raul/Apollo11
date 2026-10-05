@@ -80,6 +80,8 @@ spec:
               value: "otel-collector.{{ .Values.observability.namespace }}.svc.cluster.local:4317"
             - name: OTEL_SERVICE_NAME
               value: {{ $name | quote }}
+            - name: CACHE_ENABLED
+              value: {{ .Values.apps.search.cacheEnabled | quote }}
             # Stage 7: Redis cache backing
             - name: REDIS_URL
               value: {{ .Values.redis.url | quote }}

@@ -275,7 +275,7 @@ case "$DETECTED_STACK" in
       fi
 
       for host in "identity.apollo.local" "booking.apollo.local"; do
-        https_code=$(curl -k -s -o /dev/null -w "%{http_code}" -H "Host: $host" --connect-timeout 2 "https://${eg_ip}/healthz" 2>/dev/null || echo "000")
+        https_code=$(curl -k -s -o /dev/null -w "%{http_code}" --resolve "$host:443:$eg_ip" --connect-timeout 2 "https://$host/healthz" 2>/dev/null || echo "000")
         if [[ "$https_code" == "200" ]]; then
           pass "Envoy Gateway HTTPS listener (port 443 TLS) to $host returned HTTP $https_code"
         else
@@ -283,7 +283,7 @@ case "$DETECTED_STACK" in
         fi
       done
 
-      fe_https_code=$(curl -k -s -o /dev/null -w "%{http_code}" -H "Host: frontend.apollo.local" --connect-timeout 2 "https://${eg_ip}/" 2>/dev/null || echo "000")
+      fe_https_code=$(curl -k -s -o /dev/null -w "%{http_code}" --resolve "frontend.apollo.local:443:$eg_ip" --connect-timeout 2 "https://frontend.apollo.local/" 2>/dev/null || echo "000")
       if [[ "$fe_https_code" == "200" ]]; then
         pass "Envoy Gateway HTTPS listener (port 443 TLS) to frontend returned HTTP $fe_https_code"
       else
@@ -331,6 +331,15 @@ if [[ -n "$TOKEN" ]]; then
   else
     fail "Flight inventory query failed: $flights_resp"
   fi
+fi
+
+if [[ "$DETECTED_STACK" == envoy-gateway ]]; then
+if KUBE_CONTEXT="${CONTEXT:-${CURRENT_CTX:-}}" bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then
+  pass "trusted HTTPS workflow and hostname rejection"
+else
+  fail "trusted HTTPS workflow or hostname rejection failed"
+fi
+
 fi
 
 step "Verification Summary"

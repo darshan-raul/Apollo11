@@ -16,9 +16,9 @@ kube() {
 echo "=== Tearing down Stage 4 resources ==="
 
 # Delete Gateway API resources first
-kube delete gateway apollo-gateway -n apollo-airlines-apps --ignore-not-found >/dev/null 2>&1 || true
+kube delete gateway apollo-gateway -n apollo-airlines-apps --ignore-not-found --wait=false >/dev/null 2>&1 || true
 kube delete referencegrant apollo-gateway-grant -n apollo-airlines-ui --ignore-not-found >/dev/null 2>&1 || true
-kube delete gatewayclass eg --ignore-not-found >/dev/null 2>&1 || true
+kube delete gatewayclass eg --ignore-not-found --wait=false >/dev/null 2>&1 || true
 
 # Delete cluster-scoped PriorityClasses
 kube delete priorityclass apollo-airlines-app-critical apollo-airlines-app-low --ignore-not-found >/dev/null 2>&1 || true

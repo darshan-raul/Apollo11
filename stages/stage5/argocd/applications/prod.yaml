@@ -48,6 +48,8 @@ spec:
         # bootstrap time (see terraform/eks or kind setup scripts).
         - name: gateway.envoy.bundleInstall
           value: "false"
+        - name: priorityClasses.enabled
+          value: "false"
         - name: gateway.createClass
           value: "false"
         - name: metallb.enabled

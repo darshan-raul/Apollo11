@@ -7,6 +7,9 @@
 #   ./scripts/teardown.sh --purge               # also delete namespaces + cluster-scoped resources
 set -euo pipefail
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context.sh"
+apollo_context_guard
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGE_DIR="$(dirname "$SCRIPT_DIR")"
 CHART_DIR="$STAGE_DIR/helm/apollo11"
@@ -45,6 +48,9 @@ step() { echo -e "${CYAN}▶ $1${NC}"; }
 ok()   { echo -e "${GREEN}✓ $1${NC}"; }
 fail() { echo -e "${RED}✗ $1${NC}"; exit 1; }
 
+# Controller bundle deletion includes CRDs even without --purge.
+apollo_assert_exclusive_platform
+
 step "Tearing down (mode: $MODE, env: $ENV, purge: $PURGE)"
 
 if [[ "$MODE" == "helm" ]]; then
@@ -76,7 +82,7 @@ if [[ "$PURGE" == "true" ]]; then
     for ns in apollo-airlines-apps apollo-airlines-ui apollo-observability; do
         if kubectl get ns "$ns" >/dev/null 2>&1; then
             echo "  Patching namespace $ns for force-deletion..."
-            kubectl get pods -n "$ns" -o name 2>/dev/null | xargs -r -I{} kubectl delete {} -n "$ns" --force --grace-period=0 2>/dev/null || true
+            kubectl get pods -n "$ns" -o name 2>/dev/null | xargs -r -I{} kubectl --context "$APOLLO_CONTEXT" delete {} -n "$ns" --force --grace-period=0 2>/dev/null || true
         fi
     done
 
@@ -91,7 +97,7 @@ if [[ "$PURGE" == "true" ]]; then
     step "Purging Envoy Gateway + MetalLB"
     for ns in envoy-gateway-system metallb-system; do
         if kubectl get ns "$ns" >/dev/null 2>&1; then
-            timeout 60 kubectl delete ns "$ns" --ignore-not-found 2>&1 | tail -2 || \
+            timeout 60 kubectl --context "$APOLLO_CONTEXT" delete ns "$ns" --ignore-not-found 2>&1 | tail -2 || \
                 kubectl patch ns "$ns" -p '{"spec":{"finalizers":[]}}' --type=merge 2>/dev/null || true
         fi
     done

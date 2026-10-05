@@ -3,6 +3,10 @@ title: "Stage 2: Guidance — Networking & Edge Access"
 description: "Progressive networking ladder from internal ClusterIP and cross-namespace DNS to Envoy Gateway API on MetalLB."
 ---
 
+> **Current verification status:** the context, TLS, and contract fixes in this
+> working tree require a fresh runtime lifecycle. Counts below record earlier
+> revisions; use the current verifier's summary rather than expecting those totals.
+
 # Stage 2: Guidance — Networking & Edge Access
 
 Stage 2 takes the single-namespace baseline from Stage 1 and establishes Kubernetes networking across two production namespaces:
@@ -158,3 +162,21 @@ To cleanly remove all Stage 2 resources while retaining the underlying kind clus
 ## Next Stage: Stage 3 (Mission Data)
 
 In **Stage 3**, we replace ephemeral database Deployments with **StatefulSets**, mount persistent **1Gi PVCs**, introduce **Headless Services** for stable Pod network identities, and bootstrap schemas using PostgreSQL entrypoint hooks (`/docker-entrypoint-initdb.d/`). The **Envoy Gateway + MetalLB** access layer configured in Substage 5 carries over seamlessly as the ingress baseline.
+
+## HTTPS in the canonical Envoy substage
+
+Substage 5 now carries local TLS forward. Its installer generates and preserves
+`apollo-tls-secret` in the application namespaces and builds frontend API URLs
+as HTTPS. Use `--context kind-apollo11` (or the supported dev context) for both
+installation and certificate recovery. The certificate generator accepts
+`--rotate` for deliberate renewal. It binds all Secret changes to the selected
+context, independently of the current kubeconfig context.
+
+Inspect the HTTPS listener's `ResolvedRefs` condition, extract the public
+certificate from the Secret, and use `curl --cacert` with `--resolve` for a DNS
+hostname. `curl -k` proves neither hostname validity nor browser trust. Configure
+local DNS and trust before opening `https://frontend.apollo.local`, then verify
+that login, search, and booking requests use HTTPS in the browser Network panel.
+Delete the apps-namespace TLS Secret to break HTTPS; HTTP remains the separate
+baseline. Re-run the generator with the same context, extract its replacement
+certificate, and prove trusted HTTPS and an application workflow recover.

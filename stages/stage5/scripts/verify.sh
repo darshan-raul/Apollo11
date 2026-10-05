@@ -15,6 +15,9 @@
 #   ./scripts/verify.sh --mode kustomize --env prod
 set -euo pipefail
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context.sh"
+apollo_context_guard
+
 GREEN='\033[0;32m'; RED='\033[0;31m'; CYAN='\033[0;36m'; NC='\033[0m'
 PASS=0; FAIL=0
 pass() { echo -e "${GREEN}[PASS]${NC} $1"; PASS=$((PASS+1)); }
@@ -432,7 +435,7 @@ bundle_urls=$(kubectl exec -n apollo-airlines-ui deployment/frontend -- \
     /usr/share/nginx/html/assets 2>/dev/null || echo "")
 missing_hosts=()
 for host in identity flight booking search; do
-    if ! grep -q "http://${host}.apollo.local" <<<"$bundle_urls"; then missing_hosts+=("$host.apollo.local"); fi
+    if ! grep -q "https://${host}.apollo.local" <<<"$bundle_urls"; then missing_hosts+=("$host.apollo.local"); fi
 done
 if grep -q 'http://localhost:' <<<"$bundle_urls"; then
     fail "frontend bundle contains localhost API URLs"
@@ -544,12 +547,21 @@ if [[ "$GATEWAY_EXPECTED" == "true" ]]; then
         login=$(curl -s -X POST -H 'Host: identity.apollo.local' -H 'Content-Type: application/json' \
             -d '{"email":"admin@apolloairlines.com","password":"admin123"}' \
             "http://$envoy_ip/api/users/login" 2>/dev/null || echo "")
+        if grep -q '"token":"[^" ]' <<<"$login"; then pass "login through Envoy returned a token"; else fail "login through Envoy returned no token"; fi
         for route in identity booking; do
-            code=$(curl -k -s -o /dev/null -w '%{http_code}' -H "Host: $route.apollo.local" "https://$envoy_ip/healthz" 2>/dev/null || echo 000)
+            code=$(curl -k -s -o /dev/null -w '%{http_code}' --resolve "$route.apollo.local:443:$envoy_ip" "https://$route.apollo.local/healthz" 2>/dev/null || echo 000)
             if [[ "$code" == "200" ]]; then pass "Envoy HTTPS -> $route /healthz -> 200"; else fail "Envoy HTTPS -> $route /healthz -> $code"; fi
         done
-        fe_code=$(curl -k -s -o /dev/null -w '%{http_code}' -H 'Host: frontend.apollo.local' "https://$envoy_ip/" 2>/dev/null || echo 000)
+        fe_code=$(curl -k -s -o /dev/null -w '%{http_code}' --resolve "frontend.apollo.local:443:$envoy_ip" "https://frontend.apollo.local/" 2>/dev/null || echo 000)
         if [[ "$fe_code" == "200" ]]; then pass "Envoy HTTPS -> frontend / -> 200"; else fail "Envoy HTTPS -> frontend / -> $fe_code"; fi
+    fi
+fi
+
+if [[ "$GATEWAY_EXPECTED" == true ]]; then
+    if bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then
+        pass "trusted HTTPS API workflow and hostname rejection"
+    else
+        fail "trusted HTTPS API workflow or hostname rejection failed"
     fi
 fi
 

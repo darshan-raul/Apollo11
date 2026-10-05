@@ -31,10 +31,10 @@ for svc in "${SERVICES[@]}"; do
     if [[ "$svc" == "frontend" ]]; then
         echo "Building $svc..."
         docker build -t "${REGISTRY}/${svc}:latest" \
-            --build-arg VITE_IDENTITY_URL=http://identity.apollo.local \
-            --build-arg VITE_FLIGHT_URL=http://flight.apollo.local \
-            --build-arg VITE_BOOKING_URL=http://booking.apollo.local \
-            --build-arg VITE_SEARCH_URL=http://search.apollo.local \
+            --build-arg VITE_IDENTITY_URL=https://identity.apollo.local \
+            --build-arg VITE_FLIGHT_URL=https://flight.apollo.local \
+            --build-arg VITE_BOOKING_URL=https://booking.apollo.local \
+            --build-arg VITE_SEARCH_URL=https://search.apollo.local \
             -f "${STAGE_DIR}/code/${svc}/Dockerfile" \
             "${STAGE_DIR}/code/${svc}/"
     else

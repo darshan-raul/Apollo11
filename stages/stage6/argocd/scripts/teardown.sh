@@ -25,6 +25,8 @@
 #   ./scripts/teardown.sh --purge          # --full + cluster-scoped CRDs
 
 set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/context.sh"
+apollo_context_guard
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ARGOCD_DIR="$(dirname "$SCRIPT_DIR")"
@@ -144,7 +146,7 @@ if [[ "$MODE" == "full" || "$MODE" == "purge" ]]; then
         # Force-delete stuck pods (the argocd-redis pod's PVC can block
         # namespace deletion)
         kubectl get pods -n "$ARGOCD_NS" -o name 2>/dev/null | \
-            xargs -r -I{} kubectl delete {} -n "$ARGOCD_NS" --force --grace-period=0 2>/dev/null || true
+            xargs -r -I{} kubectl --context "$APOLLO_CONTEXT" delete {} -n "$ARGOCD_NS" --force --grace-period=0 2>/dev/null || true
         kubectl delete ns "$ARGOCD_NS" --ignore-not-found --timeout 120s 2>&1 | tail -1
         ok "namespace $ARGOCD_NS deleted"
     else

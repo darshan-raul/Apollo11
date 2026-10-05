@@ -3,6 +3,10 @@ title: "Stage 6 — Mission Ops"
 description: "Instrument Apollo Airlines with Prometheus metrics, OpenTelemetry traces, Grafana dashboards, and Loki logs."
 ---
 
+> **Current verification status:** the context, TLS, and contract fixes in this
+> working tree require a fresh runtime lifecycle. Counts below record earlier
+> revisions; use the current verifier's summary rather than expecting those totals.
+
 # Stage 6: Mission Ops
 
 Stage 6 makes the Stage 5 application observable without changing its public
@@ -178,3 +182,43 @@ stages/stage6/
 ├── scripts/                         # build, apply, verify, trace-test, teardown
 └── argocd/                          # project + four Applications + validation
 ```
+
+## Local HTTPS and certificate ownership
+
+The canonical Gateway offers HTTP on port 80 and HTTPS on port 443. Frontend
+API URLs are now baked as HTTPS; rebuild images before switching snapshots.
+The certificate Secret is generated at installation time and preserved across
+reapplication. It is not part of Helm release ownership or the Kustomize base.
+Use `bash scripts/generate-certs.sh --rotate` to renew it deliberately.
+
+Export `KUBE_CONTEXT=kind-apollo11` (or `kind-apollo11-dev`) before using the
+scripts. For a manual Helm/Kustomize install, create both application namespaces
+and run the certificate generator before submitting Gateway resources. Argo CD
+bootstrap prepares separate certificates in each tenant's namespaces.
+
+Extract the public certificate, then check the actual DNS hostname and trust:
+
+```bash
+kubectl --context "$KUBE_CONTEXT" -n apollo-airlines-apps get secret apollo-edge-tls \
+  -o jsonpath='{.data.tls\.crt}' | base64 -d > /tmp/apollo-ca.crt
+gateway_ip=$(kubectl --context "$KUBE_CONTEXT" -n envoy-gateway-system get service \
+  -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway \
+  -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}')
+curl --cacert /tmp/apollo-ca.crt --resolve "identity.apollo.local:443:$gateway_ip" \
+  https://identity.apollo.local/healthz
+```
+
+Add the Gateway address and all five hostnames to local name resolution before
+using the browser. Trust the local certificate using your browser/OS's local
+certificate facility, then open `https://frontend.apollo.local`. Verify login,
+flight search, and a reversible booking in the browser's Network panel: all API
+requests must use HTTPS. A successful HTML response alone does not establish
+that behavior. `curl -k` skips trust verification and is only a diagnostic.
+
+Delete the apps-namespace certificate to break the HTTPS listener. HTTP should
+remain available. Re-run the certificate generator and require a trusted HTTPS
+response plus login/search recovery. If the old certificate was deleted,
+extract the replacement and update local trust. Teardown removes the runtime
+certificate when it deletes the owned namespace.
+
+Follow [the ordered signal labs](SIGNALS.md) for metrics → dashboards → alerts/SLO → logs → traces → correlation.

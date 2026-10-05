@@ -123,6 +123,9 @@ func getEnv(key, fallback string) string {
 // Later probes or requests retry once per call, so the cache recovers after a
 // startup race or temporary Redis outage without an unbounded retry loop.
 func getRedisClient(parent context.Context, timeout time.Duration) (*redis.Client, error) {
+	if getEnv("CACHE_ENABLED", "true") == "false" {
+		return nil, nil
+	}
 	redisMu.Lock()
 	defer redisMu.Unlock()
 	if redisClient != nil {

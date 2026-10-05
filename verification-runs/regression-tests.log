@@ -1,0 +1,23 @@
+test_all_packaging_environments_preserve_security_and_tls_contract (test_render_contract.RenderTests.test_all_packaging_environments_preserve_security_and_tls_contract) ... ok
+test_cache_baseline_flag_reaches_search_container (test_render_contract.RenderTests.test_cache_baseline_flag_reaches_search_container) ... ok
+test_disabled_tls_has_no_dangling_https_listener (test_render_contract.RenderTests.test_disabled_tls_has_no_dangling_https_listener) ... ok
+test_helm_renders_are_deterministic (test_render_contract.RenderTests.test_helm_renders_are_deterministic) ... ok
+test_signal_progression_and_baseline_exclusion (test_render_contract.RenderTests.test_signal_progression_and_baseline_exclusion) ... ok
+test_certificate_lookup_failure_never_overwrites_secret (test_safety.SafetyTests.test_certificate_lookup_failure_never_overwrites_secret) ... ok
+test_certificate_rejects_cloud_context (test_safety.SafetyTests.test_certificate_rejects_cloud_context) ... ok
+test_certificate_uses_selected_context_and_preserves_existing_secret (test_safety.SafetyTests.test_certificate_uses_selected_context_and_preserves_existing_secret) ... ok
+test_checked_context_is_passed_to_both_tools (test_safety.SafetyTests.test_checked_context_is_passed_to_both_tools) ... ok
+test_ebs_delete_failure_is_nonzero (test_safety.SafetyTests.test_ebs_delete_failure_is_nonzero) ... ok
+test_ebs_preview_requires_both_ownership_filters (test_safety.SafetyTests.test_ebs_preview_requires_both_ownership_filters) ... ok
+test_ebs_query_failure_does_not_report_success (test_safety.SafetyTests.test_ebs_query_failure_does_not_report_success) ... ok
+test_ebs_rechecks_before_deleting (test_safety.SafetyTests.test_ebs_rechecks_before_deleting) ... ok
+test_https_workflow_checks_trust_and_cancels_booking (test_safety.SafetyTests.test_https_workflow_checks_trust_and_cancels_booking) ... ok
+test_https_workflow_rejects_an_empty_search_result (test_safety.SafetyTests.test_https_workflow_rejects_an_empty_search_result) ... ok
+test_normal_teardown_rejects_foreign_monitoring_before_bundle_deletion (test_safety.SafetyTests.test_normal_teardown_rejects_foreign_monitoring_before_bundle_deletion) ... ok
+test_platform_purge_rejects_foreign_route_before_deleting_crds (test_safety.SafetyTests.test_platform_purge_rejects_foreign_route_before_deleting_crds) ... ok
+test_teardown_rejects_cloud_context_before_mutation (test_safety.SafetyTests.test_teardown_rejects_cloud_context_before_mutation) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 9.033s
+
+OK

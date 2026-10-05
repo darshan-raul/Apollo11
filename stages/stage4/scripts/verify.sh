@@ -519,6 +519,12 @@ if kubectl get node "$TARGET_NODE" >/dev/null 2>&1; then
     fi
 fi
 
+if KUBE_CONTEXT="${CONTEXT:-${CURRENT_CTX:-}}" bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then
+  pass "trusted HTTPS workflow and hostname rejection"
+else
+  fail "trusted HTTPS workflow or hostname rejection failed"
+fi
+
 header "Verification Summary"
 echo "  Total Passed: $PASS"
 echo "  Total Failed: $FAIL"

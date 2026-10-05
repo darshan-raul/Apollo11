@@ -2,6 +2,8 @@
 # Verify the Stage 6 Argo CD module: controller health, project boundaries,
 # three isolated tenant Applications, shared observability, and real self-heal.
 set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/context.sh"
+apollo_context_guard
 
 ARGOCD_NS="argocd"
 SKIP_WORKLOADS=false

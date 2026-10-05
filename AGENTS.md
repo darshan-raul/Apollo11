@@ -39,6 +39,14 @@ stage where the effect can be demonstrated.
 
 ---
 
+## Verification status after the October gap fixes
+
+The working tree changes context isolation, certificate ownership, frontend API
+URLs, token automount, booking SLO rules, and the cache benchmark. Earlier live
+pass counts below remain historical evidence only. These changes must pass a
+fresh apply → inspect → break → recover → teardown lifecycle before completion
+claims are updated. See `verification-runs/GAP_CLOSURE.md` for current evidence.
+
 ## Current Implementation Map
 
 | Phase | Name | Focus |
@@ -357,8 +365,9 @@ that explicitly enables the API + dashboard).
   assigns a real IP, no port-forward needed
 - The `EnvoyProxy` resource (`spec.provider.kubernetes.envoyService.type:
   LoadBalancer`) is what wires the Gateway to the auto-created Service
-- Cross-namespace HTTPRoute attachments need `parentRef.namespace` +
-  `ReferenceGrant` in target namespace
+- Cross-namespace HTTPRoute attachments need `parentRef.namespace` and
+  `allowedRoutes` permission. Cross-namespace backend references need a
+  `ReferenceGrant` in the backend namespace
 - 6 HTTPRoutes + 1 ReferenceGrant (frontend in `ui` ns → Gateway in `apps` ns)
 
 **MetalLB v0.14.5 native (sets 4, 5):**
@@ -855,7 +864,7 @@ resource/cost budget, failure exercise, verification, and cleanup.
 | stage1 | (no code change — k8s deployment layer only) |
 | stage2 | (no code change — networking layer only) |
 | stage3 | (no code change — storage layer only) |
-| stage4 | All 5 Go services (flight, booking, search, notification) and the FastAPI identity service expose 3 distinct probe endpoints: `/healthz/startup` (returns 200 once the HTTP server is up), `/healthz/live` (returns 200 unconditionally), `/healthz/ready` (returns 200 if the dependency is reachable, 503 otherwise). Legacy `/healthz` and `/readyz` kept returning 200 for back-compat. Graceful SIGTERM shutdown: Go services use `signal.Notify(quit, syscall.SIGTERM)` + `srv.Shutdown(ctx)` (30s timeout) + `db.Close()`. Python/identity registers a prior SIGTERM handler that logs and lets uvicorn's built-in drain (`timeout_graceful_shutdown=30`). Frontend NGINX config (`nginx.conf`) adds three `location = /healthz/*` blocks returning 200 unconditionally — readiness on the frontend is a kubelet-level check, not a downstream check. |
+| stage4 | All 4 Go services (flight, booking, search, notification) and the FastAPI identity service expose 3 distinct probe endpoints: `/healthz/startup` (returns 200 once the HTTP server is up), `/healthz/live` (returns 200 unconditionally), `/healthz/ready` (returns 200 if the dependency is reachable, 503 otherwise). Legacy `/healthz` and `/readyz` kept returning 200 for back-compat. Graceful SIGTERM shutdown: Go services use `signal.Notify(quit, syscall.SIGTERM)` + `srv.Shutdown(ctx)` (30s timeout) + `db.Close()`. Python/identity registers a prior SIGTERM handler that logs and lets uvicorn's built-in drain (`timeout_graceful_shutdown=30`). Frontend NGINX config (`nginx.conf`) adds three `location = /healthz/*` blocks returning 200 unconditionally — readiness on the frontend is a kubelet-level check, not a downstream check. |
 | stage5 | (no code change — packaging layer only) |
 | stage6 | Full `/metrics` endpoint with all required Prometheus metrics. OTEL SDK integrated (traces + metrics). `trace_id` and `span_id` fields already present in logs since launchpad — now propagated through all calls. |
 | stage7 | Search Service: Redis caching (key: `search:{origin}:{destination}:{date}`, TTL 5min). `X-Cache: HIT/MISS` header on search responses. All Go services: graceful shutdown fully implemented. |

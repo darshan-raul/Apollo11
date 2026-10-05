@@ -39,4 +39,34 @@ spec:
           annotations:
             summary: Booking p95 latency exceeds 500 milliseconds
 
+    # This request-based SLO excludes client errors (4xx). No traffic produces
+    # no ratio; it is not counted as perfect availability. The local 5m/1h
+    # windows demonstrate burn rate, not a claim of 28-day production evidence.
+    - name: apollo.booking-slo
+      interval: 30s
+      rules:
+        - record: apollo:booking_error_ratio:5m
+          expr: |
+            (sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"5.."}[5m])) or vector(0))
+            / sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[5m]))
+            and sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[5m])) > 0
+        - record: apollo:booking_error_ratio:1h
+          expr: |
+            (sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"5.."}[1h])) or vector(0))
+            / sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[1h]))
+            and sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[1h])) > 0
+        - record: apollo:booking_error_ratio:28d
+          expr: |
+            (sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"5.."}[28d])) or vector(0))
+            / sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[28d]))
+            and sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[28d])) > 0
+        - record: apollo:booking_error_budget_remaining:28d
+          expr: 1 - apollo:booking_error_ratio:28d / 0.005
+        - alert: ApolloBookingErrorBudgetBurn
+          expr: apollo:booking_error_ratio:5m > (14.4 * 0.005) and apollo:booking_error_ratio:1h > (14.4 * 0.005)
+          for: 2m
+          labels: { severity: critical, service: booking }
+          annotations:
+            summary: Booking creation consumes the 99.5 percent error budget at more than 14.4 times the allowed rate
+
 {{- end }}

@@ -15,6 +15,9 @@
 #   bash scripts/scaling-lab.sh cleanup
 set -euo pipefail
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context.sh"
+apollo_context_guard
+
 NAMESPACE="apollo-airlines-apps"
 SEARCH_DEPLOYMENT="search"
 HPA_NAME="search-hpa"

@@ -10,6 +10,8 @@
 # --full` so tenant resources are pruned first.
 
 set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../scripts/context.sh"
+apollo_context_guard
 
 ARGOCD_NS="argocd"
 PURGE=false
@@ -59,7 +61,7 @@ step "2/3 Deleting namespace $ARGOCD_NS"
 # argocd-redis pod has a PV that may block. We force-delete stuck pods
 # then the namespace with a timeout.
 kubectl get pods -n "$ARGOCD_NS" -o name 2>/dev/null | \
-    xargs -r -I{} kubectl delete {} -n "$ARGOCD_NS" --force --grace-period=0 2>/dev/null || true
+    xargs -r -I{} kubectl --context "$APOLLO_CONTEXT" delete {} -n "$ARGOCD_NS" --force --grace-period=0 2>/dev/null || true
 kubectl delete ns "$ARGOCD_NS" --ignore-not-found --timeout 120s 2>&1 | tail -3
 ok "namespace $ARGOCD_NS removed"
 

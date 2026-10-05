@@ -1,7 +1,7 @@
 {{- /*
-6 HTTPRoutes — one per service, plus 1 cross-namespace ReferenceGrant so
-the frontend route in apollo-airlines-ui can attach to the Gateway in
-apollo-airlines-apps.
+6 HTTPRoutes and a reference-only example grant for an apps-namespace Route
+using the UI frontend as a cross-namespace backend. The current frontend
+Route attaches across namespaces using parentRef and allowedRoutes.
 
 Each route's hostname is `<service>.<gateway.hostSuffix>`. Defaults to
 `<service>.apollo.local`.
@@ -44,8 +44,8 @@ spec:
 {{- end }}
 ---
 # Frontend route — cross-namespace. The route lives in apollo-airlines-ui
-# but attaches to the Gateway in apollo-airlines-apps. ReferenceGrant in
-# apollo-airlines-ui authorizes this.
+# but attaches to the Gateway in apollo-airlines-apps via allowedRoutes.
+# Its backend is in the Route namespace and needs no ReferenceGrant.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -64,7 +64,7 @@ spec:
         - name: frontend
           port: {{ .Values.frontend.port }}
 ---
-# Cross-namespace ReferenceGrant — required because HTTPRoutes in
+# Reference-only cross-namespace backend grant for an HTTPRoute in
 # apollo-airlines-apps (5 of them, above) need to attach to the frontend
 # Service in apollo-airlines-ui, and HTTPRoutes in apollo-airlines-ui
 # (1 of them, frontend) attach to the Gateway in apollo-airlines-apps.

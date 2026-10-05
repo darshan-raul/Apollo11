@@ -38,6 +38,7 @@ description: "Apollo Airlines app-low pods (notification). Preempted under node 
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: identity
   namespace: apollo-airlines-apps
@@ -52,6 +53,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: flight
   namespace: apollo-airlines-apps
@@ -66,6 +68,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: booking
   namespace: apollo-airlines-apps
@@ -80,6 +83,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: search
   namespace: apollo-airlines-apps
@@ -94,6 +98,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: notification
   namespace: apollo-airlines-apps
@@ -108,6 +113,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: identity-db
   namespace: apollo-airlines-apps
@@ -122,6 +128,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: flight-db
   namespace: apollo-airlines-apps
@@ -136,6 +143,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: booking-db
   namespace: apollo-airlines-apps
@@ -150,6 +158,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: redis
   namespace: apollo-airlines-apps
@@ -164,6 +173,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: init-identity-db
   namespace: apollo-airlines-apps
@@ -178,6 +188,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: init-flight-db
   namespace: apollo-airlines-apps
@@ -192,6 +203,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: init-booking-db
   namespace: apollo-airlines-apps
@@ -206,6 +218,7 @@ metadata:
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: frontend
   namespace: apollo-airlines-ui
@@ -221,6 +234,7 @@ metadata:
 # Source: apollo11/templates/observability/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: false
 metadata:
   name: observability-stack
   namespace: apollo-observability
@@ -264,25 +278,6 @@ metadata:
 type: Opaque
 stringData:
   JWT_SECRET: "apollo-airlines-dev-secret-change-in-production"
-
----
-# Source: apollo11/templates/gateway/gateway.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: apollo-tls-secret
-  namespace: apollo-airlines-apps
-  labels:
-    app.kubernetes.io/name: apollo11
-    app.kubernetes.io/instance: apollo11
-    app.kubernetes.io/version: "1.0.0"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: apollo-airlines
-    hermes: managed
-type: kubernetes.io/tls
-data:
-  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKVENDQWcyZ0F3SUJBZ0lSQU5STmhlTTJjazNVSk9KbzdFbVM4akl3RFFZSktvWklodmNOQVFFTEJRQXcKR1RFWE1CVUdBMVVFQXd3T0tpNWhjRzlzYkc4dWJHOWpZV3d3SGhjTk1qWXhNREEwTVRjMU56UXpXaGNOTXpZeApNREF4TVRjMU56UXpXakFaTVJjd0ZRWURWUVFEREE0cUxtRndiMnhzYnk1c2IyTmhiRENDQVNJd0RRWUpLb1pJCmh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTGR0RUFZRStmYTNRaDFFMmkzV2Z6S2JWY3RDdnpVaHhJVEEKU2N6Q1plMUd2a0FtUzVFcXVQem0wV1BDY2N3dUUvbjJnMUU0ODZpYXpqRjR2ZmlMb0gycm1POVlrbGZnTTFCYwprYzdXaDFTZjB4TUxPUkRKOFM2TDhMZU5XSlpsTHNyQjZMdEdSNUZQMVU3NVpXS2kvenBjSUJMdVR5QUgySzJkCmVvT2hQc09VT1lta2VNRkhmeUU4bWc3c09XYksxTHU4YlZMbG1tcXJKVjZHV1BSSWFHdkp4OUZtdkJYcU5TSWMKSlg1Vmh0cTJSVVhCQkQzNEp1cVV6SUx2cWkwcVFJSVVKZTRRRnp2dytpL0JSd1RFWERxQjB1elBOZDdadlVmOQo0VFIwWVhXMEsxdlFoNnhPSjc2Wm8zUWg4ZkUzL3RKa01PVlFiV3FIUUFpMmEyRkpvV1VDQXdFQUFhTm9NR1l3CkRnWURWUjBQQVFIL0JBUURBZ1dnTUIwR0ExVWRKUVFXTUJRR0NDc0dBUVVGQndNQkJnZ3JCZ0VGQlFjREFqQU0KQmdOVkhSTUJBZjhFQWpBQU1DY0dBMVVkRVFRZ01CNkNEaW91WVhCdmJHeHZMbXh2WTJGc2dneGhjRzlzYkc4dQpiRzlqWVd3d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFEY0wrUXpEYStiMmtHNWZtalFuZDRnN1l0Y3g4ckUzCllpdnhmNTNGWTdYeUh0T25hd0hKdDlleUxpeStKTTJwU2lCY2N2UVRpMkpMUDllTnhseDRDNDIvM0J0RktCMFQKM0w0Ym9HV0ViUG5XTmVRTm5BbXc2Z09Ubm9XbTNiUEd2QmhvV3E3VGdVQ0w1ZHg3RFJ3bnVoeVl3ZG1EWm92MgpLQjQwVVRhU0pwRitTaTlpdjY3TER1dzgzaUE5SnFZbGtGUmVpVFJ5MDY4dzFnMVl5am1ZajJuc3dhTXBGK1V3CkpGMUxqaG1VZkhhWjVmWndsK21VcDc5S0hNOGI3QWdTLzdEUkpGVWhRdHFFdlBXNkFuYkZISWRUZlZaRWFhZW8KRGFnUHhUS09vMFJhOHYrQ2E2Vlp3OGh1b1BzdThUOTRVb0wvQUZ2alIrNTFnTVZSWDY3d3Y4MD0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
-  tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb3dJQkFBS0NBUUVBdDIwUUJnVDU5cmRDSFVUYUxkWi9NcHRWeTBLL05TSEVoTUJKek1KbDdVYStRQ1pMCmtTcTQvT2JSWThKeHpDNFQrZmFEVVRqenFKck9NWGk5K0l1Z2ZhdVk3MWlTVitBelVGeVJ6dGFIVkovVEV3czUKRU1ueExvdnd0NDFZbG1VdXlzSG91MFpIa1UvVlR2bGxZcUwvT2x3Z0V1NVBJQWZZcloxNmc2RSt3NVE1aWFSNAp3VWQvSVR5YUR1dzVac3JVdTd4dFV1V2FhcXNsWG9aWTlFaG9hOG5IMFdhOEZlbzFJaHdsZmxXRzJyWkZSY0VFClBmZ202cFRNZ3UrcUxTcEFnaFFsN2hBWE8vRDZMOEZIQk1SY09vSFM3TTgxM3RtOVIvM2hOSFJoZGJRclc5Q0gKckU0bnZwbWpkQ0h4OFRmKzBtUXc1VkJ0YW9kQUNMWnJZVW1oWlFJREFRQUJBb0lCQUZFLzZFY2lVUzh1QWdWQgpDSHdoZFhxUFFET25QMWRqdTg4cDlnYlRYWjc3SlM3NVI2UG9Ec1ZINFJ5VmR4OEFraXk1TzNYeENrMTNOVHJJCnh5MmZlOW51OXZHZWhFU1V0V1kxZXdqcUVrd3o5NldKNVI5QXRLcnZwaE5JY3lNN2NyeXhwRXZBVjlkUVM2YU4KNXBFSXJwSEZXUmZKcEJjR0lyN1U4UDM1b1BtMG4yZ24xSHdLZnFvWXgrWWpQQjlPa1ltUU82OTJoSGo0RXhkbwpwYWNsVmUwczZzUGhSUnVtOXFCWks3RjN3KytuY0NISUhBUFRNTXR6OGQvOUJiUm5raDY5Uy9FKy9WVnppcDJ6CnRwUVFjUU1JaWc2KzhGTno4YWNqRWdkc1BJSmxvQmJPTjYvWHp3SXNiZk83bEY0Ynl5UFhwc0U5bVQwTG1vTlAKR3FhNXYwa0NnWUVBOUNWS1d1T25sWXF0MWgwQ2Y3VU9qZzBjejNKbFV1dVhOL0VOTncweEV2VWc0MFpTaXBQQQpUdnZidmY2QmNBUlBmcnVnRVdNUlkwWStRYmYyUU02b0RhT25yUmxzRlJWdDdUQzIrYzQ0WGdlZ294dEw4ZWM5CnBsbVhXRERiYkV3RXpKalhsK1FITnMreVQrUGNqdGpYazJmbXEvd21FMVorb2ZQb3JiNENLRDhDZ1lFQXdGVUkKUWc3T0wzN2swT1puV2RVeWZTM1hOd1ZsVUNBWklUdFo4T1E1cWRvSlVIbG9COWVHbUtRbFVFaVRwaTJORVRRYwpmUUYyZHVYalUzZG5FQ1lsdVVKdUpEaTBVVVFMeWcyYS9oUUJOMVJTdmNqS2xHeG1LZXFzT2Q5d2Y4aVRMcHZuClpyVWxQMEpMeElKT2hhcVYyVFdGQnZtcnBOcG9DWVJ5NUsvOTdWc0NnWUJyYys0aHlvaDdmS205enM3R3ZqMUYKcitlNk5iTDZwODNLUlVGM3RVcWYrVnNjTEZzdnVvK3RNNVFuTHRoeElMU01KcS93ZHhXMEI3cG0yang3a1hqTgpaL1hvYllQd1U1b3FCb0xCdDAxL3RRT3lSZFZMQm1kUHk2YWNuZ1EweWRCaTYvSVhXN2tCR3JCMEVPbUZ4Vkk4CkFrSzM5eVlhNUxxZk5PWjNjV1VwcVFLQmdRQ0JlZno0TTIxY2pnbE9GSDJvL1J4akp2UUdKMHkvOXd2VDBsZkgKRW0wN1Nmd1JQOW5ueFpEbnUwRWZYZXgvNTVSYTY0RHVLb2pzbS9CQVpWWnRpYkRGbWRINThtNTVjdHlZNWpYYwpLKzF4cVFPV25kQzZ3SXE2VnpBZ09hcExhK1NoY1BVRHNKamxrQ1Rmb25Wb0NLR2VPeWhWdk1odlQxVFFhMmpKClNTMGhsd0tCZ0dSUFdGMjNpZ0VXSUpnaGxmMHV3QUxQbTN2VzRCMHJackJwVnBNVU1pcC9TZXcvaDVmS1pHcW4KYVhqSXoyT3dabml1dVVqQUNqNzJGZC9TRlNxSkNpbFZZWHozVHZKNGxRTzU2S2l2aE9pUnZHTHlqRTFlZ2VnawpUbkVTRityUGVZblp3VTN0Uk0zOVI4YzZFMWhyaXpHZDJEa3ZIeDFwTytzdVI5bTMvWWhBCi0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg==
 
 ---
 # Source: apollo11/templates/observability/grafana/deployment.yaml
@@ -331,10 +326,10 @@ metadata:
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
 data:
-  VITE_IDENTITY_URL: "http://identity.apollo.local"
-  VITE_FLIGHT_URL:   "http://flight.apollo.local"
-  VITE_BOOKING_URL:  "http://booking.apollo.local"
-  VITE_SEARCH_URL:   "http://search.apollo.local"
+  VITE_IDENTITY_URL: "https://identity.apollo.local"
+  VITE_FLIGHT_URL:   "https://flight.apollo.local"
+  VITE_BOOKING_URL:  "https://booking.apollo.local"
+  VITE_SEARCH_URL:   "https://search.apollo.local"
 
 ---
 # Source: apollo11/templates/infra/postgres.yaml
@@ -2000,6 +1995,8 @@ spec:
             - name: OTEL_SERVICE_NAME
               value: "search"
             # Stage 7: Redis cache backing
+            - name: CACHE_ENABLED
+              value: "true"
             - name: REDIS_URL
               value: "redis://redis:6379"
           startupProbe:
@@ -2952,7 +2949,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
-          - name: apollo-tls-secret
+          - name: apollo-edge-tls
       allowedRoutes:
         namespaces:
           from: All
@@ -3209,7 +3206,7 @@ spec:
   ruleSelector:
     matchLabels:
       app.kubernetes.io/part-of: apollo-airlines
-  retention: "7d"
+  retention: "30d"
   resources:
     limits:
       cpu: 500m
@@ -3269,6 +3266,36 @@ spec:
           labels: { severity: warning, team: platform, service: booking }
           annotations:
             summary: Booking p95 latency exceeds 500 milliseconds
+
+    # This request-based SLO excludes client errors (4xx). No traffic produces
+    # no ratio; it is not counted as perfect availability. The local 5m/1h
+    # windows demonstrate burn rate, not a claim of 28-day production evidence.
+    - name: apollo.booking-slo
+      interval: 30s
+      rules:
+        - record: apollo:booking_error_ratio:5m
+          expr: |
+            (sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"5.."}[5m])) or vector(0))
+            / sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[5m]))
+            and sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[5m])) > 0
+        - record: apollo:booking_error_ratio:1h
+          expr: |
+            (sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"5.."}[1h])) or vector(0))
+            / sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[1h]))
+            and sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[1h])) > 0
+        - record: apollo:booking_error_ratio:28d
+          expr: |
+            (sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"5.."}[28d])) or vector(0))
+            / sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[28d]))
+            and sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[28d])) > 0
+        - record: apollo:booking_error_budget_remaining:28d
+          expr: 1 - apollo:booking_error_ratio:28d / 0.005
+        - alert: ApolloBookingErrorBudgetBurn
+          expr: apollo:booking_error_ratio:5m > (14.4 * 0.005) and apollo:booking_error_ratio:1h > (14.4 * 0.005)
+          for: 2m
+          labels: { severity: critical, service: booking }
+          annotations:
+            summary: Booking creation consumes the 99.5 percent error budget at more than 14.4 times the allowed rate
 
 ---
 # Source: apollo11/templates/gateway/httproutes.yaml

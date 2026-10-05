@@ -59,13 +59,13 @@ Infrastructure (auto-provisioned via Docker Compose init or k8s StatefulSets):
 | Ignition | kind cluster | — |
 | Stage 1 (Liftoff) | K8s: Deployments, ConfigMaps, Secrets, Jobs | All 10 components on cluster |
 | Stage 2 (Guidance/N&C) | K8s: Namespaces, DNS, NetworkPolicies, Ingress | Network isolation, Traefik Ingress |
-| Stage 3 (Mission Data) | K8s: StatefulSets, PVCs, init containers | DBs become StatefulSets |
+| Stage 3 (Mission Data) | K8s: StatefulSets, PVCs, PostgreSQL entrypoint schema bootstrap | DBs become StatefulSets |
 | Stage 4 (Flight Control) | K8s: Probes, resource limits, QoS | Code adds `/healthz/startup`, `/healthz/live`, `/healthz/ready` |
 | Stage 5 (Payload Integration) | K8s: Helm, Kustomize, GitHub Actions | Packaging + CI/CD |
 | Stage 6 (Mission Ops) | K8s: Prometheus, Grafana, OTEL | Code adds `/metrics`, OTEL SDK |
 | Stage 7 (Orbital Maneuvering) | K8s: HPA, VPA, Redis cache | Search gets Redis caching |
-| Stage 8 (Command Module) | K8s: RBAC, SecurityContext, OPA | Code: non-root, service accounts |
-| Stage 9 (Lunar Orbit) | Cloud: Terraform for EKS + GKE | Cloud provisioning |
+| Stage 8 (Command Module) | K8s: RBAC, SecurityContext, Calico, Vault/ESO, Kyverno, Trivy/Cosign | Code: non-root, service accounts |
+| Stage 9 (Lunar Orbit) | Cloud: Terraform for AWS/EKS; GKE portability analysis | Cloud provisioning |
 | Stage 10 (Mission Extensions) | K8s: Linkerd, Argo Rollouts, Chaos Mesh | Service mesh + progressive delivery |
 | Stage 11 (Towards Mars) | K8s: CRDs, Operators, k3s, KEDA | Custom operator, event-driven scaling |
 
@@ -360,7 +360,7 @@ CREATE TABLE airports (
 ```sql
 CREATE TABLE flights (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    flight_number    VARCHAR(20) UNIQUE NOT NULL,
+    flight_number    VARCHAR(20) NOT NULL,
     origin           VARCHAR(5) REFERENCES airports(code),
     destination      VARCHAR(5) REFERENCES airports(code),
     departure_time   TIMESTAMP NOT NULL,
@@ -369,7 +369,8 @@ CREATE TABLE flights (
     available_seats  INT NOT NULL,
     status           VARCHAR(20) DEFAULT 'SCHEDULED',
     created_at       TIMESTAMP DEFAULT NOW(),
-    updated_at       TIMESTAMP DEFAULT NOW()
+    updated_at       TIMESTAMP DEFAULT NOW(),
+    UNIQUE (flight_number, departure_time)
 );
 ```
 
@@ -671,7 +672,7 @@ Search Service is the primary teaching target for:
 ```text
 Horizontal Pod Autoscaler (HPA) — Stage 7
 Canary deployments — Stage 10
-Load testing (k6) — Stage 9
+Load testing (k6) — Stage 7
 Service mesh traffic splitting — Stage 10
 Response caching (Redis) — Stage 7
 ```

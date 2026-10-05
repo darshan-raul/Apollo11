@@ -1,0 +1,632 @@
+diff --git a/docs/ignition.md b/docs/ignition.md
+index 89732d5..19156b0 100644
+--- a/docs/ignition.md
++++ b/docs/ignition.md
+@@ -8,7 +8,7 @@ sidebar_label: "Ignition (First Cluster)"
+ 
+ :::info[Page type · optional lab]
+ Run this after the Ignition chapters against Apollo11 commit
+-`7b693c9bae0a789dc9db8e0628c478fd0dd53e88`. Start in a clean lab clone and verify your context before applying anything.
++`143cac8bb7e611db25f87582a178b44ae2d2fb1e` plus the companion gap-fix patch (see [setup](./labs/setup#revision-and-verification-boundary)). Start in a clean lab clone and verify your context before applying anything.
+ :::
+ 
+ :::note[Take the controls · Ignition lab]
+diff --git a/docs/labs/setup.md b/docs/labs/setup.md
+index c9581c8..72ef8c2 100644
+--- a/docs/labs/setup.md
++++ b/docs/labs/setup.md
+@@ -39,23 +39,25 @@ daemon connection error. If a tool is missing, install it from its official
+ documentation and repeat that check. Windows learners should run the labs
+ consistently inside WSL2 rather than mixing Windows and Linux paths.
+ 
+-## Clone the tested lab revision
++## Prepare the gap-fix candidate
+ 
+-These docs are paired with Apollo11 commit
+-`7b693c9bae0a789dc9db8e0628c478fd0dd53e88`. Use a dedicated clone so checking
+-out the tested revision cannot overwrite unrelated work:
++The gap-fix candidate starts from Apollo11 commit
++`143cac8bb7e611db25f87582a178b44ae2d2fb1e`. Use a dedicated clone so checking
++out the base revision keeps the experiment separate from unrelated work:
+ 
+ ```bash
+ git clone https://github.com/darshan-raul/Apollo11.git
+ cd Apollo11
+-git checkout 7b693c9bae0a789dc9db8e0628c478fd0dd53e88
++git checkout 143cac8bb7e611db25f87582a178b44ae2d2fb1e
++# Apply the companion gap-fix patch supplied with the review report.
++git apply /path/to/apollo11-gap-fixes.patch
+ git status --short
+ git rev-parse HEAD
+ ```
+ 
+-`git status --short` should print nothing and `git rev-parse HEAD` should print
+-the commit above. A detached `HEAD` message is expected: this clone is a stable
+-lab workspace, not a development branch. If you intentionally use another
++`git rev-parse HEAD` should print the base commit above. After applying the patch,
++`git status --short` should show its modified and added files; an empty result
++would mean the patch was not applied. A detached `HEAD` message is expected. If you intentionally use another
+ revision, record its hash with your results and expect paths, namespaces, and
+ output to differ.
+ 
+@@ -109,7 +111,7 @@ commands from different snapshots.
+ 
+ Check these in order before changing the cluster:
+ 
+-1. `git rev-parse HEAD` — are you on the tested Apollo11 revision?
++1. `git rev-parse HEAD` — are you on the documented base revision with the companion patch applied?
+ 2. `pwd` — are you in the repository and stage directory named by the lab?
+ 3. `kubectl config current-context` — are you on the disposable kind cluster?
+ 4. `kubectl get namespaces` — does the stage's namespace exist?
+@@ -120,3 +122,19 @@ means the client has the wrong address or the listener is not ready. `Pending`
+ and timeouts require events and conditions, not repeated blind apply commands.
+ Use the [Troubleshooting Bible](../troubleshooting) when these checks do not
+ explain the failure.
++
++## Revision and verification boundary
++
++The October gap-fix candidate is the base revision above **plus the companion
++patch**, not the base commit alone. The patch changes certificate ownership,
++frontend API schemes, ServiceAccount token automount, SLO rules, and the cache
++baseline. Rebuild images after applying it. Confirm your working tree with
++`git status --short` and save `git diff --stat` with your lab results.
++
++The candidate has static and isolated test evidence; a clean cluster lifecycle
++has not yet been reproduced in the review environment. Do not describe it as a
++new tested release or replace historical pass counts with invented totals. If
++you do not have the companion patch, use the earlier lab instructions for the
++historical snapshot; the new benchmark and signal progression are not supported
++by that snapshot. A future published release should replace this patch-based
++setup with one immutable, lifecycle-verified commit.
+diff --git a/docs/launchpad.md b/docs/launchpad.md
+index 25587ba..ca51666 100644
+--- a/docs/launchpad.md
++++ b/docs/launchpad.md
+@@ -8,7 +8,7 @@ sidebar_label: "Launchpad (Docker Compose)"
+ 
+ :::info[Page type · optional lab]
+ Run this only after the four Launchpad chapters. It expects Apollo11 commit
+-`7b693c9bae0a789dc9db8e0628c478fd0dd53e88`; verify it in [lab setup](./labs/setup).
++`143cac8bb7e611db25f87582a178b44ae2d2fb1e` plus the companion gap-fix patch (see [setup](./labs/setup#revision-and-verification-boundary)); verify it in [lab setup](./labs/setup).
+ :::
+ 
+ :::note[Take the controls · Launchpad lab]
+diff --git a/docs/learn/observability/discovery-and-collection.md b/docs/learn/observability/discovery-and-collection.md
+index 81450b7..6926967 100644
+--- a/docs/learn/observability/discovery-and-collection.md
++++ b/docs/learn/observability/discovery-and-collection.md
+@@ -19,8 +19,8 @@ Investigate systematically across the four links in the collection chain.
+ flowchart LR
+   App["booking container\nExposes /metrics on :8082\nGo prometheus/client"] -->|HTTP scrape| Prom["Prometheus\n(scrapes every 30s)"]
+   SM["ServiceMonitor\nselects: app=booking\npath: /metrics\nport: http"] -->|configures| Prom
+-  Prom -->|stores samples| TSDB["Prometheus TSDB\nbooking_requests_total{...}"]
+-  TSDB -->|query| Grafana["Grafana dashboard\nbooking_requests_total"]
++  Prom -->|stores samples| TSDB["Prometheus TSDB\nhttp_requests_total{...}"]
++  TSDB -->|query| Grafana["Grafana dashboard\nhttp_requests_total"]
+ ~~~
+ 
+ *Diagram OB-02 — four sequential links: app exposes HTTP endpoint, ServiceMonitor targets service, Prometheus scrapes TSDB, Grafana queries.*
+@@ -41,7 +41,7 @@ metadata:
+   name: booking
+   namespace: apollo-observability
+   labels:
+-    release: prometheus   # Must match Prometheus Operator's serviceMonitorSelector
++    app.kubernetes.io/part-of: apollo-airlines # Matches Apollo Prometheus selector
+ spec:
+   selector:
+     matchLabels:
+@@ -56,7 +56,7 @@ spec:
+ ~~~
+ 
+ ### The two most frequent configuration errors:
+-- **Missing release label**: Omitting `release: prometheus` means the Prometheus Operator controller ignores the `ServiceMonitor` completely.
++- **Mismatched selection labels**: Apollo's Prometheus resource selects ServiceMonitors with `app.kubernetes.io/part-of: apollo-airlines`. A `release` label is not required by this selector. Inspect the actual Prometheus selector before copying a convention from another chart.
+ - **Unmatched port name**: The `endpoints[].port` must reference the textual `name:` of the Service port (`http`), not an unmapped number.
+ 
+ ---
+@@ -65,16 +65,21 @@ spec:
+ 
+ Diagnose missing metrics from the inside out:
+ 
+-- **1. Application endpoint**: Verify raw metrics output inside the Pod:
++- **1. Application endpoint**: The Booking image does not include curl. In a dedicated terminal, forward its Service:
+   ```bash
+-  kubectl exec -n apollo-airlines-apps deploy/booking -- curl -s http://localhost:8082/metrics | grep booking_requests_total
++  kubectl --context kind-apollo11 -n apollo-airlines-apps port-forward service/booking 18082:8082
+   ```
++  In another terminal, inspect raw metrics:
++  ```bash
++  curl -fsS http://localhost:18082/metrics | grep http_requests_total
++  ```
++  Stop the port-forward after inspection. This proves endpoint exposure; the next steps establish discovery and collection.
+ - **2. ServiceMonitor selector**: Confirm the ServiceMonitor matches the Service:
+   ```bash
+   kubectl describe servicemonitor booking -n apollo-observability
+   ```
+ - **3. Prometheus Target status**: Open Prometheus UI (`kubectl port-forward -n apollo-observability svc/prometheus 9090:9090`) and check **Status → Targets** for scrape errors.
+-- **4. Scrape error metrics**: Check if Prometheus is logging failures:
++- **4. Scrape health metric**: An `up` value of zero records a failed scrape; it is a metric, not a log query:
+   ```promql
+   up{job="booking"} == 0
+   ```
+diff --git a/docs/learn/observability/queries-alerts-and-objectives.md b/docs/learn/observability/queries-alerts-and-objectives.md
+index bb88a5a..9066467 100644
+--- a/docs/learn/observability/queries-alerts-and-objectives.md
++++ b/docs/learn/observability/queries-alerts-and-objectives.md
+@@ -15,17 +15,17 @@ Storing time-series samples does not guarantee operational awareness. Operators
+ 
+ - **Rate calculations (handling counter resets)**:
+   ```promql
+-  rate(booking_requests_total{status="200"}[5m])
++  rate(http_requests_total{service="booking",status="200"}[5m])
+   ```
+ - **Error percentage ratio**:
+   ```promql
+-  sum(rate(booking_requests_total{status=~"5.."}[5m]))
++  sum(rate(http_requests_total{service="booking",status=~"5.."}[5m]))
+   /
+-  sum(rate(booking_requests_total[5m])) * 100
++  sum(rate(http_requests_total{service="booking"}[5m])) * 100
+   ```
+-- **99th percentile latency**:
++- **99th percentile latency (milliseconds)**:
+   ```promql
+-  histogram_quantile(0.99, sum by(le) (rate(booking_request_duration_seconds_bucket[5m])))
++  histogram_quantile(0.99, sum by(le) (rate(http_request_duration_ms_bucket{service="booking"}[5m])))
+   ```
+ 
+ ---
+@@ -40,9 +40,9 @@ groups:
+     rules:
+       - alert: BookingErrorRateHigh
+         expr: |
+-          sum(rate(booking_requests_total{status=~"5.."}[5m]))
++          sum(rate(http_requests_total{service="booking",status=~"5.."}[5m]))
+           /
+-          sum(rate(booking_requests_total[5m])) > 0.05
++          sum(rate(http_requests_total{service="booking"}[5m])) > 0.05
+         for: 2m
+         labels:
+           severity: warning
+@@ -61,7 +61,7 @@ groups:
+ ~~~mermaid
+ flowchart LR
+   SLI["SLI: good_requests / total_requests\n(over 28 days)"] -->|compared against| SLO["SLO: 99.5%\n(target)"]
+-  SLO -->|remaining| Budget["Error budget:\n0.5% = ~216 hours/month"]
++  SLO -->|remaining| Budget["Error budget:\n0.5% of eligible requests"]
+   Budget -->|consumed by| Incidents["Failed requests,\ndeployments,\nmaintenance"]
+   Budget -->|protects| Velocity["Engineering velocity\n(if budget is healthy,\ntry risky changes)"]
+ ~~~
+@@ -69,11 +69,11 @@ flowchart LR
+ *Diagram OB-05 — error budgets balance deployment velocity against system reliability.*
+ 
+ - **Service Level Indicator (SLI)**: A quantifiable metric measuring service performance:
+-  - *Example*: Percentage of booking requests returning HTTP 2xx in under 500ms over a 28-day rolling window.
++  - *Example*: Percentage of eligible POST `/api/bookings` requests returning HTTP 2xx over the observed window, with a 28-day objective. Eligible requests return 2xx or 5xx; client validation and authentication errors are excluded.
+ - **Service Level Objective (SLO)**: The agreed target reliability goal:
+   - *Example*: 99.5% success rate.
+ - **Error Budget**: The permitted margin of failure (`100% - SLO`):
+-  - *Example*: 0.5% failure allowance. If depleted, feature releases pause in favor of reliability engineering.
++  - *Example*: 0.5% of eligible requests may fail. A time-based budget would allow 3.6 hours in a 30-day month, but that is a different SLI. If the request budget is depleted, investigate reliability before accepting further rollout risk.
+ 
+ ---
+ 
+@@ -87,3 +87,45 @@ flowchart LR
+   ```bash
+   kubectl get pods -n apollo-observability -l app=alertmanager
+   ```
++
++## Build, inspect, break, and recover the booking objective
++
++This exercise requires the updated Stage 6 source and image from the companion
++patch. Install the baseline, then progress to the alert/SLO substage:
++
++```bash
++cd stages/stage6
++bash scripts/apply.sh --without-observability
++bash scripts/signals-lab.sh apply 1 helm
++bash scripts/signals-lab.sh apply 2 helm
++bash scripts/signals-lab.sh apply 3 helm
++```
++
++In another terminal, forward Prometheus:
++
++```bash
++kubectl --context kind-apollo11 -n apollo-observability port-forward service/prometheus 19090:9090
++```
++
++The `apollo-services` PrometheusRule records
++`apollo:booking_error_ratio:5m`, `apollo:booking_error_ratio:1h`, and
++`apollo:booking_error_ratio:28d`. Query the first recording:
++
++```bash
++curl -fsSG --data-urlencode 'query=apollo:booking_error_ratio:5m'   http://localhost:19090/api/v1/query
++```
++
++Run `bash scripts/slo-lab.sh`. It proves a successful booking, cancels it,
++preserves Flight's replica count, generates 502 booking attempts during a
++bounded outage, restores Flight, and proves another booking and cancellation.
++It restores Flight on exit if interrupted. Inspect the API error bodies,
++recorded error ratio, budget remaining, and pending/firing alert state.
++
++No traffic produces no availability ratio; it must not be interpreted as
++perfect service. A 150-second experiment demonstrates short-window burn and
++recovery. It cannot prove a 28-day production objective, even though retention
++is configured for 30 days. The remaining budget may stay negative after the API
++recovers because past failures remain in the observation window.
++
++Explain which requests enter the denominator, why a healthy Pod can coexist
++with failed bookings, and why latency and availability are separate objectives.
+diff --git a/docs/learn/observability/signals-and-metrics.md b/docs/learn/observability/signals-and-metrics.md
+index 3b2bd75..20fe3da 100644
+--- a/docs/learn/observability/signals-and-metrics.md
++++ b/docs/learn/observability/signals-and-metrics.md
+@@ -17,7 +17,7 @@ Observability requires pairing the right signal with the right operational quest
+ 
+ ~~~mermaid
+ flowchart LR
+-  Passenger["Passenger: 'My booking was slow'"] --> Metric["Metric\nIs this widespread?\nbooking_request_duration_seconds\np99 spike at 14:30"]
++  Passenger["Passenger: 'My booking was slow'"] --> Metric["Metric\nIs this widespread?\nhttp_request_duration_ms\np99 spike at 14:30"]
+   Metric --> Trace["Trace\nWhere did time go?\nflight span: 340ms"]
+   Trace --> Log["Log\nWhat happened in flight?\nERROR: db connect timeout 14:31:55"]
+   Log --> Root["Root cause:\nflight DB connection pool exhausted"]
+@@ -35,12 +35,12 @@ flowchart LR
+ 
+ ## Counters vs. Histograms
+ 
+-- **Counters (`booking_requests_total`)**:
++- **Counters (`http_requests_total`)**:
+   - Monotonically increasing values starting from `0`.
+   - Resets to `0` when container restarts.
+-  - Query as rates: `rate(booking_requests_total[5m])` (requests per second).
+-- **Histograms (`booking_request_duration_seconds`)**:
+-  - Samples durations into configurable buckets (`le="0.05"`, `le="0.5"`, `le="+Inf"`).
++  - Query as rates: `rate(http_requests_total{service="booking"}[5m])` (requests per second).
++- **Histograms (`http_request_duration_ms`)**:
++  - Samples durations in milliseconds into configurable buckets (`le="50"`, `le="500"`, `le="+Inf"`).
+   - Enables percentile calculations: `histogram_quantile(0.99, ...)` (p99 tail latency).
+ 
+ ---
+@@ -55,15 +55,15 @@ flowchart LR
+ 
+ ## Evidence and limits
+ 
+-- **1. Target scrape health**: Ensure Prometheus is scraping metrics:
++- **1. Discovery configuration**: Inspect ServiceMonitors, then confirm actual targets in the Prometheus UI:
+   ```bash
+   kubectl get servicemonitor -n apollo-observability
+   ```
+ - **2. Query live rates**: Test PromQL expressions via curl or Prometheus UI:
+-  ```bash
+-  rate(booking_requests_total{status="200"}[5m])
++  ```promql
++  rate(http_requests_total{service="booking",status="200"}[5m])
+   ```
+ - **3. Check percentile latencies**: Inspect p99 latency distributions:
+-  ```bash
+-  histogram_quantile(0.99, sum by(le) (rate(booking_request_duration_seconds_bucket[5m])))
++  ```promql
++  histogram_quantile(0.99, sum by(le) (rate(http_request_duration_ms_bucket{service="booking"}[5m])))
+   ```
+diff --git a/docs/learn/scaling/measurement-baseline.md b/docs/learn/scaling/measurement-baseline.md
+index e655cba..3eb2c7a 100644
+--- a/docs/learn/scaling/measurement-baseline.md
++++ b/docs/learn/scaling/measurement-baseline.md
+@@ -47,17 +47,65 @@ Testing with `curl -o /dev/null -s -w '%{time_total}'` tests only a single happy
+ 
+ ## Repeatable load testing with k6
+ 
+-Execute a scripted benchmark and export summary metrics:
++This lab requires the companion patch and a freshly built Stage 7 Search image.
++The patched script and cache switch are not available in the historical pinned
++snapshot. Run from the Apollo11 repository root and first verify:
+ 
+ ```bash
+-# 1. Capture un-optimized baseline
+-k6 run stages/stage7/k6/search.js --summary-export baseline-summary.json
++test -f stages/stage7/k6/search.js
++grep -n CACHE_ENABLED stages/stage7/code/search/main.go
++```
++
++Follow `stages/stage7/k6/README.md` for the exact experiment. It saves the HPA,
++replica count, and cache setting, pauses autoscaling, then compares explicit
++`CACHE_ENABLED=false` and `CACHE_ENABLED=true` runs at one replica. Exit recovery
++restores the saved state. Keep a dedicated port-forward terminal:
++
++```bash
++kubectl --context kind-apollo11 -n apollo-airlines-apps port-forward service/search 18083:8083
++```
+ 
+-# 2. Introduce optimization (e.g. Redis caching)
++After the guide disables caching and waits for the rollout:
+ 
+-# 3. Capture post-optimization benchmark
+-k6 run stages/stage7/k6/search.js --summary-export optimized-summary.json
++```bash
++BASE_URL=http://localhost:18083 EXPECT_CACHE=off \
++  k6 run --summary-export baseline-summary.json stages/stage7/k6/search.js
++```
++
++After enabling caching and waiting for the replacement Pods, restart the
++port-forward if necessary and run:
+ 
+-# 4. Compare quantitative distributions
+-diff <(jq '.metrics' baseline-summary.json) <(jq '.metrics' optimized-summary.json)
++```bash
++BASE_URL=http://localhost:18083 EXPECT_CACHE=on \
++  k6 run --summary-export optimized-summary.json stages/stage7/k6/search.js
++jq '.metrics | {http_req_duration, http_req_failed, checks, cache_hit_rate, dropped_iterations}' \
++  baseline-summary.json optimized-summary.json
+ ```
++
++The workload sends 50 requests/second for two minutes across six seeded routes
++in deterministic order. Setup warms those keys outside the measured scenario.
++It requires nonempty flight results, successful response checks, no dropped
++iterations, and the expected cache behavior. Record the UTC search date, image,
++revision plus patch, node capacity, Pod CPU, and request rate alongside each
++summary. Use the same values for both runs.
++
++The localhost HTTP path deliberately bypasses edge TLS for both measurements.
++To measure the Gateway instead, use the same trusted HTTPS origin for both runs
++and record that route choice. Do not mix direct-Service and edge timings.
++
++## Interpret and recover
++
++A larger hit ratio is evidence that the cache served requests. It does not
++establish a latency improvement: compare p95, failures, achieved throughput,
++and CPU. A small local dataset may show no worthwhile improvement. Report that
++result without weakening the thresholds or replacing it with one fast curl.
++
++If setup finds no seeded flights, inspect seed Jobs and the database date range.
++Set `SEARCH_DATE` to a seeded UTC date or reseed the persistent database. If
++checks fail, inspect response bodies before interpreting latency. If iterations
++are dropped, the load generator failed to sustain the intended workload.
++
++Exit the experiment's Bash terminal to restore the HPA and cache setting. Prove
++recovery with a populated search response and an active HPA. Explain which
++variable changed, why warming is separate from measurement, and what evidence
++would justify enabling caching for this workload.
+diff --git a/docs/stage-2.md b/docs/stage-2.md
+index 1df4d8c..94eea6c 100644
+--- a/docs/stage-2.md
++++ b/docs/stage-2.md
+@@ -469,7 +469,7 @@ The **Gateway API** (`gateway.networking.k8s.io`) is the modern official Kuberne
+ │ APP DEVELOPER (apps)         │  │ UI DEVELOPER (ui)            │
+ │ HTTPRoute: booking           │  │ HTTPRoute: frontend          │
+ │ host: booking.apollo.local   │  │ host: frontend.apollo.local  │
+-│ backendRef: booking:8082     │  │ (Allowed by ReferenceGrant!) │
++│ backendRef: booking:8082     │  │ (Allowed by allowedRoutes!) │
+ └──────────────────────────────┘  └──────────────────────────────┘
+ ```
+ 
+@@ -590,7 +590,8 @@ The three requests should return HTTP 200 readiness responses.
+   references.
+ - **Troubleshooting**: If `Programmed` is false, inspect GatewayClass and Envoy
+   Gateway controller logs. If only the frontend cross-namespace route fails,
+-  inspect its `ReferenceGrant`. If an app route fails, trace its backend Service
++  inspect the Gateway's `allowedRoutes` and Route attachment conditions. A
++  cross-namespace backend also requires a `ReferenceGrant`. If an app route fails, trace its backend Service
+   selector and EndpointSlice.
+ - **Concept reinforced**: GatewayClass selects an implementation, Gateway owns
+   listeners, HTTPRoute owns traffic rules, and ReferenceGrant authorizes a
+@@ -621,3 +622,21 @@ Now that you have verified the networking ladder and recorded its evidence,
+ continue to the persistent data problem exposed in Stage 1.
+ 
+ 👉 **Continue to [Stage 3: Mission Data (Persistent Storage & StatefulSets)](./stage-3)**
++
++## HTTPS in the Envoy baseline
++
++The gap-fix candidate preserves local TLS in substage 5. Both the Gateway listener
++and frontend API URLs use HTTPS, and the Secret is created at installation time
++in the explicitly selected context. It is preserved on reapplication; use the
++certificate generator's `--rotate` option for deliberate renewal.
++
++Inspect listener `ResolvedRefs`, extract the public certificate, and check DNS
++hostname verification with `curl --cacert` and `--resolve`. Configure local name
++resolution and browser trust before opening `https://frontend.apollo.local`.
++Confirm login, search, and a reversible booking in the browser Network panel;
++serving HTML over HTTPS alone does not prove those API calls work. `curl -k`
++skips trust verification and must not be presented as browser acceptance.
++
++Delete the apps-namespace TLS Secret to break HTTPS while HTTP remains available.
++Run the certificate generator with the same context, extract its replacement,
++update trust, and prove an HTTPS application workflow recovers.
+diff --git a/docs/stage-4.md b/docs/stage-4.md
+index 3130220..91c5007 100644
+--- a/docs/stage-4.md
++++ b/docs/stage-4.md
+@@ -165,7 +165,7 @@ In `booking-dep.yaml`, we solve this with two coordinated mechanisms:
+ The scheduler needs to decide whether a Pod can fit before the container starts.
+ The kernel needs rules after it starts. Requests and limits serve those distinct
+ moments, even when Stage 4 deliberately makes their values equal.
+-- **`requests`**: The amount of CPU and memory that the kube-scheduler **guarantees** to reserve on a node for that Pod. If a node does not have enough unallocated requests, the Pod cannot be scheduled there.
++- **`requests`**: The CPU and memory amounts the scheduler uses to decide whether a Pod fits on a node. Requests are accounted against allocatable capacity; they do not preallocate physical memory or guarantee application performance. A Pod cannot be scheduled on a node with insufficient capacity for its requests.
+ - **`limits`**: The maximum ceiling the container is allowed to consume.
+   - **CPU (Compressible)**: If a container exceeds its CPU limit, the Linux kernel cgroup **throttles** its CPU shares. The container runs slower, but is not killed.
+   - **Memory (Incompressible)**: If a container exceeds its memory limit, the Linux kernel triggers an **OOMKill** (Out Of Memory) event and immediately kills the process!
+diff --git a/docs/stage-5.md b/docs/stage-5.md
+index 067eda0..7ed576b 100644
+--- a/docs/stage-5.md
++++ b/docs/stage-5.md
+@@ -493,3 +493,11 @@ Before moving to Stage 6, test your understanding:
+ Now that Apollo Airlines is packaged and deployable across any environment, let's turn on full observability: metrics, distributed tracing, and centralized logging!
+ 
+ 👉 **Continue to [Stage 6: Mission Operations (Observability & Tracing)](./stage-6)**
++
++## Current verification boundary
++
++The earlier source check totals are historical evidence. The October candidate
++changes context guards, TLS ownership, frontend HTTPS API URLs, and token
++protection; it requires a fresh clean lifecycle. Use the current verifier's
++summary and manual behavioral results for the revision plus patch you run.
++A production docs build verifies page compilation and links, not lab behavior.
+diff --git a/docs/stage-6.md b/docs/stage-6.md
+index 3e2a49a..06a7dd3 100644
+--- a/docs/stage-6.md
++++ b/docs/stage-6.md
+@@ -462,3 +462,15 @@ Horizontal and Vertical Pod Autoscaling, Redis caching, and advanced
+ scheduling.
+ 
+ 👉 **Continue to [Stage 7: Orbital Maneuvering (Autoscaling & Scheduling)](./stage-7)**
++
++## Current verification boundary
++
++The earlier source check totals are historical evidence. The October candidate
++changes context guards, TLS ownership, frontend HTTPS API URLs, and token
++protection; it requires a fresh clean lifecycle. Use the current verifier's
++summary and manual behavioral results for the revision plus patch you run.
++A production docs build verifies page compilation and links, not lab behavior.
++
++For the ordered metrics → dashboards → alerts/SLO → logs → traces → correlation
++path, follow `stages/stage6/SIGNALS.md`. The existing full-stack installer remains
++the maintainer path; the ordered replacement awaits runtime lifecycle evidence.
+diff --git a/docs/stage-7.md b/docs/stage-7.md
+index cafaf6a..039f979 100644
+--- a/docs/stage-7.md
++++ b/docs/stage-7.md
+@@ -435,3 +435,13 @@ work in Stage 8, so do not describe the Kubernetes deployment as hardened yet.
+ Now, explore how these concepts translate to real cloud providers like AWS EKS, and review our security and specialization roadmaps!
+ 
+ 👉 **Continue to [Cloud Appendix: EKS Research Boundary](./eks)**
++
++## Current verification boundary
++
++The earlier source check totals are historical evidence. The October candidate
++changes context guards, TLS ownership, frontend HTTPS API URLs, and token
++protection; it requires a fresh clean lifecycle. Use the current verifier's
++summary and manual behavioral results for the revision plus patch you run.
++A production docs build verifies page compilation and links, not lab behavior.
++
++Use the explicit cache baseline in [Measurement before optimization](./learn/scaling/measurement-baseline) before interpreting an HPA result.
+diff --git a/docs/stage-8.md b/docs/stage-8.md
+index d0d5334..ca6a05c 100644
+--- a/docs/stage-8.md
++++ b/docs/stage-8.md
+@@ -87,23 +87,26 @@ grep -R -n -E "runAsNonRoot|seccompProfile|readOnlyRootFilesystem|allowPrivilege
+ 
+ ### Expected result
+ 
+-Stage 1 contains the explicit token-automount setting. The Stage 7 application
+-chart does not currently preserve all of the planned Stage 8 hardening fields.
++Stage 1 and the patched Stage 7 chart both explicitly disable token automount.
++The Stage 7 chart still lacks the planned workload hardening fields checked
++above; token protection alone does not establish the full Stage 8 posture.
+ That is a documented curriculum gap, not permission to edit the application
+ repository while following this guide.
+ 
+ ### Verification
+ 
+ ```bash
+-test ! -d stages/stage8 && echo "Stage 8 implementation is absent, as documented"
++cat stages/stage8/README.md
++# Require an implemented status and lifecycle evidence before running a lab.
+ grep -n "Stage 8 is a clean rebuild" ROADMAP.md
+ ```
+ 
+ ### Troubleshooting
+ 
+-If `stages/stage8/` now exists, stop using this page as status evidence. Read
+-its README and verification scripts, then confirm the top-level trust status
+-before running anything.
++The directory contains a status placeholder. Its existence does not establish
++a working security lab. Read its README and confirm the top-level trust status
++before running anything. Only an implemented snapshot with its own lifecycle
++evidence can replace the planned boundary.
+ 
+ ### Concept reinforced
+ 
+diff --git a/docs/start/prerequisites.md b/docs/start/prerequisites.md
+index 0bfb4be..3923915 100644
+--- a/docs/start/prerequisites.md
++++ b/docs/start/prerequisites.md
+@@ -37,7 +37,9 @@ If you choose the **hands-on route**, clone the companion `Apollo11` repository
+ ```bash
+ git clone https://github.com/darshan-raul/Apollo11.git
+ cd Apollo11
+-git checkout 7b693c9bae0a789dc9db8e0628c478fd0dd53e88
++git checkout 143cac8bb7e611db25f87582a178b44ae2d2fb1e
++# Apply the companion gap-fix patch supplied with the review report.
++git apply /path/to/apollo11-gap-fixes.patch
+ ```
+ 
+ Every hands-on lab in this course runs from inside that `Apollo11` repository, navigating into stage directories such as `stages/launchpad/`, `stages/ignition/`, and `stages/stage1/`.
+@@ -48,3 +50,19 @@ page types, the reading-only and hands-on routes, and what counts as completing
+ a stage. When you are ready for experiments, workstation requirements and tools
+ are detailed in [Prepare your launchpad](../labs/setup).
+ 
++
++## Revision and verification boundary
++
++The October gap-fix candidate is the base revision above **plus the companion
++patch**, not the base commit alone. The patch changes certificate ownership,
++frontend API schemes, ServiceAccount token automount, SLO rules, and the cache
++baseline. Rebuild images after applying it. Confirm your working tree with
++`git status --short` and save `git diff --stat` with your lab results.
++
++The candidate has static and isolated test evidence; a clean cluster lifecycle
++has not yet been reproduced in the review environment. Do not describe it as a
++new tested release or replace historical pass counts with invented totals. If
++you do not have the companion patch, use the earlier lab instructions for the
++historical snapshot; the new benchmark and signal progression are not supported
++by that snapshot. A future published release should replace this patch-based
++setup with one immutable, lifecycle-verified commit.
+diff --git a/docs/start/terminal-git-and-yaml.md b/docs/start/terminal-git-and-yaml.md
+index 9c12e52..05be5d4 100644
+--- a/docs/start/terminal-git-and-yaml.md
++++ b/docs/start/terminal-git-and-yaml.md
+@@ -39,7 +39,7 @@ git status --short
+ git rev-parse HEAD
+ ```
+ 
+-The [lab compatibility contract](../labs/setup#clone-the-tested-lab-revision)
++The [lab compatibility contract](../labs/setup#prepare-the-gap-fix-candidate)
+ provides the supported clone and checkout commands.
+ 
+ ## Read YAML as nested data
+diff --git a/docs/status.md b/docs/status.md
+index 7fcd713..7eee2db 100644
+--- a/docs/status.md
++++ b/docs/status.md
+@@ -4,22 +4,26 @@ title: "Mission Status — Where Apollo Stands"
+ 
+ # Mission Status: Where Apollo Stands
+ 
+-The documentation teaches Kubernetes concepts independently of Apollo’s
+-runnable snapshots. Launchpad through Stage 7 are the supported local learning
+-path when used with Apollo11 commit
+-`7b693c9bae0a789dc9db8e0628c478fd0dd53e88`. The
+-[lab setup page](./labs/setup#clone-the-tested-lab-revision) explains how to
+-verify that revision.
++Launchpad through Stage 7 have historical local lifecycle evidence. The October
++gap-fix candidate uses Apollo11 `143cac8bb7e611db25f87582a178b44ae2d2fb1e` plus
++the companion patch from the gap-closure report. It changes behavior and requires
++fresh runtime verification. Static checks and a docs build do not prove the
++application's login, booking, failure recovery, or teardown behavior.
+ 
+-Security, cloud operations, and later extension material are conceptual or
+-roadmap material unless a source snapshot explicitly says otherwise. Commands
+-in those sections describe evidence a future implementation should produce;
+-they are not supported setup instructions. A later snapshot does not
+-automatically inherit controls from an earlier one.
++Use [lab setup](./labs/setup#revision-and-verification-boundary) to identify the
++exact revision and patch before running commands. Earlier check totals remain
++historical records. Record the current verifier's summary and the manual
++behavioral evidence for the revision you actually run.
+ 
+-| Area | Status | Learner action |
++| Area | Current boundary | Learner action |
+ | --- | --- | --- |
+-| Launchpad through Stage 7 | Supported local path | Read first; run the optional matching lab against the pinned commit. |
+-| Command Module security | Conceptual/planned | Study enforcement boundaries; do not expect example commands to succeed. |
+-| Lunar Orbit cloud and EKS | Conceptual/research boundary | Study ownership and recovery; do not create cloud resources from these docs. |
+-| Mission extensions | Roadmap | Treat names as possible future topics, not implemented capabilities. |
++| Launchpad through Stage 7 | Runnable snapshots with historical lifecycle evidence; current candidate awaits re-verification | Rebuild images, inspect the snapshot README, and run its matching break/recover lab. |
++| Stage 6 ordered signals and booking SLO | Implemented candidate, runtime lifecycle pending | Follow the signal guide only with the companion patch. |
++| Stage 7 cache comparison | Implemented candidate, measured before/after result pending | Use the updated Search image, explicit cache switch, fixed rate, and saved summaries. |
++| Command Module security | Planned clean rebuild | Read the Stage 8 status README; do not treat a directory's existence as implementation. |
++| Lunar Orbit and EKS | Planned capstone and untrusted AWS prototype | Study ownership and recovery; do not create cloud resources from these docs. |
++| Mission extensions and specializations | Planned optional catalogs | Treat names as proposed labs until their own runtime proof exists. |
++
++Conceptual explanations can be read independently. A runnable command requires
++a matching implementation and verified prerequisites; it is not made supported
++merely by appearing in a learning page.
