@@ -9,3 +9,6 @@ node_modules
 # Local runtime secrets. Commit only documented examples.
 **/.env
 !**/.env.example
+
+# Ignored directory for learner-owned manifests and experiment files
+learner-work/
