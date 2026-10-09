@@ -1,6 +1,6 @@
 # Apollo11
 
-![logo](./images/apollo11-project-logo.png)
+![Apollo11 banner](./images/apollo11-banner.webp)
 
 **Apollo Airlines** — A cloud-native flight management system built across 13
 phases, teaching a beginner to build, inspect, break, recover, and explain a
