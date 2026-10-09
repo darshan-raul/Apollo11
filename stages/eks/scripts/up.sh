@@ -29,8 +29,8 @@ ok()    { echo -e "${GREEN}✓ $1${NC}"; }
 fail()  { echo -e "${RED}✗ $1${NC}"; exit 1; }
 
 step "Preflight: aws cli + terraform"
-command -v aws      >/dev/null || fail "aws cli not installed (devbox: devbox add awscli)"
-command -v terraform>/dev/null || fail "terraform not installed (devbox: devbox add terraform@latest)"
+command -v aws      >/dev/null || fail "aws cli not installed (mise: mise use -g awscli)"
+command -v terraform>/dev/null || fail "terraform not installed (mise: mise use -g terraform)"
 
 # Check AWS creds are usable (doesn't print secrets).
 if ! aws sts get-caller-identity >/dev/null 2>&1; then

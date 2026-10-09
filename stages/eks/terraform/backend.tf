@@ -1,7 +1,7 @@
 # Local state backend. State file ends up ~5-10 MB because of the EKS module's
 # verbosity (VPC + IAM + cluster + node groups + addons + Pod Identity + KMS).
 # Manageable on a single dev machine. To share with another dev or survive
-# `rm -rf` of your devbox, swap to S3 + DynamoDB lock:
+# `rm -rf` of your local checkout, swap to S3 + DynamoDB lock:
 #
 #   terraform {
 #     backend "s3" {

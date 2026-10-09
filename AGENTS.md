@@ -877,7 +877,7 @@ resource/cost budget, failure exercise, verification, and cleanup.
 
 ## Key Constraints / Conventions
 
-- **Devbox** for environment management — no manual `apt install` for k8s tools
+- **mise** for environment management (`mise.toml` + `prep.sh`) — no manual `apt install` for k8s tools
 - **Dockerfiles** use multi-stage builds and live in each service's directory
 - **Go services:** `golang:1.22-alpine` — flight, booking, search, notification
 - **Python service:** `python:3.12-slim` — identity
@@ -891,10 +891,11 @@ resource/cost budget, failure exercise, verification, and cleanup.
 
 ---
 
-## Devbox Tools
+## mise Tools
 
-Currently in `devbox.json`: kubectl, minikube, k3d, docker, go-task,
-termshot, Helm, Argo CD, kind, Kustomize, k6, Trivy, and OPA.
+Currently in `mise.toml`: kubectl, kind, Helm, jq, Kustomize, Argo CD, k6,
+Trivy, task, k3d, and minikube. Docker is a prerequisite that `prep.sh`
+checks but does not install. `./prep.sh --verify` checks the whole toolchain.
 
 Add future-stage tools only when their lab is implemented and verified; do not
 advertise an uninstalled tool as part of the current learner environment.

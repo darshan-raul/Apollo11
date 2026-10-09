@@ -1,0 +1,34 @@
+# Apollo 11 learner toolchain, managed by mise (https://mise.jdx.dev).
+#
+# Install everything with:   ./prep.sh
+# Check what is installed:   ./prep.sh --verify
+#
+# prep.sh installs these tools into your *global* mise config, so they stay on
+# PATH even after you `git checkout` the pinned course commit (which predates
+# this file). Inside this repo you can also run `mise install` directly.
+#
+# Docker is NOT managed here: it needs a daemon. Install Docker Engine (Linux)
+# or Docker Desktop (macOS / Windows + WSL2) yourself; prep.sh checks for it.
+#
+# Add a tool only when the lab that needs it is implemented and verified.
+
+[tools]
+# Ignition onward
+kubectl = "latest"
+kind = "latest"
+helm = "latest"
+jq = "latest"
+kustomize = "latest"
+# Stage 5+ GitOps
+argocd = "latest"
+# Stage 7 load testing
+k6 = "latest"
+# Image scanning
+trivy = "latest"
+# Task runner and alternative local clusters
+task = "latest"
+k3d = "latest"
+minikube = "latest"
+
+# Optional: AWS/EKS track (stages/eks). Install on demand with
+#   mise use -g awscli terraform

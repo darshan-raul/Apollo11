@@ -81,8 +81,8 @@ If you want to go richer:
 ```bash
 cd stages/eks
 
-# 0. Prereqs (one-time, via devbox)
-devbox add awscli terraform@latest kubectl helm
+# 0. Prereqs (one-time, via mise)
+mise use -g awscli terraform kubectl helm
 
 # 1. AWS creds
 aws configure
@@ -113,10 +113,10 @@ during the `up.sh` apply, so it's usually already up by step 3).
 
 | Tool | Why | Install |
 |---|---|---|
-| `aws` (CLI v2) | All cluster + ECR + NLB operations | `devbox add awscli` (or `pip install awscli` / `brew install awscli`) |
-| `terraform >= 1.5.7` | Cluster + addon lifecycle | `devbox add terraform@latest` |
-| `kubectl >= 1.28` | Workload management | `devbox add kubectl` |
-| `helm >= 3.13` | LBC install (Terraform also uses it) | `devbox add helm` |
+| `aws` (CLI v2) | All cluster + ECR + NLB operations | `mise use -g awscli` (or `brew install awscli`) |
+| `terraform >= 1.5.7` | Cluster + addon lifecycle | `mise use -g terraform` |
+| `kubectl >= 1.28` | Workload management | `./prep.sh` (or `mise use -g kubectl`) |
+| `helm >= 3.13` | LBC install (Terraform also uses it) | `./prep.sh` (or `mise use -g helm`) |
 | `docker` | Build + push images to ECR | Already required for stages 1–6 |
 
 Configure your AWS credentials:
