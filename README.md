@@ -233,37 +233,43 @@ replace being able to explain what Kubernetes did and which evidence proved it.
 
 ## Getting Started
 
-### 1. Install Devbox
+### 1. Bootstrap the toolchain (mise)
 
 ```bash
-curl -fsSL https://get.jetify.com/devbox | bash
+git clone https://github.com/darshan-raul/Apollo11.git
+cd Apollo11
+./prep.sh            # installs mise, activates it in your shell, installs every tool in mise.toml
+exec $SHELL          # or: source ~/.bashrc / ~/.zshrc
+./prep.sh --verify   # every line should be ✅
 ```
 
-### 2. Set Up Environment
+`prep.sh` installs [mise](https://mise.jdx.dev) if needed and installs the tools
+into your global mise config, so they stay on `PATH` after you check out the
+pinned course commit. Docker is the one tool it does not install (it needs a
+daemon): install Docker Engine (Linux) or Docker Desktop (macOS, Windows + WSL2)
+first.
 
-```bash
-devbox shell  # loads all tools defined in devbox.json
-```
+### 2. Tools Installed
 
-### 3. Tools Installed
+Defined in [`mise.toml`](./mise.toml):
 
 | Tool | Purpose |
 |---|---|
-| docker | Container runtime |
+| docker | Container runtime (install yourself; `prep.sh` checks it) |
 | kubectl | Kubernetes CLI |
 | kind | Local k8s clusters |
-| k3d | Alternative local k8s |
 | helm | Chart packaging |
+| jq | JSON processing in verify scripts |
 | kustomize | Config patching |
-| skaffold | Local dev pipelines |
-| k9s | Terminal dashboard |
-| terraform | Cloud provisioning |
 | argocd | GitOps deployment |
 | k6 | Load testing |
 | trivy | Image scanning |
-| opa | Policy engine |
+| task | Task runner |
+| k3d / minikube | Alternative local k8s |
 
-### 4. Start with Launchpad
+AWS/EKS track only: `mise use -g awscli terraform`.
+
+### 3. Start with Launchpad
 
 ```bash
 cd stages/launchpad
