@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -132,8 +133,24 @@ db_connections_active{service="search"} 0
 		destination := c.Query("destination")
 		date := c.Query("date")
 
-		searchURL := fmt.Sprintf("%s/api/flights?origin=%s&destination=%s&date=%s",
-			flightServiceURL, origin, destination, date)
+		if date != "" {
+			if _, err := time.Parse("2006-01-02", date); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "date must be YYYY-MM-DD"})
+				return
+			}
+		}
+
+		// Encode the values so a parameter cannot smuggle in another one.
+		params := url.Values{}
+		for key, value := range map[string]string{"origin": origin, "destination": destination, "date": date} {
+			if value != "" {
+				params.Set(key, value)
+			}
+		}
+		searchURL := flightServiceURL + "/api/flights"
+		if len(params) > 0 {
+			searchURL += "?" + params.Encode()
+		}
 
 		req, _ := http.NewRequest("GET", searchURL, nil)
 		req.Header.Set("X-Request-ID", traceID)
@@ -148,11 +165,13 @@ db_connections_active{service="search"} 0
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+		decodeErr := json.Unmarshal(body, &result)
 
+		// An upstream failure is not an empty result set.
 		flightsRaw, ok := result["flights"].([]interface{})
-		if !ok {
-			c.JSON(http.StatusOK, gin.H{"results": []SearchResult{}, "total": 0, "page": 1, "limit": 20})
+		if resp.StatusCode != http.StatusOK || decodeErr != nil || !ok {
+			logJSON("ERROR", "search-service", fmt.Sprintf("Flight service returned HTTP %d", resp.StatusCode), traceID, "", nil)
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
 			return
 		}
 

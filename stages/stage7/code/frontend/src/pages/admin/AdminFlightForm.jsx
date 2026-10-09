@@ -39,7 +39,6 @@ export default function AdminFlightForm() {
             destination: f.destination || '',
             departureTime: f.departureTime ? f.departureTime.slice(0, 16) : '',
             arrivalTime: f.arrivalTime ? f.arrivalTime.slice(0, 16) : '',
-            totalCapacity: f.totalCapacity || '',
             status: f.status || 'SCHEDULED',
           })
         })
@@ -53,15 +52,21 @@ export default function AdminFlightForm() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    const payload = {
-      ...form,
-      totalCapacity: parseInt(form.totalCapacity, 10),
-    }
     try {
       if (isEdit) {
+        // The API only lets an existing flight change status and times.
+        const payload = {
+          status: form.status,
+          departureTime: form.departureTime,
+          arrivalTime: form.arrivalTime,
+        }
         await axios.put(`${FLIGHT_URL}/api/flights/${id}`, payload, { headers })
         toast.success('Flight updated successfully')
       } else {
+        const payload = {
+          ...form,
+          totalCapacity: parseInt(form.totalCapacity, 10),
+        }
         await axios.post(`${FLIGHT_URL}/api/flights`, payload, { headers })
         toast.success('Flight created successfully')
       }
@@ -92,10 +97,12 @@ export default function AdminFlightForm() {
 
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-100 shadow-card p-6 space-y-5">
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Flight Number" value={form.flightNumber} onChange={set('flightNumber')} placeholder="AA101" required />
-          <Input label="Origin Airport" value={form.origin} onChange={set('origin')} placeholder="BOM" required maxLength={3} />
-          <Input label="Destination Airport" value={form.destination} onChange={set('destination')} placeholder="DEL" required maxLength={3} />
-          <Input label="Total Capacity" type="number" value={form.totalCapacity} onChange={set('totalCapacity')} placeholder="180" required min="1" />
+          <Input label="Flight Number" value={form.flightNumber} onChange={set('flightNumber')} placeholder="AA101" required disabled={isEdit} />
+          <Input label="Origin Airport" value={form.origin} onChange={set('origin')} placeholder="BOM" required maxLength={3} disabled={isEdit} />
+          <Input label="Destination Airport" value={form.destination} onChange={set('destination')} placeholder="DEL" required maxLength={3} disabled={isEdit} />
+          {!isEdit && (
+            <Input label="Total Capacity" type="number" value={form.totalCapacity} onChange={set('totalCapacity')} placeholder="180" required min="1" />
+          )}
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>

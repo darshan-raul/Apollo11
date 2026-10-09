@@ -237,6 +237,10 @@ db_connections_active{service="booking"} %d
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
+		if _, err := uuid.Parse(req.FlightID); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "flightId must be a valid UUID"})
+			return
+		}
 
 		statusCode, body := callService(
 			fmt.Sprintf("%s/api/users/%s", identityServiceURL, userID),
@@ -291,6 +295,14 @@ db_connections_active{service="booking"} %d
 		).Scan(&bk.ID, &bk.BookingReference, &bk.UserID, &bk.FlightID, &bk.Status, &createdAt)
 		if err != nil {
 			logJSON("ERROR", "booking-service", fmt.Sprintf("Booking insert failed: %v", err), traceID, "", nil)
+			// The seat was already taken from Flight; give it back.
+			restoreStatus, _ := callService(
+				fmt.Sprintf("%s/api/flights/%s/seats", flightServiceURL, req.FlightID),
+				"PATCH", `{"delta": 1}`, traceID, serviceAuthorization(),
+			)
+			if restoreStatus != 200 {
+				logJSON("ERROR", "booking-service", "Seat restore after failed booking did not succeed", traceID, "", map[string]interface{}{"flight_id": req.FlightID, "status": restoreStatus})
+			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create booking"})
 			return
 		}
@@ -315,6 +327,10 @@ db_connections_active{service="booking"} %d
 		userID := claims["sub"].(string)
 		role := claims["role"].(string)
 		id := c.Param("id")
+		if _, err := uuid.Parse(id); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking ID"})
+			return
+		}
 
 		var bk Booking
 		var createdAt time.Time
@@ -460,6 +476,10 @@ db_connections_active{service="booking"} %d
 		userID := claims["sub"].(string)
 		role := claims["role"].(string)
 		id := c.Param("id")
+		if _, err := uuid.Parse(id); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking ID"})
+			return
+		}
 
 		var bk Booking
 		err := db.QueryRow(

@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"sync"
@@ -329,6 +330,12 @@ func main() {
 		origin := c.Query("origin")
 		destination := c.Query("destination")
 		date := c.Query("date")
+		if date != "" {
+			if _, err := time.Parse("2006-01-02", date); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "date must be YYYY-MM-DD"})
+				return
+			}
+		}
 
 		// Stage 7: cache key. Origin/destination/date are the natural
 		// partition — same three values = identical result, and they
@@ -368,8 +375,17 @@ func main() {
 		cacheMissesTotal.WithLabelValues("search").Inc()
 
 		// --- Cache MISS: call flight service --------------------------
-		searchURL := fmt.Sprintf("%s/api/flights?origin=%s&destination=%s&date=%s",
-			flightServiceURL, origin, destination, date)
+		// Encode the values so a parameter cannot smuggle in another one.
+		params := url.Values{}
+		for key, value := range map[string]string{"origin": origin, "destination": destination, "date": date} {
+			if value != "" {
+				params.Set(key, value)
+			}
+		}
+		searchURL := flightServiceURL + "/api/flights"
+		if len(params) > 0 {
+			searchURL += "?" + params.Encode()
+		}
 
 		req, _ := http.NewRequestWithContext(ctx, "GET", searchURL, nil)
 		req.Header.Set("X-Request-ID", requestID.(string))
@@ -387,34 +403,36 @@ func main() {
 
 		body, _ := io.ReadAll(resp.Body)
 		var result map[string]interface{}
-		json.Unmarshal(body, &result)
+		decodeErr := json.Unmarshal(body, &result)
 
+		// An upstream failure is not an empty result set, and must not be
+		// cached as one.
 		flightsRaw, ok := result["flights"].([]interface{})
-		var results []SearchResult
-		if ok {
-			results = make([]SearchResult, 0, len(flightsRaw))
-			for _, f := range flightsRaw {
-				fm := f.(map[string]interface{})
-				depStr, _ := fm["departureTime"].(string)
-				arrStr, _ := fm["arrivalTime"].(string)
-				dep, _ := time.Parse(time.RFC3339, depStr)
-				arr, _ := time.Parse(time.RFC3339, arrStr)
-				duration := int(arr.Sub(dep).Minutes())
-				avail, _ := fm["availableSeats"].(float64)
-				results = append(results, SearchResult{
-					ID:             fm["id"].(string),
-					FlightNumber:   fm["flightNumber"].(string),
-					Origin:         fm["origin"].(string),
-					Destination:    fm["destination"].(string),
-					DepartureTime:  depStr,
-					ArrivalTime:    arrStr,
-					Duration:       duration,
-					AvailableSeats: int(avail),
-					Status:         fm["status"].(string),
-				})
-			}
-		} else {
-			results = []SearchResult{}
+		if resp.StatusCode != http.StatusOK || decodeErr != nil || !ok {
+			logJSON("ERROR", "search-service", fmt.Sprintf("Flight service returned HTTP %d", resp.StatusCode), traceID, "", nil)
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
+			return
+		}
+		results := make([]SearchResult, 0, len(flightsRaw))
+		for _, f := range flightsRaw {
+			fm := f.(map[string]interface{})
+			depStr, _ := fm["departureTime"].(string)
+			arrStr, _ := fm["arrivalTime"].(string)
+			dep, _ := time.Parse(time.RFC3339, depStr)
+			arr, _ := time.Parse(time.RFC3339, arrStr)
+			duration := int(arr.Sub(dep).Minutes())
+			avail, _ := fm["availableSeats"].(float64)
+			results = append(results, SearchResult{
+				ID:             fm["id"].(string),
+				FlightNumber:   fm["flightNumber"].(string),
+				Origin:         fm["origin"].(string),
+				Destination:    fm["destination"].(string),
+				DepartureTime:  depStr,
+				ArrivalTime:    arrStr,
+				Duration:       duration,
+				AvailableSeats: int(avail),
+				Status:         fm["status"].(string),
+			})
 		}
 		payload := gin.H{"results": results, "total": len(results), "page": 1, "limit": 20}
 

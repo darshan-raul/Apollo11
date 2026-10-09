@@ -62,7 +62,7 @@ services:
   identity-db:
     image: postgres:15-alpine
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d identity"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d identity"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -113,7 +113,7 @@ services:
   flight-db:
     image: postgres:15-alpine
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d flight"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d flight"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -173,7 +173,7 @@ services:
   booking-db:
     image: postgres:15-alpine
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d booking"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d booking"]
       interval: 5s
       timeout: 5s
       retries: 10

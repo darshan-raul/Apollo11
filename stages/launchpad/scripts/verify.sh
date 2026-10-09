@@ -125,7 +125,7 @@ else
   fail "seeded passenger can log in"
 fi
 
-flight_count="$("${compose[@]}" exec -T flight-db psql -U "${POSTGRES_USER:-postgres}" -d flight -t -c 'SELECT COUNT(*) FROM flights;' 2>/dev/null | tr -d '[:space:]')"
+flight_count="$("${compose[@]}" exec -T flight-db sh -c 'psql -U "$POSTGRES_USER" -d flight -t -c "SELECT COUNT(*) FROM flights;"' 2>/dev/null | tr -d '[:space:]')"
 if [[ "$flight_count" =~ ^[0-9]+$ ]] && (( flight_count >= 186 )); then
   pass "flight table contains full 30-day schedule ($flight_count rows >= 186)"
 else

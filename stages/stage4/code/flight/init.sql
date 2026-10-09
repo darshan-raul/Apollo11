@@ -34,37 +34,29 @@ INSERT INTO airports (id, code, name, city, country) VALUES
     ('66666666-6666-6666-6666-666666666666', 'JFK', 'John F. Kennedy International', 'New York', 'USA')
 ON CONFLICT (code) DO NOTHING;
 
--- Seed flights: today + 30 days (deterministic UUIDs based on flight number)
--- AA101: BOM→SIN 08:00, AA102: SIN→BOM 20:00
--- AA201: DEL→DXB 09:30, AA202: DXB→DEL 22:00
--- AA301: BOM→LHR 01:00, AA401: DEL→JFK 02:00
-INSERT INTO flights (id, flight_number, origin, destination, departure_time, arrival_time, total_capacity, available_seats, status) VALUES
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'AA101', 'BOM', 'SIN', (CURRENT_DATE + INTERVAL '0 hour' + TIME '08:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '14:30:00')::timestamp, 180, 180, 'SCHEDULED'),
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaabb', 'AA102', 'SIN', 'BOM', (CURRENT_DATE + INTERVAL '0 hour' + TIME '20:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '23:30:00')::timestamp, 180, 180, 'SCHEDULED'),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'AA201', 'DEL', 'DXB', (CURRENT_DATE + INTERVAL '0 hour' + TIME '09:30:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '13:00:00')::timestamp, 220, 220, 'SCHEDULED'),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbcc', 'AA202', 'DXB', 'DEL', (CURRENT_DATE + INTERVAL '0 hour' + TIME '22:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '02:30:00')::timestamp, 220, 220, 'SCHEDULED'),
-    ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'AA301', 'BOM', 'LHR', (CURRENT_DATE + INTERVAL '0 hour' + TIME '01:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '10:00:00')::timestamp, 300, 300, 'SCHEDULED'),
-    ('cccccccc-cccc-cccc-cccc-ccccccccccdd', 'AA401', 'DEL', 'JFK', (CURRENT_DATE + INTERVAL '0 hour' + TIME '02:00:00')::timestamp, (CURRENT_DATE + INTERVAL '0 hour' + TIME '14:00:00')::timestamp, 280, 280, 'SCHEDULED')
-ON CONFLICT (flight_number) DO NOTHING;
-
--- Insert flights for next 30 days (same times, same routes)
-INSERT INTO flights (flight_number, origin, destination, departure_time, arrival_time, total_capacity, available_seats, status)
+-- Seed flights: six routes a day for today + 30 days (186 rows).
+-- Today's rows get deterministic UUIDs so labs and verifiers can address them.
+-- An arrival time at or before the departure time means the flight lands the
+-- next day (AA202 departs 22:00 and arrives 02:30).
+INSERT INTO flights (id, flight_number, origin, destination, departure_time, arrival_time, total_capacity, available_seats, status)
 SELECT
-    flight_number,
-    origin,
-    destination,
-    (CURRENT_DATE + n * INTERVAL '1 day' + '08:00:00'::time)::timestamp,
-    (CURRENT_DATE + n * INTERVAL '1 day' + '14:30:00'::time)::timestamp,
-    total_capacity,
-    total_capacity,
+    CASE WHEN n = 0 THEN f.id ELSE gen_random_uuid() END,
+    f.flight_number,
+    f.origin,
+    f.destination,
+    (CURRENT_DATE + n * INTERVAL '1 day' + f.dep_time)::timestamp,
+    (CURRENT_DATE + n * INTERVAL '1 day' + f.arr_time
+        + CASE WHEN f.arr_time <= f.dep_time THEN INTERVAL '1 day' ELSE INTERVAL '0' END)::timestamp,
+    f.total_capacity,
+    f.total_capacity,
     'SCHEDULED'
 FROM (VALUES
-    ('AA101', 'BOM', 'SIN', 180),
-    ('AA102', 'SIN', 'BOM', 180),
-    ('AA201', 'DEL', 'DXB', 220),
-    ('AA202', 'DXB', 'DEL', 220),
-    ('AA301', 'BOM', 'LHR', 300),
-    ('AA401', 'DEL', 'JFK', 280)
-) AS f(flight_number, origin, destination, total_capacity)
-CROSS JOIN generate_series(1, 30) AS n
-ON CONFLICT (flight_number, departure_time) DO NOTHING;
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid, 'AA101', 'BOM', 'SIN', TIME '08:00:00', TIME '14:30:00', 180),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaabb'::uuid, 'AA102', 'SIN', 'BOM', TIME '20:00:00', TIME '23:30:00', 180),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid, 'AA201', 'DEL', 'DXB', TIME '09:30:00', TIME '13:00:00', 220),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbcc'::uuid, 'AA202', 'DXB', 'DEL', TIME '22:00:00', TIME '02:30:00', 220),
+    ('cccccccc-cccc-cccc-cccc-cccccccccccc'::uuid, 'AA301', 'BOM', 'LHR', TIME '01:00:00', TIME '10:00:00', 300),
+    ('cccccccc-cccc-cccc-cccc-ccccccccccdd'::uuid, 'AA401', 'DEL', 'JFK', TIME '02:00:00', TIME '14:00:00', 280)
+) AS f(id, flight_number, origin, destination, dep_time, arr_time, total_capacity)
+CROSS JOIN generate_series(0, 30) AS n
+ON CONFLICT DO NOTHING;

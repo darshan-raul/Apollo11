@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 var (
@@ -111,6 +112,33 @@ func generateRequestID() string {
 	return uuid.New().String()
 }
 
+var flightTimeLayouts = []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02T15:04"}
+
+var validFlightStatuses = map[string]bool{
+	"SCHEDULED": true, "BOARDING": true, "DELAYED": true,
+	"DEPARTED": true, "ARRIVED": true, "CANCELLED": true,
+}
+
+// parseFlightTime accepts RFC3339 and the zone-less values sent by an HTML
+// datetime-local input. Flight times are stored as UTC wall-clock timestamps.
+func parseFlightTime(value string) (time.Time, error) {
+	for _, layout := range flightTimeLayouts {
+		if t, err := time.Parse(layout, value); err == nil {
+			return t.UTC(), nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unrecognised time %q", value)
+}
+
+func validFlightID(c *gin.Context) (string, bool) {
+	id := c.Param("id")
+	if _, err := uuid.Parse(id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid flight ID"})
+		return "", false
+	}
+	return id, true
+}
+
 func main() {
 	initDB()
 	defer db.Close()
@@ -190,6 +218,10 @@ db_connections_active{service="flight"} %d
 			argIdx++
 		}
 		if date != "" {
+			if _, err := time.Parse("2006-01-02", date); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "date must be YYYY-MM-DD"})
+				return
+			}
 			query += fmt.Sprintf(" AND DATE(departure_time) = $%d", argIdx)
 			args = append(args, date)
 		}
@@ -223,7 +255,10 @@ db_connections_active{service="flight"} %d
 	r.GET("/api/flights/:id", func(c *gin.Context) {
 		requestID, _ := c.Get("request_id")
 		traceID := requestID.(string)
-		id := c.Param("id")
+		id, ok := validFlightID(c)
+		if !ok {
+			return
+		}
 
 		var f Flight
 		var depTime, arrTime time.Time
@@ -253,13 +288,23 @@ db_connections_active{service="flight"} %d
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
-		depTime, _ := time.Parse(time.RFC3339, req.DepartureTime)
-		if depTime.IsZero() {
-			depTime, _ = time.Parse("2006-01-02T15:04:05Z", req.DepartureTime)
+		if req.FlightNumber == "" || req.Origin == "" || req.Destination == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "flightNumber, origin and destination are required"})
+			return
 		}
-		arrTime, _ := time.Parse(time.RFC3339, req.ArrivalTime)
-		if arrTime.IsZero() {
-			arrTime, _ = time.Parse("2006-01-02T15:04:05Z", req.ArrivalTime)
+		if req.TotalCapacity <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "totalCapacity must be greater than zero"})
+			return
+		}
+		depTime, depErr := parseFlightTime(req.DepartureTime)
+		arrTime, arrErr := parseFlightTime(req.ArrivalTime)
+		if depErr != nil || arrErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "departureTime and arrivalTime must be valid timestamps"})
+			return
+		}
+		if !arrTime.After(depTime) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "arrivalTime must be after departureTime"})
+			return
 		}
 		var f Flight
 		err := db.QueryRow(
@@ -270,6 +315,17 @@ db_connections_active{service="flight"} %d
 		).Scan(&f.ID, &f.FlightNumber, &f.Origin, &f.Destination, &depTime, &arrTime, &f.AvailableSeats, &f.Status)
 		if err != nil {
 			logJSON("ERROR", "flight-service", fmt.Sprintf("Create flight failed: %v", err), traceID, "", nil)
+			var pqErr *pq.Error
+			if errors.As(err, &pqErr) {
+				switch pqErr.Code {
+				case "23503":
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Unknown origin or destination airport"})
+					return
+				case "23505":
+					c.JSON(http.StatusConflict, gin.H{"error": "Flight already exists for that departure time"})
+					return
+				}
+			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create flight"})
 			return
 		}
@@ -282,7 +338,10 @@ db_connections_active{service="flight"} %d
 	r.PUT("/api/flights/:id", authRequired("ADMIN"), func(c *gin.Context) {
 		requestID, _ := c.Get("request_id")
 		traceID := requestID.(string)
-		id := c.Param("id")
+		id, ok := validFlightID(c)
+		if !ok {
+			return
+		}
 		var updates map[string]interface{}
 		if err := c.ShouldBindJSON(&updates); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
@@ -291,17 +350,47 @@ db_connections_active{service="flight"} %d
 		setParts := []string{}
 		args := []interface{}{}
 		argIdx := 1
-		validFields := map[string]bool{"status": true, "departureTime": true, "arrivalTime": true}
-		for k, v := range updates {
-			if validFields[k] {
-				setParts = append(setParts, fmt.Sprintf("%s = $%d", k, argIdx))
-				args = append(args, v)
-				argIdx++
+		// JSON field -> column. Other fields in the payload are ignored.
+		columns := []struct{ field, column string }{
+			{"status", "status"},
+			{"departureTime", "departure_time"},
+			{"arrivalTime", "arrival_time"},
+		}
+		newTimes := map[string]time.Time{}
+		for _, col := range columns {
+			raw, present := updates[col.field]
+			if !present {
+				continue
 			}
+			text, isString := raw.(string)
+			var value interface{} = text
+			if col.field == "status" {
+				if !isString || !validFlightStatuses[text] {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid flight status"})
+					return
+				}
+			} else {
+				parsed, err := parseFlightTime(text)
+				if !isString || err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": col.field + " must be a valid timestamp"})
+					return
+				}
+				value = parsed
+				newTimes[col.field] = parsed
+			}
+			setParts = append(setParts, fmt.Sprintf("%s = $%d", col.column, argIdx))
+			args = append(args, value)
+			argIdx++
 		}
 		if len(setParts) == 0 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
 			return
+		}
+		if dep, ok := newTimes["departureTime"]; ok {
+			if arr, ok := newTimes["arrivalTime"]; ok && !arr.After(dep) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "arrivalTime must be after departureTime"})
+				return
+			}
 		}
 		args = append(args, id)
 		var f Flight
@@ -317,6 +406,11 @@ db_connections_active{service="flight"} %d
 		}
 		if err != nil {
 			logJSON("ERROR", "flight-service", fmt.Sprintf("Update flight failed: %v", err), traceID, "", nil)
+			var pqErr *pq.Error
+			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+				c.JSON(http.StatusConflict, gin.H{"error": "Flight already exists for that departure time"})
+				return
+			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
 			return
 		}
@@ -328,33 +422,46 @@ db_connections_active{service="flight"} %d
 	r.PATCH("/api/flights/:id/seats", authRequired("SERVICE"), func(c *gin.Context) {
 		requestID, _ := c.Get("request_id")
 		traceID := requestID.(string)
-		id := c.Param("id")
+		id, ok := validFlightID(c)
+		if !ok {
+			return
+		}
 		var req UpdateSeatsRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
-		var currentSeats int
-		err := db.QueryRow("SELECT available_seats FROM flights WHERE id = $1", id).Scan(&currentSeats)
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Flight not found"})
+		if req.Delta == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "delta must not be zero"})
 			return
 		}
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
-			return
-		}
-		if req.Delta == -1 && currentSeats <= 0 {
-			c.JSON(http.StatusConflict, gin.H{"error": "No seats available"})
-			return
-		}
+		// One statement checks and applies the change, so concurrent bookings
+		// cannot drive the count below zero or above capacity.
 		var f Flight
 		var depTime, arrTime time.Time
-		err = db.QueryRow(
-			`UPDATE flights SET available_seats = available_seats + $1, updated_at = NOW() WHERE id = $2
+		err := db.QueryRow(
+			`UPDATE flights SET available_seats = available_seats + $1, updated_at = NOW()
+			 WHERE id = $2 AND available_seats + $1 BETWEEN 0 AND total_capacity
 			 RETURNING id, flight_number, origin, destination, departure_time, arrival_time, available_seats, status`,
 			req.Delta, id,
 		).Scan(&f.ID, &f.FlightNumber, &f.Origin, &f.Destination, &depTime, &arrTime, &f.AvailableSeats, &f.Status)
+		if err == sql.ErrNoRows {
+			var exists bool
+			if err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM flights WHERE id = $1)", id).Scan(&exists); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
+				return
+			}
+			if !exists {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Flight not found"})
+				return
+			}
+			if req.Delta < 0 {
+				c.JSON(http.StatusConflict, gin.H{"error": "No seats available"})
+				return
+			}
+			c.JSON(http.StatusConflict, gin.H{"error": "Seat count would exceed capacity"})
+			return
+		}
 		if err != nil {
 			logJSON("ERROR", "flight-service", fmt.Sprintf("Seat update failed: %v", err), traceID, "", nil)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})

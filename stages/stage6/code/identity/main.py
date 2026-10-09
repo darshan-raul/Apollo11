@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import signal
 import uuid
@@ -9,6 +10,7 @@ from decimal import Decimal
 from typing import Optional
 
 import psycopg2
+import psycopg2.errors
 from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, HTTPException, Header, Depends, Request
 from fastapi.responses import JSONResponse, Response
@@ -66,6 +68,18 @@ def current_trace_ids():
     if not sc.is_valid:
         return "", ""
     return f"{sc.trace_id:032x}", f"{sc.span_id:016x}"
+
+
+EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+MIN_PASSWORD_LENGTH = 6
+
+
+def is_uuid(value: str) -> bool:
+    try:
+        uuid.UUID(value)
+        return True
+    except (ValueError, AttributeError, TypeError):
+        return False
 
 
 def log_json(level: str, service: str, message: str, trace_id: str = "", span_id: str = "", **kwargs):
@@ -224,6 +238,10 @@ def verify_jwt(authorization: str) -> dict:
 @app.post("/api/users/register")
 async def register(body: RegisterRequest, request: Request):
     trace_id, span_id = current_trace_ids()
+    if not EMAIL_PATTERN.match(body.email):
+        raise HTTPException(status_code=400, detail="A valid email address is required")
+    if len(body.password) < MIN_PASSWORD_LENGTH:
+        raise HTTPException(status_code=400, detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters")
     try:
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -253,6 +271,9 @@ async def register(body: RegisterRequest, request: Request):
         }
     except HTTPException:
         raise
+    except psycopg2.errors.UniqueViolation:
+        # Two registrations for the same email raced past the lookup above.
+        raise HTTPException(status_code=409, detail="Email already registered")
     except Exception as e:
         log_json("ERROR", "identity-service", str(e), trace_id=trace_id, span_id=span_id)
         raise HTTPException(status_code=500, detail="Registration failed")
@@ -367,6 +388,8 @@ async def get_user_by_id(user_id: str, authorization: str = Header(None), reques
     token_user_id = payload.get("sub")
     if role != "ADMIN" and token_user_id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
+    if not is_uuid(user_id):
+        raise HTTPException(status_code=400, detail="Invalid user ID")
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))

@@ -45,7 +45,9 @@ data:
         f.origin,
         f.destination,
         (CURRENT_DATE + n * INTERVAL '1 day' + f.dep_time)::timestamp,
-        (CURRENT_DATE + n * INTERVAL '1 day' + f.arr_time)::timestamp,
+        -- An arrival at or before the departure time lands the next day (AA202).
+        (CURRENT_DATE + n * INTERVAL '1 day' + f.arr_time
+            + CASE WHEN f.arr_time <= f.dep_time THEN INTERVAL '1 day' ELSE INTERVAL '0' END)::timestamp,
         f.total_capacity,
         f.total_capacity,
         'SCHEDULED'
