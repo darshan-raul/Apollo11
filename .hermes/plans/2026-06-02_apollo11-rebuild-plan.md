@@ -12,7 +12,7 @@ The existing repo provides:
 - A well-designed 11-stage curriculum with clear learning objectives
 - 7 Dockerfiles (stub or real, need audit)
 - Partial k8s manifests in stages 1, 2, 3, 5, 11
-- A `devbox.json` with local toolchain
+- A `mise.toml` with local toolchain
 - `prep.sh` for environment setup
 - A `code/k8s/` directory referencing services that may be stubs
 
@@ -32,7 +32,7 @@ The existing repo provides:
 2. **Working code, not pseudo-code** — every microservice is a real, runnable app with a working Dockerfile
 3. **Progressive disclosure** — early stages use imperative `kubectl` commands before introducing declarative manifests; Helm comes only at stage 5
 4. **No cloud dependency until stage 9** — all stages 1-8 use local k3d/kind; cloud (EKS/GKE/AKS) only in stage 9
-5. **Devbox as the only env requirement** — `devbox install` must get you everything needed for local stages
+5. **mise as the only env requirement** — `./prep.sh` (mise) must get you everything needed for local stages, apart from Docker
 
 ---
 
@@ -123,12 +123,12 @@ test/
 
 Tests use `kubectl` and `curl` — no special framework needed for k8s verification.
 
-### Step 5: Refactor devbox.json
+### Step 5: Refactor mise.toml
 
 Add all tools that appear in the curriculum:
 - Add: `k9s`, `tilt`, `kind`, `kustomize`, `k6`, `trivy`, `opa`, `kyverno` (or note these as container-based)
-- Consolidate to a single `devbox.json` at root
-- Remove duplication — currently `devbox.json` at root AND the project references a separate one
+- Consolidate to a single `mise.toml` at root
+- Remove duplication — keep one tool list at the root
 
 ### Step 6: Create CI/CD scaffolding
 
@@ -178,7 +178,7 @@ code/
 
 ### Files to refactor:
 ```
-devbox.json          # consolidate tools
+mise.toml            # consolidate tools
 prep.sh              # add --verify, idempotency
 stages/stage1/        # complete the partial work
 stages/stage2/        # complete
@@ -203,7 +203,7 @@ stages/stage5/helm/instructions.md   # replace with proper stage5 materials
 | 11 stages × 4-5 files each = 44-55 new files | Use templating/boilerplate for manifests; only the exercise content is novel per stage |
 | Tests for k8s stages are brittle | Use idempotent `kubectl` assertions (`kubectl wait`, `kubectl get` checks only) |
 | User may want to keep current stage artifacts | Keep `stages/` content as solutions reference; rebuild stage directories fresh with exercise-first approach |
-| Devbox package availability varies | Some tools (Kyverno, OPA, Karpenter) are better run as k8s add-ons, not local packages — clarify in docs |
+| mise registry availability varies | Some tools (Kyverno, OPA, Karpenter) are better run as k8s add-ons, not local packages — clarify in docs |
 
 ---
 

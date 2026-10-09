@@ -31,7 +31,7 @@ Revision 1 of this audit contained claims that did not survive vetting:
 |---|---|
 | Docs' `storageClassName: standard` breaks on kind | **Wrong.** `kubectl --context kind-apollo11 get sc` shows the default class is literally named `standard` (provisioner `rancher.io/local-path`, `WaitForFirstConsumer`). The docs are correct. The repo's phrase "local-path StorageClass" names the provisioner, which is confusing but not a bug. |
 | "kind v1.35.0 does not exist" (Stage 5 README) | **Wrong.** It is the Kubernetes node version; the live cluster reports server `v1.35.0`. Only the wording ("kind v1.35.0") is loose. |
-| devbox lacks `cosign`/`kyverno` | AGENTS.md says tools are added only when their lab is verified. Not a defect. (The leftover `opa` entry is a minor cleanup, see V-17.) |
+| `mise.toml` lacks `cosign`/`kyverno` | AGENTS.md says tools are added only when their lab is verified. Not a defect. (The leftover `opa` entry was removed in the move to mise, see V-17.) |
 | Stage 6 "no SLOs" evidence in `values-staging.yaml` | That comment is about PDBs. SLO absence is re-established differently in V-05. |
 | `set*` dirs = "88 files / 50,000 lines" | I used a commit stat. Real figure: 125 tracked files, ~4.4 MB (V-08). |
 | Stage 1 NodePort "steals" Stage 2's lesson | Stage 1's README intentionally teaches ClusterIP + NodePort; ROADMAP only says "Services". Downgraded to a sequencing note (N-02). |
@@ -80,7 +80,7 @@ Revision 1 of this audit contained claims that did not survive vetting:
 **V-14 — SPEC.md is stale** (lines 26/62/67/68/508/674): says Stage 3 uses "init containers" (it uses the entrypoint hook), Stage 8 uses "OPA", Stage 9 does "Terraform for EKS + GKE", and load testing/k6 is "Stage 9". All conflict with ROADMAP.
 **V-15 — `stages/stage2/README.md:58`** says verify has "30+ checks" (actual 46–57). Minor.
 **V-16 — Stage 5 README calls the cluster "kind v1.35.0"** — wording only (see retractions).
-**V-17 — Minor cleanups:** `devbox.json` still lists `opa` (ROADMAP selected Kyverno) and its init hook text says only "kubectl, minikube, docker, task"; `test/util/` is empty; `test/stage{5,6,7}_test.sh` wrappers are missing although SPEC.md:26 promises per-stage test scripts; `.hermes/plans/2026-06-02_apollo11-rebuild-plan.md` is a stale tracked plan; `ignition/kind-config-single.yaml:33` comment says "unused in Set 1".
+**V-17 — Minor cleanups:** ~~the toolchain still lists `opa` (ROADMAP selected Kyverno)~~ (resolved: Devbox was replaced by `mise.toml` + `prep.sh`, without `opa`); `test/util/` is empty; `test/stage{5,6,7}_test.sh` wrappers are missing although SPEC.md:26 promises per-stage test scripts; `.hermes/plans/2026-06-02_apollo11-rebuild-plan.md` is a stale tracked plan; `ignition/kind-config-single.yaml:33` comment says "unused in Set 1".
 
 ### Operational hazards worth recording
 
@@ -282,7 +282,7 @@ Retained from revision 1, restated against ROADMAP (all optional until the owner
 - **P-05 Stage 8:** the four-substage security rebuild from the Stage 7 Helm baseline (RBAC/PSA → Calico NetworkPolicy → Vault+ESO → Kyverno/Trivy/Cosign), each with a demonstrable deny/reject.
 - **P-06 Stage 9:** rebuild AWS/EKS from the hardened Helm snapshot with explicit cost gates, tag-scoped teardown, cert-manager TLS, node-drain and upgrade drills, a Velero restore, and a required EKS→GKE portability analysis.
 - **P-07 Harness:** add `test/stage{5,6,7}_test.sh` wrappers; add flight-count/schema assertions to Launchpad; add a kube-context guard shared by every stage script.
-- **P-08 Hygiene:** purge or replace the legacy Stage 9–11 scaffolding with Apollo-specific stubs; reconcile SPEC.md with ROADMAP; clean `devbox.json`.
+- **P-08 Hygiene:** purge or replace the legacy Stage 9–11 scaffolding with Apollo-specific stubs; reconcile SPEC.md with ROADMAP; ~~clean the toolchain config~~ (done: `mise.toml`).
 
 ---
 *End of revision 2.*
