@@ -19,6 +19,8 @@ kind = "latest"
 helm = "latest"
 jq = "latest"
 kustomize = "latest"
+# Liftoff flight deck: terminal UI for the cluster
+k9s = "latest"
 # Stage 5+ GitOps
 argocd = "latest"
 # Stage 7 load testing
