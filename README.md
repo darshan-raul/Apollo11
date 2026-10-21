@@ -139,7 +139,9 @@ optional mission catalogs.
 * ✅ Visualize metrics and build dashboards using **Grafana**.
 * ✅ Centralize logs using **Loki** and correlate them with metrics.
 * ✅ Trace requests across services using **OpenTelemetry**.
-* ✅ Debug using distributed traces.
+* ✅ Debug using distributed traces, linking Tempo traces to Loki logs and Loki logs back to traces.
+* ✅ Route, group, and silence alerts with **Alertmanager**, delivering notifications to a local receiver.
+* ✅ Probe edge HTTPS ingress and internal endpoints using **Prometheus Blackbox Exporter**.
 * ✅ Use **DaemonSets** to deploy monitoring and system agents on every node.
 
 ---
@@ -148,7 +150,8 @@ optional mission catalogs.
 
 * ✅ Configure a CPU-based **Horizontal Pod Autoscaler (HPA)** and inspect its live metrics and decisions.
 * ✅ Generate recommendation-only resource guidance using **Vertical Pod Autoscaler (VPA)**.
-* ✅ Add Redis cache-aside behavior with observable HIT/MISS responses.
+* ✅ Add Redis cache-aside behavior with observable HIT/MISS responses, TTL expiry, stale availability, and graceful outage recovery.
+* ✅ Benchmark and profile cluster capacity using **k6** under normal HPA policy.
 * ✅ Run a reversible scheduling lab using **PriorityClasses**, a worker taint,
   toleration, node affinity, and topology spread.
     
@@ -187,7 +190,10 @@ the existing Stage 8 tree does not inherit implementation trust.
 ### Stage 10 : 🧪 Mission Extensions ⚠️ Planned [📖 status](stages/stage10/README.md)
 
 This is an optional catalog, not a linear stage that every learner must finish.
+Two standalone operational missions are implemented as disposable labs:
 
+* ✅ **CloudNativePG** ([📖 mission](stages/stage10/missions/cloudnativepg/README.md)): PostgreSQL replication, automatic primary failover, retained booking data, and logical dump/restore.
+* ✅ **Falco** ([📖 mission](stages/stage10/missions/falco/README.md)): Runtime security via modern eBPF, observing harmless marker events, detection blind spots, and rule tuning.
 * ☐ Implement a **service mesh** using **Linkerd**.
 * ☐ Perform progressive delivery using **Argo Rollouts**.
 * ☐ Debug with **ephemeral containers** and inspect traffic with **Kubeshark**.

@@ -1,0 +1,106 @@
+[0;36m▶ 0/8 Checking cluster[0m
+[0;32m✓ cluster reachable[0m
+[0;36m▶ 1/8 Skipping build (--skip-build)[0m
+[0;36m▶ 2/8 Installing Envoy Gateway + MetalLB controller bundles[0m
+job.batch/eg-gateway-helm-certgen serverside-applied
+mutatingwebhookconfiguration.admissionregistration.k8s.io/envoy-gateway-topology-injector.envoy-gateway-system serverside-applied
+[0;32m✓ Envoy Gateway bundle applied[0m
+daemonset.apps/speaker serverside-applied
+validatingwebhookconfiguration.admissionregistration.k8s.io/metallb-webhook-configuration serverside-applied
+[0;32m✓ MetalLB bundle applied[0m
+[0;32m✓ platform CRDs registered[0m
+[0;32m✓ MetalLB webhook endpoint ready (10.244.2.143)[0m
+[0;36m▶ 3/8 Ensuring workload namespaces exist[0m
+namespace/apollo-airlines-apps created
+namespace/apollo-airlines-ui created
+[0;32m✓ namespaces ready[0m
+secret/apollo-edge-tls created
+secret/apollo-edge-tls created
+[0;36m▶ 4/8 Kustomize build (dev overlay)[0m
+  Building kustomize overlay at /home/darshan/projects/Apollo11/stages/stage5/overlays/dev...
+[0;32m✓ kustomize build OK (2159 lines)[0m
+[0;36m▶ 5/8 Applying complete plain-manifest overlay[0m
+serviceaccount/booking created
+serviceaccount/booking-db created
+serviceaccount/flight created
+serviceaccount/flight-db created
+serviceaccount/identity created
+serviceaccount/identity-db created
+serviceaccount/init-booking-db created
+serviceaccount/init-flight-db created
+serviceaccount/init-identity-db created
+serviceaccount/notification created
+serviceaccount/redis created
+serviceaccount/search created
+serviceaccount/frontend created
+configmap/apollo-airlines-config created
+configmap/booking-db-init-script created
+configmap/booking-db-seed created
+configmap/flight-db-init-script created
+configmap/flight-db-seed created
+configmap/identity-db-init-script created
+configmap/identity-db-seed created
+configmap/apollo-airlines-config created
+secret/apollo-airlines-secrets created
+secret/apollo-airlines-secrets created
+service/booking created
+service/booking-db created
+service/booking-db-headless created
+service/flight created
+service/flight-db created
+service/flight-db-headless created
+service/identity created
+service/identity-db created
+service/identity-db-headless created
+service/notification created
+service/redis created
+service/redis-headless created
+service/search created
+service/frontend created
+priorityclass.scheduling.k8s.io/apollo-airlines-app-critical created
+priorityclass.scheduling.k8s.io/apollo-airlines-app-low created
+deployment.apps/booking created
+deployment.apps/flight created
+deployment.apps/identity created
+deployment.apps/notification created
+deployment.apps/search created
+deployment.apps/frontend created
+statefulset.apps/booking-db created
+statefulset.apps/flight-db created
+statefulset.apps/identity-db created
+statefulset.apps/redis created
+job.batch/seed-booking-db created
+job.batch/seed-flight-db created
+job.batch/seed-identity-db created
+gateway.gateway.networking.k8s.io/apollo-gateway created
+gatewayclass.gateway.networking.k8s.io/eg created
+httproute.gateway.networking.k8s.io/booking created
+httproute.gateway.networking.k8s.io/flight created
+httproute.gateway.networking.k8s.io/identity created
+httproute.gateway.networking.k8s.io/notification created
+httproute.gateway.networking.k8s.io/search created
+httproute.gateway.networking.k8s.io/frontend created
+referencegrant.gateway.networking.k8s.io/apollo-gateway-grant created
+ipaddresspool.metallb.io/apollo-pool created
+l2advertisement.metallb.io/apollo-l2 created
+[0;32m✓ kustomize overlay applied[0m
+[0;36m▶ 6/8 Waiting for StatefulSets + seed Jobs[0m
+[0;32m✓ statefulset/identity-db ready[0m
+[0;32m✓ statefulset/flight-db ready[0m
+[0;32m✓ statefulset/booking-db ready[0m
+[0;32m✓ statefulset/redis ready[0m
+[0;32m✓ job/seed-identity-db Complete[0m
+[0;32m✓ job/seed-flight-db Complete[0m
+[0;32m✓ job/seed-booking-db Complete[0m
+[0;36m▶ 7/8 Waiting for application Deployments[0m
+[0;32m✓ deployment/identity ready[0m
+[0;32m✓ deployment/flight ready[0m
+[0;32m✓ deployment/booking ready[0m
+[0;32m✓ deployment/search ready[0m
+[0;32m✓ deployment/notification ready[0m
+[0;32m✓ deployment/frontend ready[0m
+[0;36m▶ 8/8 Waiting for Envoy data-plane[0m
+[0;32m✓ Envoy Gateway ready[0m
+[0;32m✓ Apollo Airlines installed via kustomize (dev)[0m
+  Run 'bash scripts/verify.sh --mode kustomize' to run the verify suite
+  Run 'bash scripts/teardown.sh --mode kustomize' to remove

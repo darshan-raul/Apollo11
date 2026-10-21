@@ -37,7 +37,7 @@ Access the services directly using `localhost` and the allocated NodePorts:
 ```bash
 # Query identity service health
 curl -s http://localhost:30083/healthz
-# Expected: {"service":"identity","status":"healthy"}
+# Expected: {"status":"ok"}
 
 # Query flight service health
 curl -s http://localhost:30081/healthz
@@ -84,7 +84,7 @@ Query the endpoint again:
 ```bash
 curl -s http://localhost:30083/healthz
 ```
-Output returns HTTP 200 `{"service":"identity","status":"healthy"}`.
+Output returns HTTP 200 `{"status":"ok"}`.
 
 ---
 

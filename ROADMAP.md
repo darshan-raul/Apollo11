@@ -204,6 +204,8 @@ Optional, independent missions with explicit prerequisites:
 - Kubeshark traffic inspection
 - Chaos Mesh resilience experiments
 - advanced backup and disaster recovery
+- CloudNativePG replication, failover, and logical backup/restore
+- Falco runtime detection with a harmless event and rule tuning
 
 Lifecycle hooks and the baseline DevSecOps pipeline no longer live here; they
 move to Stages 4 and 8 respectively.

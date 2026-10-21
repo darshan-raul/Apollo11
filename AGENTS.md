@@ -39,6 +39,12 @@ stage where the effect can be demonstrated.
 
 ---
 
+## Open gaps
+
+Open gaps and the multi-session plan to close them live in
+[`GAPS_TRACKER.md`](GAPS_TRACKER.md). Read it at the start of every session and
+update row status and evidence when work lands.
+
 ## Verification status after the October gap fixes
 
 The working tree changes context isolation, certificate ownership, frontend API
@@ -56,7 +62,7 @@ claims are updated. See `verification-runs/GAP_CLOSURE.md` for current evidence.
 | Stage 1 | Liftoff | All 10 components as Deployments, ConfigMaps, Secrets, Jobs (single-namespace baseline) |
 | Stage 2 | Guidance/N&C | Progressive 5-substage access ladder: ClusterIP & CoreDNS discovery, NodePort, Traefik Ingress + Local TLS, MetalLB LoadBalancer, and Envoy Gateway API baseline. Headless deferred to Stage 3; NetworkPolicies deferred to Stage 8. |
 | Stage 3 | Mission Data | StatefulSets + 1Gi PVCs for all 4 stateful workloads (3 PG + redis), schema bootstrap via Postgres `/docker-entrypoint-initdb.d/` ConfigMap mount, idempotent seed Jobs. **Envoy Gateway + MetalLB access stack from Stage 2 set 5 carries over and persists for later completed stages.** |
-| Stage 4 | Flight Control | Probes, Guaranteed QoS, lifecycle hooks (preStop), PriorityClass, topology spread, PodDisruptionBudget (148/148 verify) |
+| Stage 4 | Flight Control | Probes, Guaranteed QoS, lifecycle hooks (preStop), PriorityClass, topology spread, PodDisruptionBudget (149/149 verify) |
 | Stage 5 | Payload Integration | Helm chart (full access stack), Kustomize overlays (dev/staging/prod), GitHub Actions CI, **ArgoCD GitOps module** (AppProject + 3 Applications) |
 | Stage 6 | Mission Ops | Prometheus, Grafana, OpenTelemetry |
 | Stage 7 | Orbital Maneuvering | HPA, VPA, Redis cache, PriorityClass, reversible taint/toleration + affinity + topology-spread lab |
@@ -157,7 +163,7 @@ Apollo11/
 │   │   ├── README.md
 │   │   ├── code/            # snapshot of stages/stage3/code/  (probes + SIGTERM added)
 │   │   ├── k8s/             # apps/ (probes+resources), pdb/ (NEW), gateway/, metallb/, jobs/, config/
-│   │   └── scripts/         # apply.sh, teardown.sh, verify.sh (148 checks), build-images.sh
+│   │   └── scripts/         # apply.sh, teardown.sh, verify.sh (149 checks), build-images.sh
 │   ├── stage5/              # Helm chart + Kustomize overlays + GitHub Actions + ArgoCD GitOps module
 │   ├── stage6/              # OTEL SDK + real /metrics + Prometheus + Grafana + Tempo + Loki + Alloy
 │   ├── stage7/              # HPA/VPA, Redis cache, practical scheduling lab
@@ -307,7 +313,7 @@ uses `(flight_number, departure_time)` uniqueness and creates 186 rows across
 | `02-nodeport` | `Service type: NodePort` | `localhost:30080–30084` | 48/48 pass |
 | `03-traefik-ingress-tls` | Traefik v3 Ingress + Local TLS | `*.apollo.local:30080 / 30443` | 49/49 pass |
 | `04-metallb` | MetalLB L2 + `type: LoadBalancer` | `*.apollo.local` on MetalLB IP | 46/46 pass |
-| `05-envoy-gateway` | Envoy Gateway v1.5.0 + MetalLB | `*.apollo.local` on MetalLB IP | 57/57 pass |
+| `05-envoy-gateway` | Envoy Gateway v1.5.0 + MetalLB | `*.apollo.local` on MetalLB IP | 61/61 pass |
 
 **Namespaces (2):**
 - `apollo-airlines-apps` — identity, flight, booking, search, notification, identity-db, flight-db, booking-db, redis, init jobs
@@ -465,7 +471,7 @@ both build and kind load.
 
 **Location:** `stages/stage4/`
 
-**Status:** ✅ Complete. 148/148 verify checks pass on a fresh kind cluster (probes, live execution, Guaranteed QoS, preStop hooks, PriorityClasses, topology spread, PDBs, SIGTERM drain, and Eviction API budget proof).
+**Status:** ✅ Complete. 149/149 verify checks pass on a fresh kind cluster (probes, live execution, Guaranteed QoS, preStop hooks, PriorityClasses, topology spread, PDBs, SIGTERM drain, and Eviction API budget proof).
 
 **Architecture:** Same 10 workloads as Stage 3 + same Envoy Gateway + MetalLB access stack. This stage adds **probes** (so the kubelet can detect unhealthy pods), **resource governance** with Guaranteed QoS (so the scheduler can place pods predictably and OOM events are bounded), **lifecycle preStop hooks and graceful SIGTERM shutdown** (so in-flight requests drain cleanly instead of dropping), **PriorityClasses & topology spread constraints** (so mission-critical booking/search pods have scheduling priority and replicas are balanced across nodes), and **PodDisruptionBudgets** (so voluntary disruptions cannot take down the UI or booking service). The Stage 2 set-5 access stack (Envoy + MetalLB) is unchanged.
 
@@ -478,7 +484,7 @@ both build and kind load.
 | `k8s/jobs/` | 6 | Verbatim from stage 3 (idempotent seed Jobs + ConfigMaps) |
 | `k8s/gateway/` | 11 | Envoy Gateway v1.5.0 install + GatewayClass + EnvoyProxy + Gateway + 6 HTTPRoutes + ReferenceGrant |
 | `k8s/metallb/` | 2 | MetalLB v0.14.5 native install + IPAddressPool + L2Advertisement |
-| `scripts/` | 4 | `apply.sh` (8 steps, applies config/apps/pdb/jobs/gateway/metallb), `teardown.sh` (0 residue), `verify.sh` (148 checks including Eviction API PDB proof & placement lab), `build-images.sh` |
+| `scripts/` | 4 | `apply.sh` (8 steps, applies config/apps/pdb/jobs/gateway/metallb), `teardown.sh` (0 residue), `verify.sh` (149 checks including Eviction API PDB proof & placement lab), `build-images.sh` |
 
 **Probe paths (split into 3 distinct endpoints):**
 
@@ -580,7 +586,7 @@ drain needed.
 - `stages/stage4/code/` is a snapshot of `stages/stage3/code/` with
   the above edits
 
-**Verify target:** 148 checks (43 carried baseline + 105 Stage 4 checks: probes, QoS, preStop, PriorityClasses, topology spread, PDB Eviction API proof, and placement lab):
+**Verify target:** 149 checks (carried baseline plus the Stage 4 checks for probes, QoS, preStop, PriorityClasses, topology spread, PDB Eviction API proof, and placement lab):
 - 18: probes configured on 6 app Deployments (3 probes × 6 deps)
 - 12: probes on 4 sts (liveness + readiness each, NO startupProbe)
 - 10: resources.requests/limits on all 10 workloads
@@ -633,7 +639,7 @@ drain needed.
 
 **Location:** `stages/stage5/`
 
-**Status:** ✅ Implementation complete and locally verified (2026-08-22). Helm/dev passed **153/153**, Kustomize/dev passed **142/142**, and Argo CD passed **74/74** using a temporary read-only Git fixture. Every path completed a clean purge with zero namespace/PVC/related-CRD residue. The hosted GitHub Actions run and first GHCR release publication remain external checks triggered by the next push/tag.
+**Status:** ✅ Implementation complete and locally verified (2026-08-22). Helm/dev passed **174/174** and Kustomize/dev **163/163** (re-run 2026-10-19; earlier 153/142), and Argo CD passed **74/74** (re-run 2026-10-19) using a temporary local Git fixture. Every path completed a clean purge with zero namespace/PVC/related-CRD residue. The hosted GitHub Actions run and first GHCR release publication remain external checks triggered by the next push/tag.
 
 **k8s manifest changes:** None at the workload level (Stage 5 is a packaging layer). The chart's `templates/` produce the same Deployments/StatefulSets/Services that Stage 4's `k8s/` tree contains.
 
@@ -678,7 +684,7 @@ Dev and staging auto-converge on git push; prod is human-gated and pins the imag
 
 **Location:** `stages/stage6/`
 
-**Status:** ✅ Complete and locally verified (2026-08-25). Helm/dev passed **190/190** and Kustomize/dev passed **180/180** on clean lifecycles, including real metrics, healthy Prometheus targets, the Grafana Envoy route, an end-to-end booking trace in Tempo, and Alloy log delivery to Loki. Both paths completed a full purge with no Stage 6 namespace, PVC, controller, or related-CRD residue. The four-Application Argo CD layout validates statically; live reconciliation awaits a Git revision containing the uncommitted Stage 6 work.
+**Status:** ✅ Complete and locally verified (2026-08-25). Helm/dev passed **212/212** and Kustomize/dev **201/201** (re-run 2026-10-19; earlier 190/180) on clean lifecycles, including real metrics, healthy Prometheus targets, the Grafana Envoy route, an end-to-end booking trace in Tempo, and Alloy log delivery to Loki. Both paths completed a full purge with no Stage 6 namespace, PVC, controller, or related-CRD residue. The four-Application Argo CD layout validates statically; Argo CD live run 2026-10-19 reached 79/88 on a heavily loaded host (identity startup probe failures); rerun on a quiet host before claiming a pass.
 
 **k8s manifest changes:**
 - **Prometheus Operator v0.93.0** — bundled outside the chart so Helm's release Secret stays below Kubernetes' 1 MiB object limit
@@ -707,9 +713,9 @@ Dev and staging auto-converge on git push; prod is human-gated and pins the imag
 
 **Location:** `stages/stage7/`
 
-**Status:** ✅ Complete. On 2026-08-26 Helm/dev passed **211/211**, the
+**Status:** ✅ Complete. On 2026-08-26 Helm/dev passed **227/227** (re-run 2026-10-19; earlier 211), the
 practical lab scaled search **1→3→1** across both workers and restored all
-temporary state, and Kustomize/dev passed **200/200**. Both refreshed paths
+temporary state, and Kustomize/dev passed **216/216** (earlier 200). Both refreshed paths
 completed clean purges. The earlier Helm/staging **211/211** live-VPA evidence
 still applies; current dev/staging/prod and Argo CD renders validate statically.
 
@@ -879,9 +885,10 @@ resource/cost budget, failure exercise, verification, and cleanup.
 
 - **mise** for environment management (`mise.toml` + `prep.sh`) — no manual `apt install` for k8s tools
 - **Dockerfiles** use multi-stage builds and live in each service's directory
-- **Go services:** `golang:1.22-alpine` — flight, booking, search, notification
-- **Python service:** `python:3.12-slim` — identity
-- **Frontend:** `node:20-alpine` for build, `nginx:alpine` for serving
+- **Go services:** `golang:1.27.3-alpine3.24` builder, `alpine:3.24.2` runtime — flight, booking, search, notification (Stages 5–7; earlier snapshots still use `golang:1.22-alpine`)
+- **Python service:** `python:3.12.15-slim-trixie` — identity (Stages 5–7)
+- **Frontend:** `node:22.23.4-alpine3.24` for build, `nginx:1.30.6-alpine3.24` for serving (Stages 5–7)
+- **Image gate:** CI fails a Stage 5–7 image on any fixable HIGH or CRITICAL Trivy finding; run `trivy image --ignore-unfixed --severity CRITICAL,HIGH <image>` locally before relying on a dependency bump
 - **PostgreSQL:** `postgres:15-alpine`
 - **Redis:** `redis:7-alpine`
 - **YAML frontmatter** on all documentation/readme files
@@ -909,12 +916,12 @@ advertise an uninstalled tool as part of the current learner environment.
 | Launchpad | ✅ Complete | 10 default workloads, non-root/read-only app containers, dependency-aware readiness, Prometheus text endpoints, full 30-day flight schedule (186 rows), reversible flagship workflow, 74/74 verify |
 | Ignition | ✅ Complete | Fresh three-node lifecycle; 14/14 checks cover the evidence ladder, container restart, bare-Pod deletion, and behavioral recovery |
 | Stage 1 | ✅ Complete | 42 resources; 13 tokenless workload identities; 167/167 checks cover Jobs, flagship workflow, Pod replacement, failed rollout, rollback, and clean teardown |
-| Stage 2 | ✅ Complete | 5-substage progressive access ladder: 01-internal-dns 46/46, 02-nodeport 48/48, 03-traefik-ingress-tls 49/49, 04-metallb 46/46, 05-envoy-gateway 57/57. Envoy Gateway v1.5.0 + MetalLB carries forward. |
-| Stage 3 | ✅ Complete | 4 StatefulSets + PVCs + entrypoint-hook schema + seed jobs, 53/53 verify (Envoy+MetalLB access stack persists for stages 4–11) |
-| Stage 4 | ✅ Complete | Probes (startup/live/ready) on 6 apps, Guaranteed QoS on all 10 pods, PDBs for booking + frontend, graceful SIGTERM on all backends, topology spread, PriorityClasses, Eviction API proof, 148/148 verify |
-| Stage 5 | ✅ Complete locally | Helm 153/153, Kustomize 142/142, Argo CD 74/74; all clean lifecycle tests passed. Hosted Actions/GHCR publication awaits the next push/tag. |
-| Stage 6 | ✅ Complete locally | Helm 190/190 and Kustomize dev 180/180; full metrics/traces/logs behavior and clean purges verified. Argo CD's 4-Application layout validates statically; live reconciliation awaits the next explicitly authorized Git revision. |
-| Stage 7 | ✅ Complete locally | Helm/dev 211/211 + practical scale 1→3→1 across 2 workers; Kustomize/dev 200/200; clean purges and zero lab residue. Earlier Helm/staging 211/211 proved live VPA; current renders validate statically. |
+| Stage 2 | ✅ Complete | 5-substage progressive access ladder: 01-internal-dns 46/46, 02-nodeport 48/48, 03-traefik-ingress-tls 49/49, 04-metallb 46/46, 05-envoy-gateway 61/61. Envoy Gateway v1.5.0 + MetalLB carries forward. |
+| Stage 3 | ✅ Complete | 4 StatefulSets + PVCs + entrypoint-hook schema + seed jobs, 69/69 verify (Envoy+MetalLB access stack persists for stages 4–11) |
+| Stage 4 | ✅ Complete | Probes (startup/live/ready) on 6 apps, Guaranteed QoS on all 10 pods, PDBs for booking + frontend, graceful SIGTERM on all backends, topology spread, PriorityClasses, Eviction API proof, 149/149 verify |
+| Stage 5 | ✅ Complete locally | Helm 174/174, Kustomize 163/163 (re-run 2026-10-22 on upgraded images), Argo CD 74/74 (re-run 2026-10-19); all clean lifecycle tests passed. Hosted Actions/GHCR publication awaits the next push/tag. |
+| Stage 6 | ✅ Complete locally | Helm 212/212 and Kustomize dev 201/201 (re-run 2026-10-22 on upgraded images); full metrics/traces/logs behavior, Alertmanager delivery, Blackbox edge probe, trace↔log correlation and clean purges verified. Identity uses the `python` tier (200m/256Mi); 128Mi stalled it. Argo CD's 4-Application layout validates statically; live reconciliation awaits the next explicitly authorized Git revision. |
+| Stage 7 | ✅ Complete locally | Helm/dev 227/227 + practical scale 1→3→1 across 2 workers; Kustomize/dev 216/216 (re-run 2026-10-22); k6 capacity profile scaled Search 1→2→3 under normal HPA policy after the `nodeTaintsPolicy: Honor` fix; clean purges and zero lab residue. Earlier Helm/staging 211/211 proved live VPA; current renders validate statically. |
 | Stage 8 | ⚠️ Clean rebuild pending | Current worktree is not a trusted input; replacement starts from verified Stage 7 Helm. |
 | Stage 9–11 | ⚠️ Pending | Prototype or legacy scaffolding exists, but none is a trusted implementation boundary yet. |
 

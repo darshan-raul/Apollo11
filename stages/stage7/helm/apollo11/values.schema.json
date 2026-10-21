@@ -318,6 +318,7 @@
           "enum": [
             "default",
             "flagship",
+            "python",
             "low",
             "edge"
           ]

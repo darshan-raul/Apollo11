@@ -31,7 +31,6 @@ apollo_context_guard
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ARGOCD_DIR="$(dirname "$SCRIPT_DIR")"
 APPS_DIR="$ARGOCD_DIR/applications"
-PROJECTS_DIR="$ARGOCD_DIR/projects"
 TENANT_NS="argocd"
 ARGOCD_NS="argocd"
 
@@ -166,6 +165,12 @@ if [[ "$MODE" == "full" || "$MODE" == "purge" ]]; then
         done
         for crb in $(kubectl get clusterrolebinding -o name 2>/dev/null | grep -E 'argocd|argo-cd|prometheus-operator|apollo-observability' || true); do
             kubectl delete "$crb" --ignore-not-found 2>&1 | tail -1
+        done
+        kubectl delete validatingwebhookconfiguration metallb-webhook-configuration --ignore-not-found >/dev/null 2>&1 || true
+        kubectl delete mutatingwebhookconfiguration envoy-gateway-topology-injector.envoy-gateway-system --ignore-not-found >/dev/null 2>&1 || true
+        kubectl delete priorityclass apollo-airlines-app-critical apollo-airlines-app-low --ignore-not-found >/dev/null 2>&1 || true
+        for obj in $(kubectl get clusterrolebinding,clusterrole -o name 2>/dev/null | grep -E 'metallb|eg-gateway-helm' || true); do
+            kubectl delete "$obj" --ignore-not-found >/dev/null 2>&1 || true
         done
         ok "cluster-scoped ArgoCD resources purged"
     fi

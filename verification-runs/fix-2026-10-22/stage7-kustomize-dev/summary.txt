@@ -1,0 +1,7 @@
+apply exit=0
+verify exit=0
+[0;32m[PASS][0m trusted HTTPS API workflow and hostname rejection
+  [0;32mPASS: 216[0m  /  [0;31mFAIL: 0[0m  /  TOTAL: 216
+[0;32mAll Stage 7 checks passed.[0m
+teardown exit=0
+residue lines: 2

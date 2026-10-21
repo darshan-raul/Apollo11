@@ -136,3 +136,13 @@ the extracted rule groups, as described in `verification-runs/GAP_CLOSURE.md`.
 Teardown with `bash scripts/teardown.sh --purge` (add `--mode kustomize` if that
 was the baseline mode). Require the application and observability namespaces,
 PVCs, controllers, and owned CRDs to be absent before starting another stage.
+
+## Extended operator evidence
+
+Substage 1 now includes Blackbox Exporter and the internal frontend Probe.
+Substage 3 adds Alertmanager and a local webhook receiver. Follow
+[OBSERVABILITY.md](OBSERVABILITY.md) to configure the trusted edge Probe,
+observe firing/resolved delivery and silence behavior, and follow a new booking
+between Loki and Tempo. The automated `scripts/observability-lab.sh` isolates
+notification delivery with a temporary synthetic rule and restores its route
+failure automatically. The booking SLO remains a separate exercise.

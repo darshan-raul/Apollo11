@@ -1,0 +1,114 @@
+LAST SEEN   TYPE      REASON                         OBJECT                                        MESSAGE
+5m1s        Normal    Scheduled                      pod/flight-8657878457-q7b2v                   Successfully assigned apollo-airlines-apps/flight-8657878457-q7b2v to apollo11-worker
+5m1s        Normal    Scheduled                      pod/booking-785d6f54f-7mtmw                   Successfully assigned apollo-airlines-apps/booking-785d6f54f-7mtmw to apollo11-worker2
+5m1s        Normal    Scheduled                      pod/notification-9c58d5488-gtxkk              Successfully assigned apollo-airlines-apps/notification-9c58d5488-gtxkk to apollo11-worker
+4m48s       Normal    Scheduled                      pod/identity-db-0                             Successfully assigned apollo-airlines-apps/identity-db-0 to apollo11-worker
+4m44s       Normal    Scheduled                      pod/redis-0                                   Successfully assigned apollo-airlines-apps/redis-0 to apollo11-worker
+5m1s        Normal    Scheduled                      pod/identity-846c96bf69-mfkql                 Successfully assigned apollo-airlines-apps/identity-846c96bf69-mfkql to apollo11-worker
+5m1s        Normal    Scheduled                      pod/search-7b9864d655-95zgt                   Successfully assigned apollo-airlines-apps/search-7b9864d655-95zgt to apollo11-worker
+4m50s       Normal    Scheduled                      pod/booking-db-0                              Successfully assigned apollo-airlines-apps/booking-db-0 to apollo11-worker2
+5m1s        Normal    Scheduled                      pod/seed-identity-db-h8wtq                    Successfully assigned apollo-airlines-apps/seed-identity-db-h8wtq to apollo11-worker
+4m46s       Normal    Scheduled                      pod/flight-db-0                               Successfully assigned apollo-airlines-apps/flight-db-0 to apollo11-worker2
+5m1s        Normal    Scheduled                      pod/seed-booking-db-cddvv                     Successfully assigned apollo-airlines-apps/seed-booking-db-cddvv to apollo11-worker2
+5m1s        Normal    Scheduled                      pod/seed-flight-db-5bdkn                      Successfully assigned apollo-airlines-apps/seed-flight-db-5bdkn to apollo11-worker2
+5m1s        Normal    SuccessfulCreate               statefulset/redis                             Create Pod redis-0 in StatefulSet redis successful
+5m1s        Normal    WaitForFirstConsumer           persistentvolumeclaim/pg-data-flight-db-0     waiting for first consumer to be created before binding
+5m1s        Normal    SuccessfulCreate               statefulset/booking-db                        Create Claim pg-data-booking-db-0 Pod booking-db-0 in StatefulSet booking-db success
+5m1s        Normal    SuccessfulCreate               statefulset/booking-db                        Create Pod booking-db-0 in StatefulSet booking-db successful
+5m1s        Normal    ScalingReplicaSet              deployment/booking                            Scaled up replica set booking-785d6f54f from 0 to 1
+5m1s        Normal    SuccessfulCreate               job/seed-booking-db                           Created pod: seed-booking-db-cddvv
+5m1s        Normal    ScalingReplicaSet              deployment/identity                           Scaled up replica set identity-846c96bf69 from 0 to 1
+5m1s        Normal    SuccessfulCreate               statefulset/identity-db                       Create Pod identity-db-0 in StatefulSet identity-db successful
+5m1s        Normal    ScalingReplicaSet              deployment/search                             Scaled up replica set search-7b9864d655 from 0 to 1
+5m1s        Warning   FailedComputeMetricsReplicas   horizontalpodautoscaler/search-hpa            invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: unable to get metrics for resource cpu: unable to fetch metrics from resource metrics API: the server is currently unable to handle the request (get pods.metrics.k8s.io)
+5m1s        Warning   FailedGetResourceMetric        horizontalpodautoscaler/search-hpa            failed to get cpu utilization: unable to get metrics for resource cpu: unable to fetch metrics from resource metrics API: the server is currently unable to handle the request (get pods.metrics.k8s.io)
+5m1s        Normal    SuccessfulCreate               replicaset/flight-8657878457                  Created pod: flight-8657878457-q7b2v
+5m1s        Normal    SuccessfulCreate               job/seed-flight-db                            Created pod: seed-flight-db-5bdkn
+5m1s        Normal    SuccessfulCreate               replicaset/search-7b9864d655                  Created pod: search-7b9864d655-95zgt
+5m1s        Normal    SuccessfulCreate               statefulset/identity-db                       Create Claim pg-data-identity-db-0 Pod identity-db-0 in StatefulSet identity-db success
+5m1s        Normal    ScalingReplicaSet              deployment/notification                       Scaled up replica set notification-9c58d5488 from 0 to 1
+5m1s        Normal    SuccessfulCreate               replicaset/booking-785d6f54f                  Created pod: booking-785d6f54f-7mtmw
+5m1s        Normal    SuccessfulCreate               replicaset/notification-9c58d5488             Created pod: notification-9c58d5488-gtxkk
+5m1s        Normal    SuccessfulCreate               statefulset/redis                             Create Claim redis-data-redis-0 Pod redis-0 in StatefulSet redis success
+5m1s        Normal    SuccessfulCreate               statefulset/flight-db                         Create Claim pg-data-flight-db-0 Pod flight-db-0 in StatefulSet flight-db success
+5m1s        Normal    SuccessfulCreate               statefulset/flight-db                         Create Pod flight-db-0 in StatefulSet flight-db successful
+5m1s        Normal    ScalingReplicaSet              deployment/flight                             Scaled up replica set flight-8657878457 from 0 to 1
+5m1s        Normal    WaitForFirstConsumer           persistentvolumeclaim/pg-data-booking-db-0    waiting for first consumer to be created before binding
+5m1s        Normal    Provisioning                   persistentvolumeclaim/pg-data-booking-db-0    External provisioner is provisioning volume for claim "apollo-airlines-apps/pg-data-booking-db-0"
+5m1s        Normal    WaitForFirstConsumer           persistentvolumeclaim/pg-data-identity-db-0   waiting for first consumer to be created before binding
+5m1s        Normal    SuccessfulCreate               replicaset/identity-846c96bf69                Created pod: identity-846c96bf69-mfkql
+5m1s        Normal    SuccessfulCreate               job/seed-identity-db                          Created pod: seed-identity-db-h8wtq
+5m1s        Normal    WaitForFirstConsumer           persistentvolumeclaim/redis-data-redis-0      waiting for first consumer to be created before binding
+5m          Normal    Pulled                         pod/identity-846c96bf69-mfkql                 Container image "apollo11/identity:latest" already present on machine and can be accessed by the pod
+5m          Normal    Pulled                         pod/booking-785d6f54f-7mtmw                   Container image "apollo11/booking:latest" already present on machine and can be accessed by the pod
+5m          Normal    Created                        pod/booking-785d6f54f-7mtmw                   Container created
+5m          Normal    Pulled                         pod/search-7b9864d655-95zgt                   Container image "apollo11/search:latest" already present on machine and can be accessed by the pod
+4m59s       Normal    ExternalProvisioning           persistentvolumeclaim/pg-data-booking-db-0    Waiting for a volume to be created either by the external provisioner 'rancher.io/local-path' or manually by the system administrator. If volume creation is delayed, please verify that the provisioner is running and correctly registered.
+4m59s       Normal    ExternalProvisioning           persistentvolumeclaim/pg-data-flight-db-0     Waiting for a volume to be created either by the external provisioner 'rancher.io/local-path' or manually by the system administrator. If volume creation is delayed, please verify that the provisioner is running and correctly registered.
+4m59s       Normal    Pulled                         pod/seed-booking-db-cddvv                     Container image "postgres:15-alpine" already present on machine and can be accessed by the pod
+4m59s       Normal    Created                        pod/identity-846c96bf69-mfkql                 Container created
+4m59s       Normal    ExternalProvisioning           persistentvolumeclaim/redis-data-redis-0      Waiting for a volume to be created either by the external provisioner 'rancher.io/local-path' or manually by the system administrator. If volume creation is delayed, please verify that the provisioner is running and correctly registered.
+4m59s       Normal    Pulled                         pod/seed-identity-db-h8wtq                    Container image "postgres:15-alpine" already present on machine and can be accessed by the pod
+4m59s       Normal    ExternalProvisioning           persistentvolumeclaim/pg-data-identity-db-0   Waiting for a volume to be created either by the external provisioner 'rancher.io/local-path' or manually by the system administrator. If volume creation is delayed, please verify that the provisioner is running and correctly registered.
+4m59s       Normal    Created                        pod/search-7b9864d655-95zgt                   Container created
+4m59s       Normal    Pulled                         pod/seed-flight-db-5bdkn                      Container image "postgres:15-alpine" already present on machine and can be accessed by the pod
+4m59s       Normal    Pulled                         pod/flight-8657878457-q7b2v                   Container image "apollo11/flight:latest" already present on machine and can be accessed by the pod
+4m59s       Normal    Started                        pod/booking-785d6f54f-7mtmw                   Container started
+4m59s       Normal    Pulled                         pod/notification-9c58d5488-gtxkk              Container image "apollo11/notification:latest" already present on machine and can be accessed by the pod
+4m59s       Normal    Started                        pod/identity-846c96bf69-mfkql                 Container started
+4m58s       Normal    Created                        pod/notification-9c58d5488-gtxkk              Container created
+4m58s       Normal    Created                        pod/flight-8657878457-q7b2v                   Container created
+4m58s       Normal    Started                        pod/search-7b9864d655-95zgt                   Container started
+4m58s       Normal    Started                        pod/seed-identity-db-h8wtq                    Container started
+4m58s       Normal    Created                        pod/seed-identity-db-h8wtq                    Container created
+4m58s       Normal    Created                        pod/seed-booking-db-cddvv                     Container created
+4m58s       Normal    Created                        pod/seed-flight-db-5bdkn                      Container created
+4m57s       Normal    Started                        pod/seed-flight-db-5bdkn                      Container started
+4m57s       Normal    Started                        pod/seed-booking-db-cddvv                     Container started
+4m57s       Normal    Started                        pod/flight-8657878457-q7b2v                   Container started
+4m56s       Normal    Started                        pod/notification-9c58d5488-gtxkk              Container started
+4m54s       Normal    Provisioning                   persistentvolumeclaim/pg-data-flight-db-0     External provisioner is provisioning volume for claim "apollo-airlines-apps/pg-data-flight-db-0"
+4m54s       Normal    Provisioning                   persistentvolumeclaim/pg-data-identity-db-0   External provisioner is provisioning volume for claim "apollo-airlines-apps/pg-data-identity-db-0"
+4m51s       Normal    ProvisioningSucceeded          persistentvolumeclaim/pg-data-booking-db-0    Successfully provisioned volume pvc-12223d65-e0a0-405a-8554-771a76c04a44
+4m50s       Normal    Provisioning                   persistentvolumeclaim/redis-data-redis-0      External provisioner is provisioning volume for claim "apollo-airlines-apps/redis-data-redis-0"
+4m49s       Normal    Created                        pod/booking-db-0                              Container created
+4m49s       Normal    Pulled                         pod/booking-db-0                              Container image "postgres:15-alpine" already present on machine and can be accessed by the pod
+4m48s       Normal    ProvisioningSucceeded          persistentvolumeclaim/pg-data-identity-db-0   Successfully provisioned volume pvc-1a81d393-b6eb-4b81-b88e-457c04b910a7
+4m48s       Normal    Started                        pod/booking-db-0                              Container started
+4m47s       Normal    Created                        pod/identity-db-0                             Container created
+4m47s       Normal    Pulled                         pod/identity-db-0                             Container image "postgres:15-alpine" already present on machine and can be accessed by the pod
+4m46s       Warning   Unhealthy                      pod/flight-8657878457-q7b2v                   Startup probe failed: Get "http://10.244.1.53:8081/healthz/startup": dial tcp 10.244.1.53:8081: connect: connection refused
+4m46s       Warning   Unhealthy                      pod/booking-785d6f54f-7mtmw                   Startup probe failed: Get "http://10.244.2.110:8082/healthz/startup": dial tcp 10.244.2.110:8082: connect: connection refused
+4m46s       Normal    Started                        pod/identity-db-0                             Container started
+4m46s       Normal    ProvisioningSucceeded          persistentvolumeclaim/pg-data-flight-db-0     Successfully provisioned volume pvc-b6ddb0bf-de22-4f72-abb9-984b6e35ab59
+4m46s       Warning   FailedComputeMetricsReplicas   horizontalpodautoscaler/search-hpa            invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+4m46s       Warning   FailedGetResourceMetric        horizontalpodautoscaler/search-hpa            failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+4m45s       Normal    Started                        pod/flight-db-0                               Container started
+4m45s       Normal    Created                        pod/flight-db-0                               Container created
+4m45s       Normal    ProvisioningSucceeded          persistentvolumeclaim/redis-data-redis-0      Successfully provisioned volume pvc-804d4838-e043-4977-9348-785ba8d19bdc
+4m45s       Normal    Pulled                         pod/flight-db-0                               Container image "postgres:15-alpine" already present on machine and can be accessed by the pod
+4m44s       Normal    Created                        pod/redis-0                                   Container created
+4m44s       Normal    Pulled                         pod/redis-0                                   Container image "redis:7-alpine" already present on machine and can be accessed by the pod
+4m43s       Normal    Started                        pod/redis-0                                   Container started
+4m41s       Warning   Unhealthy                      pod/identity-846c96bf69-mfkql                 Startup probe failed: Get "http://10.244.1.49:8080/healthz/startup": dial tcp 10.244.1.49:8080: connect: connection refused
+4m39s       Warning   Unhealthy                      pod/notification-9c58d5488-gtxkk              Readiness probe failed: HTTP probe failed with statuscode: 503
+4m37s       Warning   Unhealthy                      pod/booking-db-0                              Readiness probe failed: /var/run/postgresql:5432 - no response
+4m37s       Warning   Unhealthy                      pod/identity-db-0                             Liveness probe failed: /var/run/postgresql:5432 - no response
+4m36s       Warning   Unhealthy                      pod/identity-db-0                             Readiness probe failed: /var/run/postgresql:5432 - no response
+4m34s       Warning   Unhealthy                      pod/flight-db-0                               Readiness probe failed: /var/run/postgresql:5432 - no response
+4m31s       Warning   FailedGetResourceMetric        horizontalpodautoscaler/search-hpa            failed to get cpu utilization: did not receive metrics for targeted pods (pods might be unready)
+4m31s       Warning   Unhealthy                      pod/flight-8657878457-q7b2v                   Readiness probe failed: HTTP probe failed with statuscode: 503
+4m31s       Warning   Unhealthy                      pod/booking-785d6f54f-7mtmw                   Readiness probe failed: HTTP probe failed with statuscode: 503
+4m31s       Warning   FailedComputeMetricsReplicas   horizontalpodautoscaler/search-hpa            invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: did not receive metrics for targeted pods (pods might be unready)
+4m31s       Warning   Unhealthy                      pod/identity-846c96bf69-mfkql                 Readiness probe failed: HTTP probe failed with statuscode: 503
+4m26s       Normal    Completed                      job/seed-identity-db                          Job completed
+4m26s       Normal    Completed                      job/seed-booking-db                           Job completed
+4m21s       Normal    Completed                      job/seed-flight-db                            Job completed
+3m46s       Warning   Unhealthy                      pod/booking-db-0                              Liveness probe failed: command timed out: "pg_isready -U postgres -d booking" timed out after 1s
+3m35s       Warning   Unhealthy                      pod/identity-db-0                             Liveness probe failed: command timed out: "pg_isready -U postgres -d identity" timed out after 1s
+3m35s       Normal    Killing                        pod/identity-db-0                             Container postgres failed liveness probe, will be restarted
+3m35s       Warning   Unhealthy                      pod/identity-846c96bf69-mfkql                 Readiness probe failed: Get "http://10.244.1.49:8080/healthz/ready": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+3m34s       Warning   Unhealthy                      pod/booking-db-0                              Readiness probe failed: command timed out: "pg_isready -U postgres -d booking" timed out after 1s
+3m32s       Warning   Unhealthy                      pod/identity-db-0                             Readiness probe failed: command timed out: "pg_isready -U postgres -d identity" timed out after 1s
+3m32s       Warning   Unhealthy                      pod/flight-db-0                               Liveness probe failed: command timed out: "pg_isready -U postgres -d flight" timed out after 1s
+3m32s       Warning   Unhealthy                      pod/flight-db-0                               Readiness probe failed: command timed out: "pg_isready -U postgres -d flight" timed out after 1s

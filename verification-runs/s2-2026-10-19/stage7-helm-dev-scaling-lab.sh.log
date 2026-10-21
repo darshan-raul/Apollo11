@@ -1,0 +1,38 @@
+
+==> Designating apollo11-worker as the preferred search worker
+node/apollo11-worker labeled
+node/apollo11-worker modified
+Waiting for deployment "search" rollout to finish: 0 of 1 updated replicas are available...
+Waiting for deployment "search" rollout to finish: 0 of 1 updated replicas are available...
+deployment "search" successfully rolled out
+NAME                      READY   STATUS    RESTARTS   AGE   IP             NODE              NOMINATED NODE   READINESS GATES
+search-664cd4c54d-mmtwl   1/1     Running   0          6s    10.244.1.126   apollo11-worker   <none>           <none>
+
+==> Temporarily tuning the HPA for a short local demonstration
+Production values: CPU target=70%, scale-down window=300s
+Lab values:        CPU target=10%, scale-down window=30s
+
+==> Starting bounded in-cluster HTTP load
+Waiting for deployment "search-load" rollout to finish: 0 of 4 updated replicas are available...
+Waiting for deployment "search-load" rollout to finish: 1 of 4 updated replicas are available...
+Waiting for deployment "search-load" rollout to finish: 2 of 4 updated replicas are available...
+Waiting for deployment "search-load" rollout to finish: 3 of 4 updated replicas are available...
+deployment "search-load" successfully rolled out
+
+==> Watching for HPA scale-out
+    0s  ready replicas=1  search-hpa   Deployment/search   cpu: <unknown>/10%   1     3     1     2m18s
+   10s  ready replicas=1  search-hpa   Deployment/search   cpu: <unknown>/10%   1     3     1     2m28s
+   20s  ready replicas=1  search-hpa   Deployment/search   cpu: <unknown>/10%   1     3     1     2m38s
+   30s  ready replicas=1  search-hpa   Deployment/search   cpu: 95%/10%   1     3     1     2m48s
+   40s  ready replicas=3  search-hpa   Deployment/search   cpu: 95%/10%   1     3     1     2m59s
+
+==> Search replicas after scale-out
+NAME                      READY   STATUS    RESTARTS   AGE   IP             NODE              NOMINATED NODE   READINESS GATES
+search-664cd4c54d-78dxj   1/1     Running   0          13s   10.244.1.127   apollo11-worker   <none>           <none>
+search-664cd4c54d-mmtwl   1/1     Running   0          49s   10.244.1.126   apollo11-worker   <none>           <none>
+search-664cd4c54d-zgzl2   1/1     Running   0          13s   10.244.1.128   apollo11-worker   <none>           <none>
+ERROR: search replicas used only 1 worker; expected at least 2
+
+==> Cleaning up the load generator and restoring cluster settings
+Lab state removed. The chart-defined HPA policy is restored.
+exit=1

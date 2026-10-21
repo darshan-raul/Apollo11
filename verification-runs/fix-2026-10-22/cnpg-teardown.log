@@ -1,0 +1,3 @@
+Deleting cluster "apollo11-cloudnativepg" ...
+Deleted nodes: ["apollo11-cloudnativepg-control-plane" "apollo11-cloudnativepg-worker" "apollo11-cloudnativepg-worker2"]
+Owned cluster, volumes, controllers, private context and local dump removed.

@@ -197,11 +197,13 @@ redis:
 # Per-tier resource tiers (Guaranteed QoS — requests == limits):
 #   default:  100m / 128Mi
 #   flagship: 200m / 256Mi  (booking — calls flight + identity + notification)
+#   python:   200m / 256Mi  (identity — Python runtime plus OpenTelemetry
+#             instrumentation; 128Mi left no headroom and stalled under reclaim)
 #   low:       50m /  64Mi  (notification)
 #   edge:      50m /  64Mi  (frontend NGINX)
 apps:
   identity:
-    tier: default
+    tier: python
     port: 8080
     replicas: 2
     dependsOn: [identity-db]
@@ -243,9 +245,13 @@ apps:
                   operator: In
                   values: [dedicated]
     topologySpreadConstraints:
+      # Honor: only nodes whose taints Search tolerates count as domains. With
+      # the default (Ignore) the tainted control plane counts as an empty
+      # domain, so a third replica on two workers breaks maxSkew and stays Pending.
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
-        whenUnsatisfiable: ScheduleAnyway
+        whenUnsatisfiable: DoNotSchedule
+        nodeTaintsPolicy: Honor
         labelSelector:
           matchLabels:
             app: search
@@ -270,6 +276,9 @@ tiers:
     cpu: 100m
     memory: 128Mi
   flagship:
+    cpu: 200m
+    memory: 256Mi
+  python:
     cpu: 200m
     memory: 256Mi
   low:
@@ -450,6 +459,10 @@ observability:
     resources:
       requests: { cpu: 100m, memory: 128Mi }
       limits: { cpu: 300m, memory: 256Mi }
+  blackbox:
+    # In-cluster URLs the blackbox-internal Probe checks. Empty means the
+    # frontend in namespaces.ui; the shared Argo CD platform lists every tenant.
+    internalTargets: []
   otelCollector:
     enabled: true
     image: otel/opentelemetry-collector-contrib:0.99.0

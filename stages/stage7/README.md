@@ -13,8 +13,8 @@ description: "Add HPA, recommendation-only VPA, Redis cache-aside, PriorityClass
 
 | Delivery path | Result |
 |---|---|
-| Helm/dev | **211/211** checks + practical scaling lab, followed by a clean purge |
-| Kustomize/dev | **200/200** checks, followed by a clean purge |
+| Helm/dev | **227/227** checks + practical scaling lab, followed by a clean purge |
+| Kustomize/dev | **216/216** checks, followed by a clean purge |
 | Helm/staging | **211/211** checks with live VPA on 2026-08-25; current render validates statically |
 
 Both refreshed dev purges left zero Apollo namespaces, PVCs, Stage 7
@@ -37,7 +37,7 @@ is a service that can ride out traffic spikes without manual intervention.
 | **Workloads unchanged** | identity, flight, frontend, all StatefulSets, seed Jobs, NetworkPolicies, ServiceAccounts, ConfigMap, Secret, observability stack |
 | **New cluster resources** | 2 PriorityClasses, 1 HPA, metrics-server, and—outside dev—1 recommendation-only VPA with recommender/updater controllers |
 | **Code changes** | search service: Redis client with bounded startup and lazy recovery, cache GET/SET, cache metrics, `X-Cache: HIT/MISS`, OTEL child spans, and clean shutdown |
-| **Verification** | Helm/dev **211/211** + scale 1→3→1 across 2 workers; Kustomize/dev **200/200** |
+| **Verification** | Helm/dev **227/227** + scale 1→3→1 across 2 workers; Kustomize/dev **216/216** |
 
 ---
 
@@ -78,7 +78,7 @@ GET /api/search?origin=BOM&destination=SIN&date=...
 ### 2. HPA: HorizontalPodAutoscaler
 
 ```yaml
-apiVersion: autoscaling.k8s.io/v1
+apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: search-hpa
@@ -125,7 +125,7 @@ toggle).
 ### 3. VPA: VerticalPodAutoscaler in `Off` mode
 
 ```yaml
-apiVersion: autoscaling/v2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: search-vpa
@@ -216,7 +216,8 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: ScheduleAnyway
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
           labelSelector:
             matchLabels:
               app: search
@@ -228,8 +229,19 @@ where dedicated node groups host specific workloads. The soft node affinity
 prefers a worker labeled `apollo11.io/search-pool=dedicated`; it does not make
 that worker mandatory if it is unavailable. The topology-spread constraint
 then asks the scheduler to keep search replicas balanced across eligible
-hostnames with `maxSkew: 1` while retaining `ScheduleAnyway` as a local-lab
-escape hatch.
+hostnames with `maxSkew: 1`. It is `DoNotSchedule` on purpose: the node
+affinity and a `ScheduleAnyway` spread are both normalised scores that nearly
+tie, so replicas sometimes all landed on the preferred worker. The hard
+constraint makes the spread deterministic; the cost is that a replica stays
+Pending rather than doubling up if only one eligible worker is available.
+
+`nodeTaintsPolicy: Honor` matters for the hard constraint. By default the
+scheduler ignores taints when it counts spread domains, so the tainted
+control-plane node counts as a domain holding zero search replicas. With two
+workers already holding one replica each, a third replica on either worker
+would make the skew 2 and it stays Pending. `Honor` counts only nodes whose
+taints search tolerates: the two workers, including the lab's tainted
+search-pool worker.
 
 `scripts/scaling-lab.sh` makes all three policies observable. It labels and
 taints one worker, restarts search, drives HPA scale-out, proves the resulting
@@ -440,3 +452,21 @@ extract the replacement and update local trust. Teardown removes the runtime
 certificate when it deletes the owned namespace.
 
 Follow [the repeatable cache benchmark](k6/README.md) before the HPA lab.
+
+## CI and published image contract
+
+CI validates Stages 5–7, runs review regressions and Go tests, renders every
+Helm/Kustomize environment, checks stage shell scripts, and scans each built
+image with Trivy (fixable HIGH/CRITICAL findings block publication). It publishes
+the exact scanned artifact, without rebuilding it in the publication job.
+
+Images now use `ghcr.io/darshan-raul/apollo11/stageN/SERVICE:TAG`, where N matches
+this stage. Production Helm values and Kustomize names follow that layout.
+Do not substitute a Stage 5 image for Stage 6 telemetry or Stage 7 caching.
+Run `bash test/ci.sh` from the repository root for local validation; install
+Python/PyYAML, Go, Helm, kubectl and shellcheck first. The hosted run and first
+publication require a separately authorized push and remain unverified locally.
+
+Follow [alert delivery, edge probes and correlation](OBSERVABILITY.md) for the new observability exercises.
+
+Complete [performance, correctness and normal-policy scaling](PERFORMANCE.md), including the staging VPA exercise.

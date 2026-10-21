@@ -1,0 +1,29 @@
+helm apply=1
+[FAIL] identity /metrics lacks http_requests_total
+[FAIL] identity /metrics lacks latency histogram
+[FAIL] cross-service trace test failed (see /tmp/stage6-trace-test.log)
+[FAIL] deployment/identity not ready (ready=)
+[FAIL] deployment/identity DATABASE_URL still contains an unexpanded variable
+[FAIL] identity /healthz/startup is unreachable
+[FAIL] identity /healthz/live is unreachable
+[FAIL] identity /healthz/ready is unreachable
+[FAIL] Helm release apollo11 status=failed
+[FAIL] Envoy -> identity /healthz -> 500
+[FAIL] login flow through Envoy did not return a token
+[FAIL] Envoy HTTPS -> identity.apollo.local /healthz -> 500
+[FAIL] trusted HTTPS API workflow or hostname rejection failed
+  PASS: 214  /  FAIL: 13  /  TOTAL: 227
+helm scaling 1 exit=0
+helm scaling 2 exit=0
+helm scaling 3 exit=0
+helm scaling 4 exit=0
+helm scaling 5 exit=0
+helm teardown=0
+kustomize apply=0
+  PASS: 216  /  FAIL: 0  /  TOTAL: 216
+kustomize scaling 1 exit=0
+kustomize scaling 2 exit=0
+kustomize scaling 3 exit=0
+kustomize scaling 4 exit=0
+kustomize scaling 5 exit=0
+kustomize teardown=0

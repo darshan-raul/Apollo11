@@ -1,0 +1,147 @@
+{{- if .Values.observability.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: {{ .Values.observability.namespace }}
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/part-of: apollo-airlines
+data:
+  alertmanager.yml: |
+    route:
+      receiver: lab
+      group_by: [alertname, namespace]
+      group_wait: 5s
+      group_interval: 10s
+      repeat_interval: 1h
+    receivers:
+      - name: lab
+        webhook_configs:
+          - url: http://alert-receiver:8080/
+            send_resolved: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: {{ .Values.observability.namespace }}
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: alertmanager}
+  template:
+    metadata:
+      labels: {app: alertmanager}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 65534, fsGroup: 65534}
+      containers:
+        - name: alertmanager
+          image: quay.io/prometheus/alertmanager:v0.28.1
+          args: [--config.file=/etc/alertmanager/alertmanager.yml, --storage.path=/data, --cluster.listen-address=]
+          ports: [{name: http, containerPort: 9093}]
+          readinessProbe:
+            httpGet: {path: /-/ready, port: http}
+          resources:
+            requests: {cpu: 25m, memory: 32Mi}
+            limits: {cpu: 200m, memory: 128Mi}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts:
+            - {name: config, mountPath: /etc/alertmanager}
+            - {name: data, mountPath: /data}
+      volumes:
+        - name: config
+          configMap: {name: alertmanager-config}
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: {{ .Values.observability.namespace }}
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  selector: {app: alertmanager}
+  ports: [{name: http, port: 9093, targetPort: http}]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alert-receiver-code
+  namespace: {{ .Values.observability.namespace }}
+  labels:
+    app.kubernetes.io/name: alert-receiver
+    app.kubernetes.io/part-of: apollo-airlines
+data:
+  receiver.py: |
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    import json
+    events = []
+    class Receiver(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(events).encode())
+        def do_POST(self):
+            event = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+            events.append(event)
+            del events[:-100]
+            print(json.dumps(event), flush=True)
+            self.send_response(200)
+            self.end_headers()
+    HTTPServer(('0.0.0.0', 8080), Receiver).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-receiver
+  namespace: {{ .Values.observability.namespace }}
+  labels:
+    app.kubernetes.io/name: alert-receiver
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: alert-receiver}
+  template:
+    metadata:
+      labels: {app: alert-receiver}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 10001}
+      containers:
+        - name: receiver
+          image: python:3.12.10-alpine3.21
+          command: [python, -B, /app/receiver.py]
+          ports: [{name: http, containerPort: 8080}]
+          readinessProbe:
+            httpGet: {path: /, port: http}
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 64Mi}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: code, mountPath: /app}]
+      volumes:
+        - name: code
+          configMap: {name: alert-receiver-code}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-receiver
+  namespace: {{ .Values.observability.namespace }}
+  labels:
+    app.kubernetes.io/name: alert-receiver
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  selector: {app: alert-receiver}
+  ports: [{name: http, port: 8080, targetPort: http}]
+{{- end }}

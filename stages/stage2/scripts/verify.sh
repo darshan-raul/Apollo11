@@ -191,7 +191,7 @@ case "$DETECTED_STACK" in
     done
 
     tls_subj=$(curl -k -v --resolve "identity.apollo.local:30443:127.0.0.1" "https://identity.apollo.local:30443/healthz" 2>&1 | grep "subject:" || echo "")
-    if echo "$tls_subj" | grep -q "*.apollo.local"; then
+    if echo "$tls_subj" | grep -Fq "*.apollo.local"; then
       pass "Traefik TLS termination serves *.apollo.local certificate on :30443"
     else
       fail "Traefik TLS certificate mismatch: $tls_subj"

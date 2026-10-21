@@ -16,7 +16,7 @@ description: "Startup/liveness/readiness probes, Guaranteed QoS resource governa
 | **Curriculum Sequence** | Probes → Drains & Lifecycle Hooks → Guaranteed QoS → Priority & Topology Spread → PodDisruptionBudgets |
 | **New Concepts** | `startupProbe`, `livenessProbe`, `readinessProbe`, `preStop` lifecycle hook, `terminationGracePeriodSeconds`, `resources.{requests,limits}`, Guaranteed QoS, `PriorityClass`, `topologySpreadConstraints`, `PodDisruptionBudget`, Eviction API |
 | **Workloads Changed** | 10 (6 app Deployments + 4 StatefulSets) |
-| **Verify Target** | **148/148 checks pass** |
+| **Verify Target** | **149/149 checks pass** |
 
 ---
 
@@ -182,7 +182,7 @@ stages/stage4/
 ├── code/                              # Snapshot of Stage 3 code + probe endpoints & SIGTERM drains
 ├── scripts/
 │   ├── apply.sh                       # 8-step idempotent orchestrator
-│   ├── verify.sh                      # 148 automated checks including eviction & placement proofs
+│   ├── verify.sh                      # 149 automated checks including eviction & placement proofs
 │   ├── teardown.sh                    # Teardown with zero cluster residue
 │   └── build-images.sh                # Builds & loads all 6 application images
 └── k8s/
@@ -205,7 +205,7 @@ Run the verification suite:
 ./stages/stage4/scripts/verify.sh
 ```
 
-**Expected Result: 148/148 checks pass.**
+**Expected Result: 149/149 checks pass.**
 
 ## Local HTTPS and certificate ownership
 

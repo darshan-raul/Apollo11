@@ -20,7 +20,7 @@ def signal_stage(document):
         return None
     if name.startswith('grafana'):
         return 2
-    if name == 'apollo-services':
+    if name.startswith(('alertmanager', 'alert-receiver')) or name == 'apollo-services':
         return 3
     if name.startswith(('loki', 'alloy')):
         return 4

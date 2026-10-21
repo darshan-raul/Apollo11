@@ -4,7 +4,7 @@
 
 # In prod, pull images from GHCR rather than the local kind cluster.
 image:
-  repository: ghcr.io/darshan-raul/apollo11
+  repository: ghcr.io/darshan-raul/apollo11/stage5
   tag: v1.0.0
   pullPolicy: Always
 

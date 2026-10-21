@@ -1,0 +1,442 @@
+== apply 2026-10-19T10:55:41+05:30
+▶ 0/8 Checking cluster
+✓ cluster reachable
+▶ 1/8 Building + loading images (tag: latest)
+=== Building Apollo Airlines service images (stage6) — tag: latest ===
+  Building apollo11/identity:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  49.15kB
+Step 1/7 : FROM python:3.12-slim
+ ---> 090ba77e2958
+Step 2/7 : WORKDIR /app
+ ---> Using cache
+ ---> 878f749aa9bb
+Step 3/7 : COPY requirements.txt .
+ ---> Using cache
+ ---> ea2286d60393
+Step 4/7 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Using cache
+ ---> 0a0db2318821
+Step 5/7 : COPY . .
+ ---> Using cache
+ ---> 3042f07b2493
+Step 6/7 : EXPOSE 8080
+ ---> Using cache
+ ---> e9be36121a16
+Step 7/7 : CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+ ---> Using cache
+ ---> dfdf0eb12ca7
+Successfully built dfdf0eb12ca7
+Successfully tagged apollo11/identity:latest
+  Building apollo11/flight:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  48.64kB
+Step 1/12 : FROM golang:1.22-alpine AS builder
+ ---> 1699c10032ca
+Step 2/12 : WORKDIR /app
+ ---> Using cache
+ ---> ce9b91143eb7
+Step 3/12 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 24d3993149d3
+Step 4/12 : RUN go mod download
+ ---> Using cache
+ ---> 2a1fb5cbfc73
+Step 5/12 : COPY . .
+ ---> Using cache
+ ---> 90c6398bba94
+Step 6/12 : RUN CGO_ENABLED=0 GOOS=linux go build -o /flight-service
+ ---> Using cache
+ ---> cad038bcfe53
+Step 7/12 : FROM alpine:3.19
+ ---> 6baf43584bcb
+Step 8/12 : RUN apk --no-cache add ca-certificates
+ ---> Using cache
+ ---> e498f83dbb30
+Step 9/12 : WORKDIR /app
+ ---> Using cache
+ ---> 0e5250c0ab2a
+Step 10/12 : COPY --from=builder /flight-service /app/flight-service
+ ---> Using cache
+ ---> 60250d4b357a
+Step 11/12 : EXPOSE 8081
+ ---> Using cache
+ ---> f6fbb6776ebc
+Step 12/12 : CMD ["/app/flight-service"]
+ ---> Using cache
+ ---> 40b92074d642
+Successfully built 40b92074d642
+Successfully tagged apollo11/flight:latest
+  Building apollo11/booking:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  49.15kB
+Step 1/12 : FROM golang:1.22-alpine AS builder
+ ---> 1699c10032ca
+Step 2/12 : WORKDIR /app
+ ---> Using cache
+ ---> ce9b91143eb7
+Step 3/12 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 44281f3c2b9f
+Step 4/12 : RUN go mod download
+ ---> Using cache
+ ---> e3fd9878765b
+Step 5/12 : COPY . .
+ ---> Using cache
+ ---> a27ee53ac4f4
+Step 6/12 : RUN CGO_ENABLED=0 GOOS=linux go build -o /booking-service
+ ---> Using cache
+ ---> 4455664475f4
+Step 7/12 : FROM alpine:3.19
+ ---> 6baf43584bcb
+Step 8/12 : RUN apk --no-cache add ca-certificates
+ ---> Using cache
+ ---> e498f83dbb30
+Step 9/12 : WORKDIR /app
+ ---> Using cache
+ ---> 0e5250c0ab2a
+Step 10/12 : COPY --from=builder /booking-service /app/booking-service
+ ---> Using cache
+ ---> d460ac2ee256
+Step 11/12 : EXPOSE 8082
+ ---> Using cache
+ ---> 9bcac1f9f724
+Step 12/12 : CMD ["/app/booking-service"]
+ ---> Using cache
+ ---> fa34938389a2
+Successfully built fa34938389a2
+Successfully tagged apollo11/booking:latest
+  Building apollo11/search:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  31.23kB
+Step 1/12 : FROM golang:1.22-alpine AS builder
+ ---> 1699c10032ca
+Step 2/12 : WORKDIR /app
+ ---> Using cache
+ ---> ce9b91143eb7
+Step 3/12 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 9a1030a7947b
+Step 4/12 : RUN go mod download
+ ---> Using cache
+ ---> 84015cc245ca
+Step 5/12 : COPY . .
+ ---> Using cache
+ ---> 7ae8b09372cd
+Step 6/12 : RUN CGO_ENABLED=0 GOOS=linux go build -o /search-service
+ ---> Using cache
+ ---> 6a4a4491a36f
+Step 7/12 : FROM alpine:3.19
+ ---> 6baf43584bcb
+Step 8/12 : RUN apk --no-cache add ca-certificates
+ ---> Using cache
+ ---> e498f83dbb30
+Step 9/12 : WORKDIR /app
+ ---> Using cache
+ ---> 0e5250c0ab2a
+Step 10/12 : COPY --from=builder /search-service /app/search-service
+ ---> Using cache
+ ---> 7e3bf3a4a0ed
+Step 11/12 : EXPOSE 8083
+ ---> Using cache
+ ---> 027926729ad2
+Step 12/12 : CMD ["/app/search-service"]
+ ---> Using cache
+ ---> 4375b9997e62
+Successfully built 4375b9997e62
+Successfully tagged apollo11/search:latest
+  Building apollo11/notification:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  31.74kB
+Step 1/12 : FROM golang:1.22-alpine AS builder
+ ---> 1699c10032ca
+Step 2/12 : WORKDIR /app
+ ---> Using cache
+ ---> ce9b91143eb7
+Step 3/12 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 685ab66e8619
+Step 4/12 : RUN go mod download
+ ---> Using cache
+ ---> 44676b9c607a
+Step 5/12 : COPY . .
+ ---> Using cache
+ ---> 147c7e3f1fe4
+Step 6/12 : RUN CGO_ENABLED=0 GOOS=linux go build -o /notification-service
+ ---> Using cache
+ ---> a003a46bf5e6
+Step 7/12 : FROM alpine:3.19
+ ---> 6baf43584bcb
+Step 8/12 : RUN apk --no-cache add ca-certificates
+ ---> Using cache
+ ---> e498f83dbb30
+Step 9/12 : WORKDIR /app
+ ---> Using cache
+ ---> 0e5250c0ab2a
+Step 10/12 : COPY --from=builder /notification-service /app/notification-service
+ ---> Using cache
+ ---> 6ffcad2c5d00
+Step 11/12 : EXPOSE 8084
+ ---> Using cache
+ ---> 72f682cd47f6
+Step 12/12 : CMD ["/app/notification-service"]
+ ---> Using cache
+ ---> 226abdc8c95b
+Successfully built 226abdc8c95b
+Successfully tagged apollo11/notification:latest
+  Building apollo11/frontend:latest...
+    VITE_IDENTITY_URL=https://identity.apollo.local
+    VITE_FLIGHT_URL=https://flight.apollo.local
+    VITE_BOOKING_URL=https://booking.apollo.local
+    VITE_SEARCH_URL=https://search.apollo.local
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  109.6kB
+Step 1/19 : FROM node:20-alpine AS builder
+ ---> fb4cd12c85ee
+Step 2/19 : ARG VITE_IDENTITY_URL="http://localhost:30083"
+ ---> Using cache
+ ---> 61734c94f3b1
+Step 3/19 : ARG VITE_FLIGHT_URL="http://localhost:30081"
+ ---> Using cache
+ ---> e6a685b17b9a
+Step 4/19 : ARG VITE_BOOKING_URL="http://localhost:30082"
+ ---> Using cache
+ ---> b9b40451f080
+Step 5/19 : ARG VITE_SEARCH_URL="http://localhost:30084"
+ ---> Using cache
+ ---> 40aeab1ac1db
+Step 6/19 : ENV VITE_IDENTITY_URL=$VITE_IDENTITY_URL
+ ---> Using cache
+ ---> 81a911e44e09
+Step 7/19 : ENV VITE_FLIGHT_URL=$VITE_FLIGHT_URL
+ ---> Using cache
+ ---> 178473c75082
+Step 8/19 : ENV VITE_BOOKING_URL=$VITE_BOOKING_URL
+ ---> Using cache
+ ---> 84ec420afeda
+Step 9/19 : ENV VITE_SEARCH_URL=$VITE_SEARCH_URL
+ ---> Using cache
+ ---> 5d340f6b5db3
+Step 10/19 : WORKDIR /app
+ ---> Using cache
+ ---> 7f42faa8a809
+Step 11/19 : COPY package.json ./
+ ---> Using cache
+ ---> 80bb731f13f4
+Step 12/19 : RUN npm install
+ ---> Using cache
+ ---> fecc2c4e91a3
+Step 13/19 : COPY . .
+ ---> Using cache
+ ---> d64ce0bab659
+Step 14/19 : RUN npm run build
+ ---> Using cache
+ ---> 32f24a04bdd1
+Step 15/19 : FROM nginx:alpine
+ ---> 8b1e78743a03
+Step 16/19 : COPY --from=builder /app/dist /usr/share/nginx/html
+ ---> Using cache
+ ---> 4dc5fcc6bcc2
+Step 17/19 : COPY nginx.conf /etc/nginx/conf.d/default.conf
+ ---> Using cache
+ ---> 9143d1f1de39
+Step 18/19 : EXPOSE 3000
+ ---> Using cache
+ ---> 602328aa4b57
+Step 19/19 : CMD ["nginx", "-g", "daemon off;"]
+ ---> Using cache
+ ---> a2d4f2f63361
+Successfully built a2d4f2f63361
+Successfully tagged apollo11/frontend:latest
+
+=== Loading images into kind cluster 'apollo11' ===
+Image: "apollo11/identity:latest" with ID "sha256:dfdf0eb12ca7bda376c3beceb91eecfc010a63bdfd748509c3ef982d40d62eb6" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/identity:latest" with ID "sha256:dfdf0eb12ca7bda376c3beceb91eecfc010a63bdfd748509c3ef982d40d62eb6" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/identity:latest" with ID "sha256:dfdf0eb12ca7bda376c3beceb91eecfc010a63bdfd748509c3ef982d40d62eb6" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/identity:latest
+Image: "apollo11/flight:latest" with ID "sha256:40b92074d642f9204fb259e5f38bff4482790c67479323245a0db96a1d40e68e" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/flight:latest" with ID "sha256:40b92074d642f9204fb259e5f38bff4482790c67479323245a0db96a1d40e68e" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/flight:latest" with ID "sha256:40b92074d642f9204fb259e5f38bff4482790c67479323245a0db96a1d40e68e" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/flight:latest
+Image: "apollo11/booking:latest" with ID "sha256:fa34938389a227c34d45ea3c1a73c398e0934cdcfd40d5cc3aaef44f6c03ea1a" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/booking:latest" with ID "sha256:fa34938389a227c34d45ea3c1a73c398e0934cdcfd40d5cc3aaef44f6c03ea1a" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/booking:latest" with ID "sha256:fa34938389a227c34d45ea3c1a73c398e0934cdcfd40d5cc3aaef44f6c03ea1a" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/booking:latest
+Image: "apollo11/search:latest" with ID "sha256:4375b9997e62dd9d05ef671c445f08694a7a91ddff620c950e5eed21484211ef" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/search:latest" with ID "sha256:4375b9997e62dd9d05ef671c445f08694a7a91ddff620c950e5eed21484211ef" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/search:latest" with ID "sha256:4375b9997e62dd9d05ef671c445f08694a7a91ddff620c950e5eed21484211ef" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/search:latest
+Image: "apollo11/notification:latest" with ID "sha256:226abdc8c95b3adacbb2f0f318edf7512d5cffcc4d63759b920135ac7e438a59" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/notification:latest" with ID "sha256:226abdc8c95b3adacbb2f0f318edf7512d5cffcc4d63759b920135ac7e438a59" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/notification:latest" with ID "sha256:226abdc8c95b3adacbb2f0f318edf7512d5cffcc4d63759b920135ac7e438a59" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/notification:latest
+Image: "apollo11/frontend:latest" with ID "sha256:a2d4f2f633614246edcc10f8de40634ae6ef5c53565207859e1bd89064fc561b" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/frontend:latest" with ID "sha256:a2d4f2f633614246edcc10f8de40634ae6ef5c53565207859e1bd89064fc561b" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/frontend:latest" with ID "sha256:a2d4f2f633614246edcc10f8de40634ae6ef5c53565207859e1bd89064fc561b" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/frontend:latest
+
+Done.
+✓ all 6 application images built and loaded
+▶ 2/8 Installing Envoy Gateway + MetalLB controller bundles
+job.batch/eg-gateway-helm-certgen serverside-applied
+mutatingwebhookconfiguration.admissionregistration.k8s.io/envoy-gateway-topology-injector.envoy-gateway-system serverside-applied
+✓ Envoy Gateway bundle applied
+daemonset.apps/speaker serverside-applied
+validatingwebhookconfiguration.admissionregistration.k8s.io/metallb-webhook-configuration serverside-applied
+✓ MetalLB bundle applied
+✓ platform CRDs registered
+✓ MetalLB webhook endpoint ready (10.244.2.181)
+✓ Prometheus Operator v0.93.0 ready
+▶ 3/8 Ensuring workload namespaces exist
+namespace/apollo-airlines-apps created
+namespace/apollo-airlines-ui created
+✓ namespaces ready
+secret/apollo-edge-tls created
+secret/apollo-edge-tls created
+▶ 4/8 Kustomize build (dev overlay)
+  Building kustomize overlay at /home/darshan/projects/Apollo11/stages/stage6/overlays/dev...
+✓ kustomize build OK (3551 lines)
+▶ 5/8 Applying complete plain-manifest overlay
+serviceaccount/booking created
+serviceaccount/booking-db created
+serviceaccount/flight created
+serviceaccount/flight-db created
+serviceaccount/identity created
+serviceaccount/identity-db created
+serviceaccount/init-booking-db created
+serviceaccount/init-flight-db created
+serviceaccount/init-identity-db created
+serviceaccount/notification created
+serviceaccount/redis created
+serviceaccount/search created
+serviceaccount/frontend created
+serviceaccount/observability-stack created
+clusterrole.rbac.authorization.k8s.io/apollo-observability created
+clusterrolebinding.rbac.authorization.k8s.io/apollo-observability created
+configmap/apollo-airlines-config created
+configmap/booking-db-init-script created
+configmap/booking-db-seed created
+configmap/flight-db-init-script created
+configmap/flight-db-seed created
+configmap/identity-db-init-script created
+configmap/identity-db-seed created
+configmap/apollo-airlines-config created
+configmap/alloy-config created
+configmap/grafana-dashboard-booking created
+configmap/grafana-dashboard-errors created
+configmap/grafana-dashboard-overview created
+configmap/grafana-dashboard-provider created
+configmap/grafana-dashboard-saturation created
+configmap/grafana-dashboard-trace-viewer created
+configmap/grafana-datasources created
+configmap/loki-config created
+configmap/otel-collector-config created
+configmap/tempo-config created
+secret/apollo-airlines-secrets created
+secret/apollo-airlines-secrets created
+secret/grafana-admin created
+service/booking created
+service/booking-db created
+service/booking-db-headless created
+service/flight created
+service/flight-db created
+service/flight-db-headless created
+service/identity created
+service/identity-db created
+service/identity-db-headless created
+service/notification created
+service/redis created
+service/redis-headless created
+service/search created
+service/frontend created
+service/grafana created
+service/loki created
+service/otel-collector created
+service/prometheus created
+service/tempo created
+priorityclass.scheduling.k8s.io/apollo-airlines-app-critical created
+priorityclass.scheduling.k8s.io/apollo-airlines-app-low created
+persistentvolumeclaim/grafana-data created
+persistentvolumeclaim/loki-data created
+persistentvolumeclaim/tempo-data created
+deployment.apps/booking created
+deployment.apps/flight created
+deployment.apps/identity created
+deployment.apps/notification created
+deployment.apps/search created
+deployment.apps/frontend created
+deployment.apps/grafana created
+deployment.apps/loki created
+deployment.apps/tempo created
+statefulset.apps/booking-db created
+statefulset.apps/flight-db created
+statefulset.apps/identity-db created
+statefulset.apps/redis created
+daemonset.apps/alloy created
+daemonset.apps/otel-collector created
+job.batch/seed-booking-db created
+job.batch/seed-flight-db created
+job.batch/seed-identity-db created
+gateway.gateway.networking.k8s.io/apollo-gateway created
+gatewayclass.gateway.networking.k8s.io/eg created
+httproute.gateway.networking.k8s.io/booking created
+httproute.gateway.networking.k8s.io/flight created
+httproute.gateway.networking.k8s.io/identity created
+httproute.gateway.networking.k8s.io/notification created
+httproute.gateway.networking.k8s.io/search created
+httproute.gateway.networking.k8s.io/frontend created
+httproute.gateway.networking.k8s.io/grafana created
+referencegrant.gateway.networking.k8s.io/apollo-gateway-grant created
+ipaddresspool.metallb.io/apollo-pool created
+l2advertisement.metallb.io/apollo-l2 created
+prometheus.monitoring.coreos.com/apollo created
+prometheusrule.monitoring.coreos.com/apollo-services created
+servicemonitor.monitoring.coreos.com/booking created
+servicemonitor.monitoring.coreos.com/flight created
+servicemonitor.monitoring.coreos.com/identity created
+servicemonitor.monitoring.coreos.com/notification created
+servicemonitor.monitoring.coreos.com/search created
+✓ kustomize overlay applied
+▶ 6/8 Waiting for StatefulSets + seed Jobs
+✓ statefulset/identity-db ready
+✓ statefulset/flight-db ready
+✓ statefulset/booking-db ready
+✓ statefulset/redis ready
+✓ job/seed-identity-db Complete
+✓ job/seed-flight-db Complete
+✓ job/seed-booking-db Complete
+▶ 7/8 Waiting for application Deployments
+✓ deployment/identity ready
+✓ deployment/flight ready
+✓ deployment/booking ready
+✓ deployment/search ready
+✓ deployment/notification ready
+✓ deployment/frontend ready
+▶ 8/8 Waiting for Envoy data-plane
+✓ Envoy Gateway ready
+▶ Waiting for Stage 6 observability workloads
+✓ deployment/grafana ready
+✓ deployment/loki ready
+✓ deployment/tempo ready
+✓ daemonset/otel-collector ready
+error: timed out waiting for the condition
+✗ daemonset/alloy did not become ready
+apply_exit=1

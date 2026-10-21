@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLUSTER="${CLUSTER:-apollo11}"
 ALLOWED_CONTEXTS=("kind-${CLUSTER}" "kind-${CLUSTER}-dev")
 
@@ -427,7 +426,7 @@ fi
 
 header "15. Reversible Eviction API & PodDisruptionBudget Enforcement Proof"
 info "Testing PDB contract: verifying first eviction succeeds and second is blocked..."
-BOOKING_PODS=($(kubectl get pods -n apollo-airlines-apps -l app=booking -o jsonpath='{.items[*].metadata.name}'))
+read -r -a BOOKING_PODS <<< "$(kubectl get pods -n apollo-airlines-apps -l app=booking -o jsonpath='{.items[*].metadata.name}')"
 if [[ "${#BOOKING_PODS[@]}" -ge 2 ]]; then
     POD1="${BOOKING_PODS[0]}"
     POD2="${BOOKING_PODS[1]}"

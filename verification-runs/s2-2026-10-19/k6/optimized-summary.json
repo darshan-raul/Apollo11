@@ -1,0 +1,173 @@
+{
+    "metrics": {
+        "http_req_duration": {
+            "max": 167.313204,
+            "p(90)": 5.759137,
+            "p(95)": 10.7409675,
+            "avg": 4.3173242166167,
+            "min": 0.74036,
+            "med": 2.8447645,
+            "thresholds": {
+                "p(95)<200": false
+            }
+        },
+        "http_reqs": {
+            "count": 6006,
+            "rate": 50.02355978318546
+        },
+        "cache_hit_rate": {
+            "fails": 1,
+            "passes": 5999,
+            "thresholds": {
+                "rate>0.9": false
+            },
+            "value": 0.9998333333333334
+        },
+        "dropped_iterations": {
+            "count": 0,
+            "rate": 0,
+            "thresholds": {
+                "count==0": false
+            }
+        },
+        "vus_max": {
+            "max": 20,
+            "value": 20,
+            "min": 20
+        },
+        "data_sent": {
+            "count": 924924,
+            "rate": 7703.6282066105605
+        },
+        "checks": {
+            "passes": 18000,
+            "fails": 0,
+            "thresholds": {
+                "rate==1": false
+            },
+            "value": 1
+        },
+        "http_req_sending": {
+            "avg": 0.03993413203463202,
+            "min": 0.01,
+            "med": 0.0374965,
+            "max": 2.60874,
+            "p(90)": 0.054094,
+            "p(95)": 0.06925225
+        },
+        "http_req_waiting": {
+            "max": 167.175423,
+            "p(90)": 5.506864,
+            "p(95)": 10.534964500000001,
+            "avg": 4.162495940059927,
+            "min": 0.696006,
+            "med": 2.6822425
+        },
+        "http_req_blocked": {
+            "med": 0.01137,
+            "max": 2.447164,
+            "p(90)": 0.013844,
+            "p(95)": 0.01946525,
+            "avg": 0.015272796869796873,
+            "min": 0.003677
+        },
+        "http_req_connecting": {
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.0023874250749250743,
+            "min": 0,
+            "med": 0,
+            "max": 2.0248
+        },
+        "iterations": {
+            "count": 6000,
+            "rate": 49.97358619698847
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 6006,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(95)": 10.7409675,
+            "avg": 4.3173242166167,
+            "min": 0.74036,
+            "med": 2.8447645,
+            "max": 167.313204,
+            "p(90)": 5.759137
+        },
+        "http_req_tls_handshaking": {
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0
+        },
+        "vus": {
+            "value": 2,
+            "min": 0,
+            "max": 4
+        },
+        "cache_misses": {
+            "count": 1,
+            "rate": 0.008328931032831412
+        },
+        "http_req_receiving": {
+            "p(95)": 0.19629475,
+            "avg": 0.11489414452214511,
+            "min": 0.017114,
+            "med": 0.1126925,
+            "max": 2.820818,
+            "p(90)": 0.157129
+        },
+        "data_received": {
+            "count": 4132224,
+            "rate": 34417.00870821075
+        },
+        "cache_hits": {
+            "count": 5999,
+            "rate": 49.965257265955636
+        },
+        "iteration_duration": {
+            "med": 3.323015,
+            "max": 168.165628,
+            "p(90)": 6.388738100000001,
+            "p(95)": 11.281284650000003,
+            "avg": 4.756683611999998,
+            "min": 0.922593
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "returns seeded flights": {
+                    "passes": 6000,
+                    "fails": 0,
+                    "name": "returns seeded flights",
+                    "path": "::returns seeded flights",
+                    "id": "cad05679924df19200550d226f551066"
+                },
+                "reports cache state": {
+                    "id": "8c874a8837d5935daebafdfb84803565",
+                    "passes": 6000,
+                    "fails": 0,
+                    "name": "reports cache state",
+                    "path": "::reports cache state"
+                },
+                "cache bypass gives MISS": {
+                    "name": "cache bypass gives MISS",
+                    "path": "::cache bypass gives MISS",
+                    "id": "1525286b03723b6d0815ad0eb1289a7a",
+                    "passes": 6000,
+                    "fails": 0
+                }
+            }
+    }
+}

@@ -1,0 +1,173 @@
+{
+    "metrics": {
+        "checks": {
+            "fails": 8470,
+            "passes": 977,
+            "thresholds": {
+                "rate==1": true
+            },
+            "value": 0.10341907483857309
+        },
+        "http_req_waiting": {
+            "avg": 2473.171707562595,
+            "min": 0,
+            "med": 0,
+            "max": 10188.614691,
+            "p(90)": 10003.9903452,
+            "p(95)": 10008.4847286
+        },
+        "cache_misses": {
+            "count": 325,
+            "rate": 2.5447450367013897
+        },
+        "http_req_failed": {
+            "passes": 2823,
+            "fails": 332,
+            "thresholds": {
+                "rate<0.01": true
+            },
+            "value": 0.894770206022187
+        },
+        "dropped_iterations": {
+            "count": 2852,
+            "rate": 22.331116445145735,
+            "thresholds": {
+                "count==0": true
+            }
+        },
+        "http_req_receiving": {
+            "med": 0,
+            "max": 1.258287,
+            "p(90)": 0.1388366,
+            "p(95)": 0.18107399999999996,
+            "avg": 0.04294341806656107,
+            "min": 0
+        },
+        "http_reqs": {
+            "count": 3155,
+            "rate": 24.703601817824264
+        },
+        "http_req_sending": {
+            "avg": 0.03695078858954041,
+            "min": 0,
+            "med": 0,
+            "max": 16.738735,
+            "p(90)": 0.0533082,
+            "p(95)": 0.08100039999999996
+        },
+        "http_req_blocked": {
+            "min": 0,
+            "med": 0,
+            "max": 15.026869,
+            "p(90)": 0.015079999999999996,
+            "p(95)": 0.2786613999999999,
+            "avg": 0.06165367226624403
+        },
+        "cache_hits": {
+            "count": 1,
+            "rate": 0.00782998472831197
+        },
+        "http_req_connecting": {
+            "min": 0,
+            "med": 0,
+            "max": 14.322064,
+            "p(90)": 0,
+            "p(95)": 0.19560669999999977,
+            "avg": 0.0432617207606973
+        },
+        "vus": {
+            "value": 0,
+            "min": 0,
+            "max": 100
+        },
+        "cache_hit_rate": {
+            "fails": 3148,
+            "passes": 1,
+            "thresholds": {
+                "rate==0": true
+            },
+            "value": 0.00031756113051762465
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "data_sent": {
+            "count": 189882,
+            "rate": 1486.7731601813334
+        },
+        "data_received": {
+            "count": 551302,
+            "rate": 4316.686240687845
+        },
+        "http_req_duration": {
+            "min": 0,
+            "med": 0,
+            "max": 10188.808119,
+            "p(90)": 10004.2271014,
+            "p(95)": 10008.7478522,
+            "avg": 2473.251601769255,
+            "thresholds": {
+                "p(95)<200": true
+            }
+        },
+        "iteration_duration": {
+            "p(90)": 10004.6652216,
+            "p(95)": 10009.7481864,
+            "avg": 2487.049346583038,
+            "min": 0.283848,
+            "med": 1.64863,
+            "max": 10189.550155
+        },
+        "vus_max": {
+            "max": 100,
+            "value": 100,
+            "min": 20
+        },
+        "iterations": {
+            "count": 3149,
+            "rate": 24.65662190945439
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 2461.939891165662,
+            "min": 2.178228,
+            "med": 1209.9059695,
+            "max": 9980.871244,
+            "p(90)": 7178.02924410001,
+            "p(95)": 9304.35474255
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "returns seeded flights": {
+                    "name": "returns seeded flights",
+                    "path": "::returns seeded flights",
+                    "id": "cad05679924df19200550d226f551066",
+                    "passes": 326,
+                    "fails": 2823
+                },
+                "reports cache state": {
+                    "name": "reports cache state",
+                    "path": "::reports cache state",
+                    "id": "8c874a8837d5935daebafdfb84803565",
+                    "passes": 326,
+                    "fails": 2823
+                },
+                "cache bypass gives MISS": {
+                    "fails": 2824,
+                    "name": "cache bypass gives MISS",
+                    "path": "::cache bypass gives MISS",
+                    "id": "1525286b03723b6d0815ad0eb1289a7a",
+                    "passes": 325
+                }
+            }
+    }
+}

@@ -1,0 +1,73 @@
+Name:             identity-846c96bf69-mfkql
+Namespace:        apollo-airlines-apps
+Priority:         0
+Service Account:  identity
+Node:             apollo11-worker/172.18.0.4
+Start Time:       Mon, 19 Oct 2026 14:25:29 +0530
+Labels:           app=identity
+                  app.kubernetes.io/instance=apollo11
+                  app.kubernetes.io/managed-by=Helm
+                  app.kubernetes.io/name=apollo11
+                  app.kubernetes.io/part-of=apollo-airlines
+                  app.kubernetes.io/version=1.0.0
+                  hermes=managed
+                  pod-template-hash=846c96bf69
+                  tier=public
+Annotations:      prometheus.io/path: /metrics
+                  prometheus.io/port: 8080
+                  prometheus.io/scrape: true
+Status:           Running
+IP:               10.244.1.49
+IPs:
+  IP:           10.244.1.49
+Controlled By:  ReplicaSet/identity-846c96bf69
+Containers:
+  identity:
+    Container ID:   containerd://4c37b6cc0f429290bf967c3ac01c4ad1bb899656bf3541e3b282c70113192eb3
+    Image:          apollo11/identity:latest
+    Image ID:       docker.io/library/import-2026-10-19@sha256:5bff6dd3ddbca1a64e9772fe17704a837ab9dac6d246a07b2cc53ecd20a4e1d7
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Mon, 19 Oct 2026 14:25:31 +0530
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     100m
+      memory:  128Mi
+    Requests:
+      cpu:      100m
+      memory:   128Mi
+    Liveness:   http-get http://:8080/healthz/live delay=15s timeout=1s period=10s successThreshold=1 failureThreshold=3
+    Readiness:  http-get http://:8080/healthz/ready delay=5s timeout=1s period=5s successThreshold=1 failureThreshold=3
+    Startup:    http-get http://:8080/healthz/startup delay=0s timeout=1s period=5s successThreshold=1 failureThreshold=6
+    Environment:
+      PORT:                         8080
+      POSTGRES_PASSWORD:            <set to the key 'POSTGRES_PASSWORD' in secret 'apollo-airlines-secrets'>  Optional: false
+      DATABASE_URL:                 postgresql://postgres:$(POSTGRES_PASSWORD)@identity-db:5432/identity?sslmode=disable
+      JWT_SECRET:                   <set to the key 'JWT_SECRET' in secret 'apollo-airlines-secrets'>  Optional: false
+      OTEL_EXPORTER_OTLP_ENDPOINT:  otel-collector.apollo-observability.svc.cluster.local:4317
+      OTEL_SERVICE_NAME:            identity
+    Mounts:                         <none>
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
+Volumes:                      <none>
+QoS Class:                    Guaranteed
+Node-Selectors:               <none>
+Tolerations:                  node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                              node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Topology Spread Constraints:  kubernetes.io/hostname:ScheduleAnyway when max skew 1 is exceeded for selector app=identity
+Events:
+  Type     Reason     Age                    From               Message
+  ----     ------     ----                   ----               -------
+  Normal   Scheduled  4m59s                  default-scheduler  Successfully assigned apollo-airlines-apps/identity-846c96bf69-mfkql to apollo11-worker
+  Normal   Pulled     4m59s                  kubelet            spec.containers{identity}: Container image "apollo11/identity:latest" already present on machine and can be accessed by the pod
+  Normal   Created    4m58s                  kubelet            spec.containers{identity}: Container created
+  Normal   Started    4m58s                  kubelet            spec.containers{identity}: Container started
+  Warning  Unhealthy  4m40s (x4 over 4m55s)  kubelet            spec.containers{identity}: Startup probe failed: Get "http://10.244.1.49:8080/healthz/startup": dial tcp 10.244.1.49:8080: connect: connection refused
+  Warning  Unhealthy  4m30s (x2 over 4m35s)  kubelet            spec.containers{identity}: Readiness probe failed: HTTP probe failed with statuscode: 503

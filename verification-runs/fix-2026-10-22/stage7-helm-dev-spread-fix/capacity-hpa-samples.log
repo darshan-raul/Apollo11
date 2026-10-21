@@ -1,0 +1,166 @@
+21:25:41
+search-hpa   Deployment/search   cpu: 4%/70%   1     3     1     6m18s
+search-75d78747dd-xcmh2   4m    23Mi   
+search-75d78747dd-xcmh2   1/1   Running   0     6m17s   10.244.1.149   apollo11-worker   <none>   <none>
+21:26:11
+search-hpa   Deployment/search   cpu: 22%/70%   1     3     1     6m48s
+search-75d78747dd-xcmh2   22m   28Mi   
+search-75d78747dd-xcmh2   1/1   Running   0     6m47s   10.244.1.149   apollo11-worker   <none>   <none>
+21:26:41
+search-hpa   Deployment/search   cpu: 28%/70%   1     3     1     7m19s
+search-75d78747dd-xcmh2   28m   16Mi   
+search-75d78747dd-xcmh2   1/1   Running   0     7m18s   10.244.1.149   apollo11-worker   <none>   <none>
+21:27:12
+search-hpa   Deployment/search   cpu: 39%/70%   1     3     1     7m49s
+search-75d78747dd-xcmh2   39m   17Mi   
+search-75d78747dd-xcmh2   1/1   Running   0     7m48s   10.244.1.149   apollo11-worker   <none>   <none>
+21:27:42
+search-hpa   Deployment/search   cpu: 50%/70%   1     3     1     8m19s
+search-75d78747dd-xcmh2   50m   18Mi   
+search-75d78747dd-xcmh2   1/1   Running   0     8m18s   10.244.1.149   apollo11-worker   <none>   <none>
+21:28:12
+search-hpa   Deployment/search   cpu: 48%/70%   1     3     1     8m49s
+search-75d78747dd-xcmh2   48m   18Mi   
+search-75d78747dd-xcmh2   1/1   Running   0     8m48s   10.244.1.149   apollo11-worker   <none>   <none>
+21:28:42
+search-hpa   Deployment/search   cpu: 64%/70%   1     3     1     9m19s
+search-75d78747dd-xcmh2   64m   17Mi   
+search-75d78747dd-xcmh2   1/1   Running   0     9m19s   10.244.1.149   apollo11-worker   <none>   <none>
+21:29:13
+search-hpa   Deployment/search   cpu: 60%/70%   1     3     1     9m50s
+search-75d78747dd-xcmh2   60m   23Mi   
+search-75d78747dd-xcmh2   1/1   Running   0     9m49s   10.244.1.149   apollo11-worker   <none>   <none>
+21:29:43
+search-hpa   Deployment/search   cpu: 70%/70%   1     3     1     10m
+search-75d78747dd-xcmh2   70m   26Mi   
+search-75d78747dd-xcmh2   1/1   Running   0     10m   10.244.1.149   apollo11-worker   <none>   <none>
+21:30:13
+search-hpa   Deployment/search   cpu: 72%/70%   1     3     1     10m
+search-75d78747dd-xcmh2   86m   19Mi   
+search-75d78747dd-xcmh2   1/1   Running   0     10m   10.244.1.149   apollo11-worker   <none>   <none>
+21:30:44
+search-hpa   Deployment/search   cpu: 80%/70%   1     3     2     11m
+search-75d78747dd-g528r   25m   13Mi   
+search-75d78747dd-xcmh2   72m   35Mi   
+search-75d78747dd-g528r   1/1   Running   0     19s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     11m   10.244.1.149   apollo11-worker    <none>   <none>
+21:31:14
+search-hpa   Deployment/search   cpu: 59%/70%   1     3     2     11m
+search-75d78747dd-g528r   63m   14Mi   
+search-75d78747dd-xcmh2   56m   23Mi   
+search-75d78747dd-g528r   1/1   Running   0     49s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     11m   10.244.1.149   apollo11-worker    <none>   <none>
+21:31:44
+search-hpa   Deployment/search   cpu: 61%/70%   1     3     2     12m
+search-75d78747dd-g528r   75m   25Mi   
+search-75d78747dd-xcmh2   75m   25Mi   
+search-75d78747dd-g528r   1/1   Running   0     80s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     12m   10.244.1.149   apollo11-worker    <none>   <none>
+21:32:15
+search-hpa   Deployment/search   cpu: 58%/70%   1     3     2     12m
+search-75d78747dd-g528r   67m   21Mi   
+search-75d78747dd-xcmh2   67m   19Mi   
+search-75d78747dd-g528r   1/1   Running   0     110s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     12m    10.244.1.149   apollo11-worker    <none>   <none>
+21:32:45
+search-hpa   Deployment/search   cpu: 70%/70%   1     3     2     13m
+search-75d78747dd-g528r   77m   16Mi   
+search-75d78747dd-xcmh2   82m   24Mi   
+search-75d78747dd-g528r   1/1   Running   0     2m20s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     13m     10.244.1.149   apollo11-worker    <none>   <none>
+21:33:15
+search-hpa   Deployment/search   cpu: 71%/70%   1     3     3     13m
+search-75d78747dd-g528r   74m   20Mi   
+search-75d78747dd-nwwd9   20m   8Mi    
+search-75d78747dd-xcmh2   73m   26Mi   
+search-75d78747dd-g528r   1/1   Running   0     2m50s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-nwwd9   1/1   Running   0     20s     10.244.1.168   apollo11-worker    <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     13m     10.244.1.149   apollo11-worker    <none>   <none>
+21:33:45
+search-hpa   Deployment/search   cpu: 58%/70%   1     3     3     14m
+search-75d78747dd-g528r   51m   19Mi   
+search-75d78747dd-nwwd9   53m   10Mi   
+search-75d78747dd-xcmh2   47m   23Mi   
+search-75d78747dd-g528r   1/1   Running   0     3m21s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-nwwd9   1/1   Running   0     51s     10.244.1.168   apollo11-worker    <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     14m     10.244.1.149   apollo11-worker    <none>   <none>
+21:34:16
+search-hpa   Deployment/search   cpu: 53%/70%   1     3     3     14m
+search-75d78747dd-g528r   48m   20Mi   
+search-75d78747dd-nwwd9   55m   14Mi   
+search-75d78747dd-xcmh2   52m   23Mi   
+search-75d78747dd-g528r   1/1   Running   0     3m52s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-nwwd9   1/1   Running   0     82s     10.244.1.168   apollo11-worker    <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     14m     10.244.1.149   apollo11-worker    <none>   <none>
+21:34:47
+search-hpa   Deployment/search   cpu: 51%/70%   1     3     3     15m
+search-75d78747dd-g528r   53m   23Mi   
+search-75d78747dd-nwwd9   48m   19Mi   
+search-75d78747dd-xcmh2   48m   23Mi   
+search-75d78747dd-g528r   1/1   Running   0     4m22s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-nwwd9   1/1   Running   0     112s    10.244.1.168   apollo11-worker    <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     15m     10.244.1.149   apollo11-worker    <none>   <none>
+21:35:17
+search-hpa   Deployment/search   cpu: 49%/70%   1     3     3     15m
+search-75d78747dd-g528r   44m   25Mi   
+search-75d78747dd-nwwd9   43m   21Mi   
+search-75d78747dd-xcmh2   44m   19Mi   
+search-75d78747dd-g528r   1/1   Running   0     4m52s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-nwwd9   1/1   Running   0     2m22s   10.244.1.168   apollo11-worker    <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     15m     10.244.1.149   apollo11-worker    <none>   <none>
+21:35:47
+search-hpa   Deployment/search   cpu: 45%/70%   1     3     3     16m
+search-75d78747dd-g528r   39m   16Mi   
+search-75d78747dd-nwwd9   39m   12Mi   
+search-75d78747dd-xcmh2   39m   24Mi   
+search-75d78747dd-g528r   1/1   Running   0     5m23s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-nwwd9   1/1   Running   0     2m53s   10.244.1.168   apollo11-worker    <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     16m     10.244.1.149   apollo11-worker    <none>   <none>
+21:36:18
+search-hpa   Deployment/search   cpu: 43%/70%   1     3     3     16m
+search-75d78747dd-g528r   42m   21Mi   
+search-75d78747dd-nwwd9   41m   12Mi   
+search-75d78747dd-xcmh2   40m   23Mi   
+search-75d78747dd-g528r   1/1   Running   0     5m53s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-nwwd9   1/1   Running   0     3m23s   10.244.1.168   apollo11-worker    <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     16m     10.244.1.149   apollo11-worker    <none>   <none>
+21:36:48
+search-hpa   Deployment/search   cpu: 37%/70%   1     3     3     17m
+search-75d78747dd-g528r   29m   24Mi   
+search-75d78747dd-nwwd9   28m   11Mi   
+search-75d78747dd-xcmh2   30m   21Mi   
+search-75d78747dd-g528r   1/1   Running   0     6m23s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-nwwd9   1/1   Running   0     3m53s   10.244.1.168   apollo11-worker    <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     17m     10.244.1.149   apollo11-worker    <none>   <none>
+21:37:18
+search-hpa   Deployment/search   cpu: 29%/70%   1     3     3     17m
+search-75d78747dd-g528r   32m   26Mi   
+search-75d78747dd-nwwd9   34m   11Mi   
+search-75d78747dd-xcmh2   32m   22Mi   
+search-75d78747dd-g528r   1/1   Running   0     6m54s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-nwwd9   1/1   Running   0     4m24s   10.244.1.168   apollo11-worker    <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     17m     10.244.1.149   apollo11-worker    <none>   <none>
+21:37:49
+search-hpa   Deployment/search   cpu: 29%/70%   1     3     3     18m
+search-75d78747dd-g528r   29m   29Mi   
+search-75d78747dd-nwwd9   25m   12Mi   
+search-75d78747dd-xcmh2   27m   18Mi   
+search-75d78747dd-g528r   1/1   Running   0     7m24s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-nwwd9   1/1   Running   0     4m54s   10.244.1.168   apollo11-worker    <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     18m     10.244.1.149   apollo11-worker    <none>   <none>
+21:38:19
+search-hpa   Deployment/search   cpu: 24%/70%   1     3     3     18m
+search-75d78747dd-g528r   19m   19Mi   
+search-75d78747dd-nwwd9   22m   14Mi   
+search-75d78747dd-xcmh2   20m   21Mi   
+search-75d78747dd-g528r   1/1   Running   0     7m54s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-nwwd9   1/1   Running   0     5m24s   10.244.1.168   apollo11-worker    <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     18m     10.244.1.149   apollo11-worker    <none>   <none>
+21:38:49
+search-hpa   Deployment/search   cpu: 17%/70%   1     3     3     19m
+search-75d78747dd-g528r   11m   19Mi   
+search-75d78747dd-nwwd9   17m   16Mi   
+search-75d78747dd-xcmh2   11m   22Mi   
+search-75d78747dd-g528r   1/1   Running   0     8m24s   10.244.2.176   apollo11-worker2   <none>   <none>
+search-75d78747dd-nwwd9   1/1   Running   0     5m54s   10.244.1.168   apollo11-worker    <none>   <none>
+search-75d78747dd-xcmh2   1/1   Running   0     19m     10.244.1.149   apollo11-worker    <none>   <none>

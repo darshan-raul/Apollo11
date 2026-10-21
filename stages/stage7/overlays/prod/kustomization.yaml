@@ -47,20 +47,20 @@ replicas:
 
 images:
   - name: apollo11/identity
-    newName: ghcr.io/darshan-raul/apollo11/identity
+    newName: ghcr.io/darshan-raul/apollo11/stage7/identity
     newTag: v1.0.0
   - name: apollo11/flight
-    newName: ghcr.io/darshan-raul/apollo11/flight
+    newName: ghcr.io/darshan-raul/apollo11/stage7/flight
     newTag: v1.0.0
   - name: apollo11/booking
-    newName: ghcr.io/darshan-raul/apollo11/booking
+    newName: ghcr.io/darshan-raul/apollo11/stage7/booking
     newTag: v1.0.0
   - name: apollo11/search
-    newName: ghcr.io/darshan-raul/apollo11/search
+    newName: ghcr.io/darshan-raul/apollo11/stage7/search
     newTag: v1.0.0
   - name: apollo11/notification
-    newName: ghcr.io/darshan-raul/apollo11/notification
+    newName: ghcr.io/darshan-raul/apollo11/stage7/notification
     newTag: v1.0.0
   - name: apollo11/frontend
-    newName: ghcr.io/darshan-raul/apollo11/frontend
+    newName: ghcr.io/darshan-raul/apollo11/stage7/frontend
     newTag: v1.0.0

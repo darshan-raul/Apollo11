@@ -1,0 +1,5 @@
+NAME                     SYNC STATUS   HEALTH STATUS
+apollo11-dev             Synced        Degraded
+apollo11-observability   OutOfSync     Degraded
+apollo11-prod            OutOfSync     Missing
+apollo11-staging         Synced        Progressing

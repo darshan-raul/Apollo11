@@ -1,0 +1,78 @@
+▶ 0/3 Checking cluster
+✓ cluster reachable
+▶ 1/3 Deleting Applications (mode: purge)
+  deleting application apollo11-dev (pruning managed resources)...
+  deleting application apollo11-observability (pruning managed resources)...
+  deleting application apollo11-prod (pruning managed resources)...
+  deleting application apollo11-staging (pruning managed resources)...
+✓ 4 application(s) deleted
+▶ 2/3 Deleting AppProject + isolated tenant platform
+appproject.argoproj.io "apollo-airlines" deleted from argocd namespace
+✓ appproject/apollo-airlines deleted
+✓ tenant namespaces and shared platform deleted
+▶ 3/3 Deleting ArgoCD system namespace
+pod "argocd-application-controller-0" force deleted from argocd namespace
+pod "argocd-applicationset-controller-cc9f596b-54j9m" force deleted from argocd namespace
+pod "argocd-dex-server-7665676cbc-w6dzh" force deleted from argocd namespace
+pod "argocd-notifications-controller-66fb46b4f-8nsvg" force deleted from argocd namespace
+pod "argocd-redis-6b477bb4b9-24zfk" force deleted from argocd namespace
+pod "argocd-repo-server-787db56bbd-r6mmj" force deleted from argocd namespace
+pod "argocd-server-59ccc85b97-zw5jv" force deleted from argocd namespace
+namespace "argocd" deleted
+✓ namespace argocd deleted
+  purging cluster-scoped CRDs...
+customresourcedefinition.apiextensions.k8s.io "applications.argoproj.io" deleted
+customresourcedefinition.apiextensions.k8s.io "applicationsets.argoproj.io" deleted
+customresourcedefinition.apiextensions.k8s.io "appprojects.argoproj.io" deleted
+customresourcedefinition.apiextensions.k8s.io "alertmanagerconfigs.monitoring.coreos.com" deleted
+customresourcedefinition.apiextensions.k8s.io "alertmanagers.monitoring.coreos.com" deleted
+customresourcedefinition.apiextensions.k8s.io "backends.gateway.envoyproxy.io" deleted
+customresourcedefinition.apiextensions.k8s.io "backendtlspolicies.gateway.networking.k8s.io" deleted
+customresourcedefinition.apiextensions.k8s.io "backendtrafficpolicies.gateway.envoyproxy.io" deleted
+customresourcedefinition.apiextensions.k8s.io "bfdprofiles.metallb.io" deleted
+customresourcedefinition.apiextensions.k8s.io "bgpadvertisements.metallb.io" deleted
+customresourcedefinition.apiextensions.k8s.io "bgppeers.metallb.io" deleted
+customresourcedefinition.apiextensions.k8s.io "clienttrafficpolicies.gateway.envoyproxy.io" deleted
+customresourcedefinition.apiextensions.k8s.io "communities.metallb.io" deleted
+customresourcedefinition.apiextensions.k8s.io "envoyextensionpolicies.gateway.envoyproxy.io" deleted
+customresourcedefinition.apiextensions.k8s.io "envoypatchpolicies.gateway.envoyproxy.io" deleted
+customresourcedefinition.apiextensions.k8s.io "envoyproxies.gateway.envoyproxy.io" deleted
+customresourcedefinition.apiextensions.k8s.io "gatewayclasses.gateway.networking.k8s.io" deleted
+customresourcedefinition.apiextensions.k8s.io "gateways.gateway.networking.k8s.io" deleted
+customresourcedefinition.apiextensions.k8s.io "grpcroutes.gateway.networking.k8s.io" deleted
+customresourcedefinition.apiextensions.k8s.io "httproutefilters.gateway.envoyproxy.io" deleted
+customresourcedefinition.apiextensions.k8s.io "httproutes.gateway.networking.k8s.io" deleted
+customresourcedefinition.apiextensions.k8s.io "ipaddresspools.metallb.io" deleted
+customresourcedefinition.apiextensions.k8s.io "l2advertisements.metallb.io" deleted
+customresourcedefinition.apiextensions.k8s.io "podmonitors.monitoring.coreos.com" deleted
+customresourcedefinition.apiextensions.k8s.io "probes.monitoring.coreos.com" deleted
+customresourcedefinition.apiextensions.k8s.io "prometheusagents.monitoring.coreos.com" deleted
+customresourcedefinition.apiextensions.k8s.io "prometheuses.monitoring.coreos.com" deleted
+customresourcedefinition.apiextensions.k8s.io "prometheusrules.monitoring.coreos.com" deleted
+customresourcedefinition.apiextensions.k8s.io "referencegrants.gateway.networking.k8s.io" deleted
+customresourcedefinition.apiextensions.k8s.io "scrapeconfigs.monitoring.coreos.com" deleted
+customresourcedefinition.apiextensions.k8s.io "securitypolicies.gateway.envoyproxy.io" deleted
+customresourcedefinition.apiextensions.k8s.io "servicel2statuses.metallb.io" deleted
+customresourcedefinition.apiextensions.k8s.io "servicemonitors.monitoring.coreos.com" deleted
+customresourcedefinition.apiextensions.k8s.io "tcproutes.gateway.networking.k8s.io" deleted
+customresourcedefinition.apiextensions.k8s.io "thanosrulers.monitoring.coreos.com" deleted
+customresourcedefinition.apiextensions.k8s.io "tlsroutes.gateway.networking.k8s.io" deleted
+customresourcedefinition.apiextensions.k8s.io "udproutes.gateway.networking.k8s.io" deleted
+customresourcedefinition.apiextensions.k8s.io "xbackendtrafficpolicies.gateway.networking.x-k8s.io" deleted
+customresourcedefinition.apiextensions.k8s.io "xlistenersets.gateway.networking.x-k8s.io" deleted
+clusterrole.rbac.authorization.k8s.io "apollo-observability" deleted
+clusterrole.rbac.authorization.k8s.io "argocd-application-controller" deleted
+clusterrole.rbac.authorization.k8s.io "argocd-applicationset-controller" deleted
+clusterrole.rbac.authorization.k8s.io "argocd-server" deleted
+clusterrole.rbac.authorization.k8s.io "prometheus-operator" deleted
+clusterrolebinding.rbac.authorization.k8s.io "apollo-observability" deleted
+clusterrolebinding.rbac.authorization.k8s.io "argocd-application-controller" deleted
+clusterrolebinding.rbac.authorization.k8s.io "argocd-applicationset-controller" deleted
+clusterrolebinding.rbac.authorization.k8s.io "argocd-server" deleted
+clusterrolebinding.rbac.authorization.k8s.io "prometheus-operator" deleted
+✓ cluster-scoped ArgoCD resources purged
+✓ Teardown complete (mode: purge)
+
+  Remaining state:
+    (no applications namespace)
+    (argocd ns removed)

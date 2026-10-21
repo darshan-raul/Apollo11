@@ -1,0 +1,61 @@
+# Copy this file beside extracted rules.yaml, then run promtool test rules.
+rule_files: [rules.yaml]
+evaluation_interval: 30s
+fuzzy_compare: true
+tests:
+  - name: successful booking creations preserve the budget
+    interval: 1m
+    input_series:
+      - series: 'http_requests_total{service="booking",method="POST",path="/api/bookings",status="201"}'
+        values: '0+100x10'
+    promql_expr_test:
+      - expr: apollo:booking_error_ratio:5m
+        eval_time: 10m
+        exp_samples: [{labels: 'apollo:booking_error_ratio:5m', value: 0}]
+      - expr: apollo:booking_error_budget_remaining:28d
+        eval_time: 10m
+        exp_samples: [{labels: 'apollo:booking_error_budget_remaining:28d', value: 1}]
+  - name: ten percent server errors consume twenty times the allowed budget
+    interval: 1m
+    input_series:
+      - series: 'http_requests_total{service="booking",method="POST",path="/api/bookings",status="201"}'
+        values: '0+90x10'
+      - series: 'http_requests_total{service="booking",method="POST",path="/api/bookings",status="502"}'
+        values: '0+10x10'
+      - series: 'http_requests_total{service="booking",method="POST",path="/api/bookings",status="401"}'
+        values: '0+1000x10'
+    promql_expr_test:
+      - expr: apollo:booking_error_ratio:5m
+        eval_time: 10m
+        exp_samples: [{labels: 'apollo:booking_error_ratio:5m', value: 0.1}]
+      - expr: apollo:booking_error_budget_remaining:28d
+        eval_time: 10m
+        exp_samples: [{labels: 'apollo:booking_error_budget_remaining:28d', value: -19}]
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ApolloBookingErrorBudgetBurn
+        exp_alerts:
+          - exp_labels: {severity: critical, service: booking}
+            exp_annotations:
+              summary: Booking creation consumes the 99.5 percent error budget at more than 14.4 times the allowed rate
+  - name: no requests are not counted as perfect availability
+    interval: 1m
+    input_series:
+      - series: 'http_requests_total{service="booking",method="POST",path="/api/bookings",status="201"}'
+        values: '0x10'
+    promql_expr_test:
+      - expr: apollo:booking_error_ratio:5m
+        eval_time: 10m
+        exp_samples: []
+      - expr: apollo:booking_error_budget_remaining:28d
+        eval_time: 10m
+        exp_samples: []
+  - name: authentication errors do not create an eligible booking denominator
+    interval: 1m
+    input_series:
+      - series: 'http_requests_total{service="booking",method="POST",path="/api/bookings",status="401"}'
+        values: '0+100x10'
+    promql_expr_test:
+      - expr: apollo:booking_error_ratio:5m
+        eval_time: 10m
+        exp_samples: []

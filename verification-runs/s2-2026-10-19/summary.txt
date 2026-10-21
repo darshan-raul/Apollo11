@@ -1,0 +1,6 @@
+### 5 helm
+### 5 kustomize
+### 6 helm slo-lab.sh signals-lab.sh trace-test.sh
+### 6 kustomize
+### 7 helm scaling-lab.sh trace-test.sh
+### 7 kustomize

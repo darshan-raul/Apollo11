@@ -44,7 +44,7 @@ kubectl exec -n apollo-airlines-ui curl-client -- nslookup identity.apollo-airli
 
 # 3. Query the application over internal ClusterIP via FQDN:
 kubectl exec -n apollo-airlines-ui curl-client -- curl -s http://identity.apollo-airlines-apps.svc.cluster.local:8080/healthz
-# Expected output: {"service":"identity","status":"healthy"}
+# Expected output: {"status":"ok"}
 ```
 
 ---
@@ -89,7 +89,7 @@ Re-run the HTTP query:
 ```bash
 kubectl exec -n apollo-airlines-ui curl-client -- curl -s http://identity.apollo-airlines-apps.svc.cluster.local:8080/healthz
 ```
-Output returns HTTP 200 `{"service":"identity","status":"healthy"}`.
+Output returns HTTP 200 `{"status":"ok"}`.
 
 ---
 

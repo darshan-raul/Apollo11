@@ -112,7 +112,7 @@ Verify traffic reachability:
 LB_IP=$(kubectl get svc traefik -n kube-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 curl -s -H "Host: identity.apollo.local" "http://${LB_IP}/healthz"
 ```
-Output returns HTTP 200 `{"service":"identity","status":"healthy"}`.
+Output returns HTTP 200 `{"status":"ok"}`.
 
 ---
 

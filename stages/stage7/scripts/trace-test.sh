@@ -11,7 +11,17 @@ ok() { echo -e "${GREEN}✓ $1${NC}"; }
 fail() { echo -e "${RED}✗ $1${NC}"; exit 1; }
 
 DEBUG_POD="stage7-trace-$RANDOM"
-cleanup() { kubectl delete pod "$DEBUG_POD" -n apollo-airlines-apps --wait=false >/dev/null 2>&1 || true; }
+booking_id=""
+cleanup() {
+    local result=$?
+    if [[ -n "$booking_id" ]]; then
+        kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- curl --max-time 15 -fsS \
+            -X DELETE -H "Authorization: Bearer $token" \
+            "http://booking:8082/api/bookings/$booking_id" >/dev/null || result=1
+    fi
+    kubectl delete pod "$DEBUG_POD" -n apollo-airlines-apps --wait=false >/dev/null 2>&1 || result=1
+    exit "$result"
+}
 trap cleanup EXIT
 
 step "Starting an in-cluster HTTP client"
@@ -50,6 +60,7 @@ for flight_id in "${flight_ids[@]}"; do
     body=${response%$'\n'*}
     if [[ "$status" == "200" || "$status" == "201" ]] && grep -q '"bookingReference"' <<<"$body"; then
         booking="$body"
+        booking_id=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$booking")
         chosen_flight_id="$flight_id"
         seats_before="$candidate_seats"
         break
@@ -108,6 +119,7 @@ cancel_status=${cancel_response##*$'\n'}
 cancel_body=${cancel_response%$'\n'*}
 [[ "$cancel_status" == "200" ]] || fail "booking cancellation returned HTTP $cancel_status: $cancel_body"
 
+booking_id=""
 seats_after_cancel=""
 for _ in $(seq 1 20); do
     flight_after_cancel=$(kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- curl -fsS "http://flight:8081/api/flights/$chosen_flight_id")
@@ -118,3 +130,17 @@ done
 [[ "$seats_after_cancel" == "$seats_before" ]] || fail "seat count was not restored after cancellation ($seats_before -> $seats_after_cancel)"
 
 ok "passenger booking and cancellation succeeded; one trace contains booking → identity → flight → notification"
+
+# The same trace must also exist in newly collected structured logs.
+correlated=false
+for _ in $(seq 1 30); do
+    logs=$(kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- curl --max-time 15 -fsS -G \
+        --data-urlencode "query={service=~\".+\"} | json | trace_id=\"$TRACE_ID\"" \
+        http://loki.apollo-observability:3100/loki/api/v1/query_range)
+    if python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(not any(s["values"] for s in d["data"]["result"]))' <<< "$logs"; then
+        correlated=true; break
+    fi
+    sleep 2
+done
+[[ "$correlated" == true ]] || fail "trace exists in Tempo but matching logs never reached Loki"
+ok "Log/trace correlation proved for $TRACE_ID; use Grafana's View trace and Logs links"

@@ -1,0 +1,64 @@
+[0;36m▶ 0/9 Checking cluster[0m
+[0;32m✓ cluster reachable[0m
+[0;36m▶ 1/8 Skipping build (--skip-build)[0m
+[0;36m▶ 2/9 Pre-install: CRD bundles and Stage 7 metrics dependencies[0m
+job.batch/eg-gateway-helm-certgen serverside-applied
+mutatingwebhookconfiguration.admissionregistration.k8s.io/envoy-gateway-topology-injector.envoy-gateway-system serverside-applied
+[0;32m✓ Envoy Gateway bundle applied[0m
+daemonset.apps/speaker serverside-applied
+validatingwebhookconfiguration.admissionregistration.k8s.io/metallb-webhook-configuration serverside-applied
+[0;32m✓ MetalLB bundle applied[0m
+[0;32m✓ Prometheus Operator v0.93.0 ready[0m
+[0;32m✓ metrics-server ready[0m
+[0;36m▶ 3/8 Wait for CRD registration[0m
+[0;32m✓ CRDs registered[0m
+[0;36m▶ 4/8 Wait for MetalLB webhook to be ready[0m
+[0;32m✓ MetalLB webhook endpoint ready (10.244.2.87)[0m
+[0;36m▶ 5/8 Helm install (release: apollo11, env: dev)[0m
+secret/apollo-edge-tls created
+secret/apollo-edge-tls created
+  using values file: /home/darshan/projects/Apollo11/stages/stage7/helm/apollo11/values-dev.yaml
+Release "apollo11" does not exist. Installing it now.
+NAME: apollo11
+LAST DEPLOYED: Mon Oct 19 14:22:30 2026
+NAMESPACE: apollo-airlines-apps
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+[0;32m✓ helm install complete[0m
+[0;36m▶ 6/8 Waiting for MetalLB controller pod[0m
+[0;32m✓ MetalLB controller ready[0m
+[0;36m▶ 7/8 Waiting for Envoy Gateway[0m
+[0;32m✓ Envoy Gateway ready[0m
+[0;36m▶ 8/8 Waiting for StatefulSets (3 PG + 1 Redis)[0m
+[0;32m✓ statefulset/identity-db ready[0m
+[0;32m✓ statefulset/flight-db ready[0m
+[0;32m✓ statefulset/booking-db ready[0m
+[0;32m✓ statefulset/redis ready[0m
+[0;36m▶ 8b/8 Waiting for seed jobs[0m
+[0;32m✓ job/seed-identity-db Complete[0m
+[0;32m✓ job/seed-flight-db Complete[0m
+[0;32m✓ job/seed-booking-db Complete[0m
+[0;36m▶ 8c/8 Waiting for app Deployments (5 backends + frontend)[0m
+[0;32m✓ deployment/identity ready[0m
+[0;32m✓ deployment/flight ready[0m
+[0;32m✓ deployment/booking ready[0m
+[0;32m✓ deployment/search ready[0m
+[0;32m✓ deployment/notification ready[0m
+[0;32m✓ deployment/frontend ready[0m
+[0;36m▶ Waiting for Stage 7 autoscaling resources[0m
+[0;32m✓ metrics.k8s.io returns node data[0m
+[0;32m✓ search HPA reports current CPU utilization[0m
+[0;36m▶ Waiting for Stage 6 observability workloads[0m
+[0;32m✓ deployment/grafana ready[0m
+[0;32m✓ deployment/loki ready[0m
+[0;32m✓ deployment/tempo ready[0m
+[0;32m✓ daemonset/otel-collector ready[0m
+[0;32m✓ daemonset/alloy ready[0m
+[0;32m✓ statefulset/prometheus-apollo ready[0m
+[0;36m▶ 8/8 Summary[0m
+[0;32m✓ Apollo Airlines Stage 7 installed via Helm[0m
+  Run 'bash scripts/verify.sh --mode helm' to run the verify suite
+  Run 'bash scripts/scaling-lab.sh' for the practical HPA + scheduling lab
+  Run 'bash scripts/teardown.sh --mode helm' to uninstall

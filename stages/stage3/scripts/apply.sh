@@ -95,7 +95,7 @@ kube apply -f "${K8S_DIR}/gateway/06-httproute-notification.yaml"
 kube apply -f "${K8S_DIR}/gateway/07-httproute-frontend.yaml"
 
 printf 'Waiting for Envoy Proxy and Gateway programming...\n'
-for i in {1..30}; do
+for _ in {1..30}; do
   if kube get svc -n envoy-gateway-system -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}' 2>/dev/null | grep -q '^[0-9]'; then
     break
   fi

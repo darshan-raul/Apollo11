@@ -153,7 +153,7 @@ case "${SUBSTAGE}" in
     kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/07-httproute-frontend.yaml"
 
     printf 'Waiting for Envoy Proxy and Gateway programming...\n'
-    for i in {1..30}; do
+    for _ in {1..30}; do
       if kube get svc -n envoy-gateway-system -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}' 2>/dev/null | grep -q '^[0-9]'; then
         break
       fi

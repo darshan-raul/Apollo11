@@ -1,0 +1,97 @@
+▶ 1/5 Argo CD control plane
+[PASS] argocd-server has 1 Ready pod(s)
+[PASS] argocd-repo-server has 1 Ready pod(s)
+[PASS] argocd-application-controller has 1 Ready pod(s)
+[PASS] argocd-redis has 1 Ready pod(s)
+▶ 2/5 Shared platform and AppProject boundary
+[PASS] crd/applications.argoproj.io
+[PASS] crd/gateways.gateway.networking.k8s.io
+[PASS] crd/ipaddresspools.metallb.io
+[PASS] crd/servicemonitors.monitoring.coreos.com
+[PASS] shared gatewayclass/eg
+[PASS] shared ipaddresspool/apollo-pool
+[PASS] appproject/apollo-airlines
+[PASS] tenant Applications cannot create cluster-scoped resources
+[PASS] project destination apollo-airlines-dev-apps
+[PASS] namespace/apollo-airlines-dev-apps
+[PASS] project destination apollo-airlines-dev-ui
+[PASS] namespace/apollo-airlines-dev-ui
+[PASS] project destination apollo-airlines-staging-apps
+[PASS] namespace/apollo-airlines-staging-apps
+[PASS] project destination apollo-airlines-staging-ui
+[PASS] namespace/apollo-airlines-staging-ui
+[PASS] project destination apollo-airlines-prod-apps
+[PASS] namespace/apollo-airlines-prod-apps
+[PASS] project destination apollo-airlines-prod-ui
+[PASS] namespace/apollo-airlines-prod-ui
+[PASS] project destination apollo-observability
+[PASS] namespace/apollo-observability
+▶ 3/5 Three isolated tenant Applications plus shared observability
+[PASS] application/apollo11-dev
+[PASS] apollo11-dev uses expected repo
+[PASS] apollo11-dev destination=apollo-airlines-dev-apps
+[PASS] apollo11-dev parameter namespaces.apps=apollo-airlines-dev-apps
+[PASS] apollo11-dev parameter namespaces.ui=apollo-airlines-dev-ui
+[PASS] apollo11-dev parameter gateway.createClass=false
+[PASS] apollo11-dev parameter metallb.enabled=false
+[PASS] apollo11-dev parameter observability.enabled=false
+[PASS] apollo11-dev enables automated sync
+[PASS] apollo11-dev sync=Synced
+[FAIL] apollo11-dev health=Degraded
+[PASS] application/apollo11-staging
+[PASS] apollo11-staging uses expected repo
+[PASS] apollo11-staging destination=apollo-airlines-staging-apps
+[PASS] apollo11-staging parameter namespaces.apps=apollo-airlines-staging-apps
+[PASS] apollo11-staging parameter namespaces.ui=apollo-airlines-staging-ui
+[PASS] apollo11-staging parameter gateway.createClass=false
+[PASS] apollo11-staging parameter metallb.enabled=false
+[PASS] apollo11-staging parameter observability.enabled=false
+[PASS] apollo11-staging enables automated sync
+[PASS] apollo11-staging sync=Synced
+[FAIL] apollo11-staging health=Degraded
+[PASS] application/apollo11-prod
+[PASS] apollo11-prod uses expected repo
+[PASS] apollo11-prod destination=apollo-airlines-prod-apps
+[PASS] apollo11-prod parameter namespaces.apps=apollo-airlines-prod-apps
+[PASS] apollo11-prod parameter namespaces.ui=apollo-airlines-prod-ui
+[PASS] apollo11-prod parameter gateway.createClass=false
+[PASS] apollo11-prod parameter metallb.enabled=false
+[PASS] apollo11-prod parameter observability.enabled=false
+[PASS] apollo11-prod is manual-sync
+[PASS] application/apollo11-observability
+[PASS] observability destination=apollo-observability
+[FAIL] observability sync=OutOfSync
+[FAIL] observability health=Progressing
+▶ 4/5 Dev/staging workloads and shared observability are healthy
+[FAIL] dev deployment/identity not ready
+[PASS] dev deployment/flight ready=1
+[PASS] dev deployment/booking ready=1
+[PASS] dev deployment/search ready=1
+[PASS] dev deployment/notification ready=1
+[PASS] dev deployment/frontend ready=1
+[PASS] dev statefulset/identity-db ready=1
+[PASS] dev statefulset/flight-db ready=1
+[PASS] dev statefulset/booking-db ready=1
+[PASS] dev statefulset/redis ready=1
+[PASS] dev gateway Programmed
+[FAIL] staging deployment/identity not ready
+[FAIL] staging deployment/flight not ready
+[FAIL] staging deployment/booking not ready
+[PASS] staging deployment/search ready=2
+[PASS] staging deployment/notification ready=2
+[PASS] staging deployment/frontend ready=2
+[PASS] staging statefulset/identity-db ready=1
+[PASS] staging statefulset/flight-db ready=1
+[PASS] staging statefulset/booking-db ready=1
+[PASS] staging statefulset/redis ready=1
+[PASS] staging gateway Programmed
+[FAIL] observability deployment/grafana not ready
+[PASS] observability deployment/loki ready=1
+[PASS] observability deployment/tempo ready=1
+[PASS] observability statefulset/prometheus-apollo ready=1
+▶ 5/5 Argo CD self-heals declarative drift
+[PASS] dev booking replicas self-healed 2 -> 1
+
+============================================
+  PASS: 79  /  FAIL: 9  /  TOTAL: 88
+============================================

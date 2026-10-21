@@ -1,6 +1,6 @@
 name: CI
 
-# Stage 5 CI: lint + validate the Helm chart and Kustomize overlays, build
+# Stages 5–7 CI: lint + validate the Helm chart and Kustomize overlays, build
 # container images, and push to GHCR on main / tag events.
 #
 # The Stage 5 Argo CD module handles deployment. This workflow is
@@ -39,62 +39,31 @@ jobs:
         with:
           version: v1.30.0
 
-      - name: helm lint (all environments)
-        working-directory: stages/stage5
-        run: |
-          helm lint helm/apollo11
-          for env in dev staging prod; do
-            helm lint helm/apollo11 -f "helm/apollo11/values-${env}.yaml"
-          done
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+          cache: false
 
-      - name: helm template (smoke render)
-        working-directory: stages/stage5
+      - name: Install validation tools
         run: |
-          helm template apollo11 helm/apollo11 > /tmp/stage5-render.yaml
-          count=$(grep -c '^kind:' /tmp/stage5-render.yaml)
-          test "$count" -gt 100
-          echo "Resources rendered with bundled controllers: $count"
-
-      - name: committed Kustomize base matches the verified chart
-        working-directory: stages/stage5
-        run: |
-          helm template apollo11 helm/apollo11 \
-            --namespace apollo-airlines-apps \
-            --set gateway.envoy.bundleInstall=false \
-            --set metallb.bundleInstall=false \
-            --set pdb.enabled=false > /tmp/stage5-plain-base.yaml
-          tail -n +4 overlays/base/generated.yaml > /tmp/stage5-committed-base.yaml
-          diff -u /tmp/stage5-plain-base.yaml /tmp/stage5-committed-base.yaml
-
-      - name: kustomize build (all environments)
-        working-directory: stages/stage5
-        run: |
-          for env in dev staging prod; do
-            kubectl kustomize "overlays/${env}" > "/tmp/stage5-kustomize-${env}.yaml"
-          done
-          test "$(grep -c '^kind:' /tmp/stage5-kustomize-dev.yaml)" -eq 61
-          test "$(grep -c '^kind:' /tmp/stage5-kustomize-staging.yaml)" -eq 61
-          test "$(grep -c '^kind:' /tmp/stage5-kustomize-prod.yaml)" -eq 63
-
-      - name: shellcheck scripts
-        run: |
+          sudo apt-get update
           sudo apt-get install -y shellcheck
-          shellcheck stages/stage5/scripts/*.sh
-          shellcheck stages/stage5/argocd/*.sh stages/stage5/argocd/scripts/*.sh
+          python3 -m pip install PyYAML
 
-      - name: validate isolated Argo CD Applications
-        run: bash stages/stage5/argocd/scripts/validate.sh
+      - name: Validate all maintained charts, overlays, scripts, and tests
+        run: bash test/ci.sh
 
   # ---------------------------------------------------------------------------
-  # 2. Build container images (matrix, no push on PRs)
+  # 2. Build and scan container images (matrix, no push on PRs)
   # ---------------------------------------------------------------------------
   build:
-    name: Build ${{ matrix.service }}
+    name: Build stage${{ matrix.stage }} ${{ matrix.service }}
     runs-on: ubuntu-latest
     needs: lint
     strategy:
       fail-fast: false
       matrix:
+        stage: [5, 6, 7]
         service:
           - identity
           - flight
@@ -112,21 +81,20 @@ jobs:
         id: vite
         if: matrix.service == 'frontend'
         run: |
-          CHART=stages/stage5/helm/apollo11/values.yaml
+          CHART=stages/stage${{ matrix.stage }}/helm/apollo11/values.yaml
           read_url() { awk -v key="$1" '/^  viteUrls:/ { found=1; next } found && $1 == key ":" { gsub(/"/, "", $2); print $2; exit }' "$CHART"; }
           echo "vite_id=$(read_url identity)" >> "$GITHUB_OUTPUT"
           echo "vite_fl=$(read_url flight)" >> "$GITHUB_OUTPUT"
           echo "vite_bk=$(read_url booking)" >> "$GITHUB_OUTPUT"
           echo "vite_sr=$(read_url search)" >> "$GITHUB_OUTPUT"
 
-      - name: Build (no push)
+      - name: Build image (load into daemon)
         uses: docker/build-push-action@v6
         with:
-          context: stages/stage5/code/${{ matrix.service }}
-          file: stages/stage5/code/${{ matrix.service }}/Dockerfile
-          push: false
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:sha-${{ github.sha }}
+          context: stages/stage${{ matrix.stage }}/code/${{ matrix.service }}
+          file: stages/stage${{ matrix.stage }}/code/${{ matrix.service }}/Dockerfile
+          load: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/stage${{ matrix.stage }}/${{ matrix.service }}:sha-${{ github.sha }}
           build-args: |
             VITE_IDENTITY_URL=${{ steps.vite.outputs.vite_id }}
             VITE_FLIGHT_URL=${{ steps.vite.outputs.vite_fl }}
@@ -135,11 +103,38 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Scan image with Trivy
+        # Pinned by commit: trivy-action tags were force-pushed with malicious
+        # code in March 2026, so a tag alone is not a trustworthy reference.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: 'v0.70.0'
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/stage${{ matrix.stage }}/${{ matrix.service }}:sha-${{ github.sha }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Save scanned image artifact for publication
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        run: |
+          mkdir -p /tmp/scanned-image
+          docker save "${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/stage${{ matrix.stage }}/${{ matrix.service }}:sha-${{ github.sha }}" -o /tmp/scanned-image/image.tar
+
+      - name: Upload scanned image artifact
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-stage${{ matrix.stage }}-${{ matrix.service }}
+          path: /tmp/scanned-image/image.tar
+          retention-days: 1
+
   # ---------------------------------------------------------------------------
-  # 3. Push to GHCR (only on main push or tag)
+  # 3. Publish to GHCR (only on main push or tag)
   # ---------------------------------------------------------------------------
-  push:
-    name: Push images to GHCR
+  publish:
+    name: Publish stage${{ matrix.stage }} ${{ matrix.service }}
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
@@ -149,6 +144,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        stage: [5, 6, 7]
         service:
           - identity
           - flight
@@ -166,42 +162,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: actions/download-artifact@v4
+        with:
+          name: image-stage${{ matrix.stage }}-${{ matrix.service }}
+          path: /tmp/scanned-image
 
-      - name: Extract VITE_* URLs for frontend build
-        id: vite
-        if: matrix.service == 'frontend'
-        run: |
-          CHART=stages/stage5/helm/apollo11/values.yaml
-          read_url() { awk -v key="$1" '/^  viteUrls:/ { found=1; next } found && $1 == key ":" { gsub(/"/, "", $2); print $2; exit }' "$CHART"; }
-          echo "vite_id=$(read_url identity)" >> "$GITHUB_OUTPUT"
-          echo "vite_fl=$(read_url flight)" >> "$GITHUB_OUTPUT"
-          echo "vite_bk=$(read_url booking)" >> "$GITHUB_OUTPUT"
-          echo "vite_sr=$(read_url search)" >> "$GITHUB_OUTPUT"
+      - name: Load scanned image
+        run: docker load -i /tmp/scanned-image/image.tar
 
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/stage${{ matrix.stage }}/${{ matrix.service }}
           tags: |
             type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=tag
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: stages/stage5/code/${{ matrix.service }}
-          file: stages/stage5/code/${{ matrix.service }}/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            VITE_IDENTITY_URL=${{ steps.vite.outputs.vite_id }}
-            VITE_FLIGHT_URL=${{ steps.vite.outputs.vite_fl }}
-            VITE_BOOKING_URL=${{ steps.vite.outputs.vite_bk }}
-            VITE_SEARCH_URL=${{ steps.vite.outputs.vite_sr }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Publish the exact scanned image
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          source_image="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/stage${{ matrix.stage }}/${{ matrix.service }}:sha-${{ github.sha }}"
+          while IFS= read -r tag; do
+            test -n "$tag" || continue
+            docker tag "$source_image" "$tag"
+            docker push "$tag"
+          done <<< "$IMAGE_TAGS"

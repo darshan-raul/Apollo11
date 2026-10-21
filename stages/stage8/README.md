@@ -27,3 +27,6 @@ Stage 8 starts from the trusted **Stage 7 baseline** (the hardened 10-component 
 5. **Admission Control & Supply Chain Security**:
    - Kyverno policy enforcement for image signatures and required labels.
    - Trivy vulnerability scanning and Cosign signature verification in CI.
+
+> [!NOTE]
+> For runtime threat detection beyond admission and network boundaries, an independent [Falco mission](../stage10/missions/falco/README.md) is available as an optional extension in Stage 10.

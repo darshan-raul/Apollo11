@@ -1,0 +1,70 @@
+
+=== 1. Core Namespaces ===
+  [PASS] Namespace apollo-airlines-apps exists
+  [PASS] Namespace apollo-airlines-ui exists
+
+=== 2. Configuration & Secrets ===
+  [PASS] ConfigMap apollo-airlines-config exists in apollo-airlines-apps
+  [PASS] ConfigMap apollo-airlines-config exists in apollo-airlines-ui
+  [PASS] Secret apollo-airlines-secrets exists in apollo-airlines-apps
+
+=== 3. ServiceAccounts (Strict Token Automount Security) ===
+  [PASS] SA apollo-airlines-apps/identity-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/flight-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/booking-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/redis exists (automount=false)
+  [PASS] SA apollo-airlines-apps/identity exists (automount=false)
+  [PASS] SA apollo-airlines-apps/flight exists (automount=false)
+  [PASS] SA apollo-airlines-apps/booking exists (automount=false)
+  [PASS] SA apollo-airlines-apps/search exists (automount=false)
+  [PASS] SA apollo-airlines-apps/notification exists (automount=false)
+  [PASS] SA apollo-airlines-apps/init-identity-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/init-flight-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/init-booking-db exists (automount=false)
+  [PASS] SA apollo-airlines-ui/frontend exists (automount=false)
+
+=== 4. Infrastructure Workloads & Seed Jobs ===
+  [PASS] Infra deployment apollo-airlines-apps/identity-db ready
+  [PASS] Infra deployment apollo-airlines-apps/flight-db ready
+  [PASS] Infra deployment apollo-airlines-apps/booking-db ready
+  [PASS] Infra deployment apollo-airlines-apps/redis ready
+  [PASS] Database init job apollo-airlines-apps/init-identity-db completed
+  [PASS] Database init job apollo-airlines-apps/init-flight-db completed
+  [PASS] Database init job apollo-airlines-apps/init-booking-db completed
+
+=== 5. Application Workloads & Services ===
+  [PASS] App deployment apollo-airlines-apps/identity ready
+  [PASS] App deployment apollo-airlines-apps/flight ready
+  [PASS] App deployment apollo-airlines-apps/booking ready
+  [PASS] App deployment apollo-airlines-apps/search ready
+  [PASS] App deployment apollo-airlines-apps/notification ready
+  [PASS] UI deployment apollo-airlines-ui/frontend ready
+
+=== 6. Endpoints & EndpointSlice Discovery ===
+  [PASS] Service identity has ready endpoints (10.244.1.25 10.244.2.28)
+  [PASS] Service flight has ready endpoints (10.244.1.26 10.244.2.29)
+  [PASS] Service booking has ready endpoints (10.244.1.27 10.244.2.30)
+  [PASS] Service search has ready endpoints (10.244.1.28 10.244.2.31)
+  [PASS] Service notification has ready endpoints (10.244.1.29 10.244.2.32)
+  [PASS] Service identity-db has ready endpoints (10.244.2.25)
+  [PASS] Service flight-db has ready endpoints (10.244.1.21)
+  [PASS] Service booking-db has ready endpoints (10.244.1.22)
+  [PASS] Service redis has ready endpoints (10.244.2.26)
+  [PASS] Service frontend has ready endpoints (10.244.1.30 10.244.2.33)
+
+=== 7. Networking Edge Access & Route Verification ===
+  [INFO] Detected networking architecture: traefik-metallb
+  [PASS] Traefik Service assigned LoadBalancer IP: 172.18.0.50
+  [PASS] MetalLB LoadBalancer direct port 80 routing to identity.apollo.local (HTTP 200)
+  [PASS] MetalLB LoadBalancer direct port 80 routing to flight.apollo.local (HTTP 200)
+
+=== 8. End-to-End Application & Auth Verification ===
+  [PASS] Passenger authentication succeeded and returned JWT
+  [PASS] Flight inventory query returned flights from flight-db
+
+=== Verification Summary ===
+  Total Passed: 46
+  Total Failed: 0
+
+Stage 2 verification succeeded with 0 failures.
+

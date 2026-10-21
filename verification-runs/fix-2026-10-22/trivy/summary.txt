@@ -1,0 +1,19 @@
+Trivy 0.75.0, flags: --ignore-unfixed --severity CRITICAL,HIGH --pkg-types os,library --exit-code 1
+stage5-booking fixable_high_critical=0
+stage5-flight fixable_high_critical=0
+stage5-frontend fixable_high_critical=0
+stage5-identity fixable_high_critical=0
+stage5-notification fixable_high_critical=0
+stage5-search fixable_high_critical=0
+stage6-booking fixable_high_critical=0
+stage6-flight fixable_high_critical=0
+stage6-frontend fixable_high_critical=0
+stage6-identity fixable_high_critical=0
+stage6-notification fixable_high_critical=0
+stage6-search fixable_high_critical=0
+stage7-booking fixable_high_critical=0
+stage7-flight fixable_high_critical=0
+stage7-frontend fixable_high_critical=0
+stage7-identity fixable_high_critical=0
+stage7-notification fixable_high_critical=0
+stage7-search fixable_high_critical=0

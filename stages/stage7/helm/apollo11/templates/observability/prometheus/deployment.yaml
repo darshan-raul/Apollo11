@@ -23,6 +23,17 @@ spec:
   ruleSelector:
     matchLabels:
       app.kubernetes.io/part-of: apollo-airlines
+  alerting:
+    alertmanagers:
+      - namespace: {{ .Values.observability.namespace }}
+        name: alertmanager
+        port: http
+  probeSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: apollo-airlines
+  probeNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: {{ .Values.observability.namespace }}
   retention: {{ .Values.observability.prometheus.retention | quote }}
   resources:
     {{- toYaml .Values.observability.prometheus.resources | nindent 4 }}

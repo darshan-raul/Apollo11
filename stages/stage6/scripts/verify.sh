@@ -118,7 +118,7 @@ if [[ "$OBSERVABILITY_EXPECTED" == "true" ]]; then
 
     step "Prometheus discovery, rules, Grafana, Tempo, and Loki APIs"
     pf_log=$(mktemp)
-    kubectl port-forward -n apollo-observability service/prometheus 19090:9090 >"$pf_log" 2>&1 &
+    command kubectl --context "$APOLLO_CONTEXT" port-forward -n apollo-observability service/prometheus 19090:9090 >"$pf_log" 2>&1 &
     pf_pid=$!
     for _ in $(seq 1 20); do curl -fsS http://127.0.0.1:19090/-/ready >/dev/null 2>&1 && break; sleep 1; done
     active_targets=0
@@ -135,17 +135,17 @@ if [[ "$OBSERVABILITY_EXPECTED" == "true" ]]; then
     wait "$pf_pid" 2>/dev/null || true
     rm -f "$pf_log"
 
-    kubectl port-forward -n apollo-observability service/grafana 13000:3000 >/tmp/stage6-grafana-pf.log 2>&1 & grafana_pf=$!
+    command kubectl --context "$APOLLO_CONTEXT" port-forward -n apollo-observability service/grafana 13000:3000 >/tmp/stage6-grafana-pf.log 2>&1 & grafana_pf=$!
     for _ in $(seq 1 20); do grafana_health=$(curl -fsS http://127.0.0.1:13000/api/health 2>/dev/null || true); [[ -n "$grafana_health" ]] && break; sleep 1; done
     grep -q '"database": "ok"' <<<"$grafana_health" && pass "Grafana API healthy" || fail "Grafana API unhealthy"
     kill "$grafana_pf" >/dev/null 2>&1 || true; wait "$grafana_pf" 2>/dev/null || true
     dashboard_count=$(kubectl get configmap -n apollo-observability -l app.kubernetes.io/name=grafana -o name | grep -c 'dashboard-' || true)
     [[ "$dashboard_count" -ge 5 ]] && pass "5 Grafana dashboards provisioned" || fail "Grafana dashboard ConfigMaps=$dashboard_count"
-    kubectl port-forward -n apollo-observability service/tempo 13100:3100 >/tmp/stage6-tempo-pf.log 2>&1 & tempo_pf=$!
+    command kubectl --context "$APOLLO_CONTEXT" port-forward -n apollo-observability service/tempo 13100:3100 >/tmp/stage6-tempo-pf.log 2>&1 & tempo_pf=$!
     for _ in $(seq 1 20); do curl -fsS http://127.0.0.1:13100/ready >/dev/null 2>&1 && break; sleep 1; done
     curl -fsS http://127.0.0.1:13100/ready >/dev/null 2>&1 && pass "Tempo API ready" || fail "Tempo API not ready"
     kill "$tempo_pf" >/dev/null 2>&1 || true; wait "$tempo_pf" 2>/dev/null || true
-    kubectl port-forward -n apollo-observability service/loki 13101:3100 >/tmp/stage6-loki-pf.log 2>&1 & loki_pf=$!
+    command kubectl --context "$APOLLO_CONTEXT" port-forward -n apollo-observability service/loki 13101:3100 >/tmp/stage6-loki-pf.log 2>&1 & loki_pf=$!
     for _ in $(seq 1 20); do curl -fsS http://127.0.0.1:13101/ready >/dev/null 2>&1 && break; sleep 1; done
     curl -fsS http://127.0.0.1:13101/ready >/dev/null 2>&1 && pass "Loki API ready" || fail "Loki API not ready"
 
@@ -533,7 +533,7 @@ if [[ "$flights" -ge 180 ]]; then pass "flight seed has $flights flights"; else 
 
 step "Frontend bundle contains routed API hosts and no localhost API URLs"
 bundle_urls=$(kubectl exec -n apollo-airlines-ui deployment/frontend -- \
-    grep -R -o -E 'http://(localhost:[0-9]+|[a-z]+\.apollo\.local)' \
+    grep -R -o -E 'https?://(localhost:[0-9]+|[a-z]+\.apollo\.local)' \
     /usr/share/nginx/html/assets 2>/dev/null || echo "")
 missing_hosts=()
 for host in identity flight booking search; do

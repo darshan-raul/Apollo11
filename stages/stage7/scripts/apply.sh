@@ -33,9 +33,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGE_DIR="$(dirname "$SCRIPT_DIR")"
 CHART_DIR="$STAGE_DIR/helm/apollo11"
-CODE_DIR="$STAGE_DIR/code"
 CLUSTER="${CLUSTER:-}"
-REGISTRY="apollo11"
 
 MODE="helm"
 ENV="dev"
@@ -143,7 +141,7 @@ install_platform_bundles() {
     kubectl apply --server-side --force-conflicts -f "$metallb_bundle" 2>&1 | tail -2
     ok "MetalLB bundle applied"
 
-    for i in 1 2 3 4 5 6 7 8 9 10; do
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
         if kubectl get crd gateways.gateway.networking.k8s.io >/dev/null 2>&1 && \
            kubectl get crd ipaddresspools.metallb.io >/dev/null 2>&1; then
             crds_ready=true
@@ -154,7 +152,7 @@ install_platform_bundles() {
     [[ "$crds_ready" == "true" ]] || fail "Envoy Gateway/MetalLB CRDs did not register within 30s"
     ok "platform CRDs registered"
 
-    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
         endpoints=$(kubectl get endpoints metallb-webhook-service -n metallb-system -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null || echo "")
         [[ -n "$endpoints" ]] && break
         sleep 3
@@ -311,7 +309,7 @@ if [[ "$MODE" == "helm" ]]; then
     step "3/8 Wait for CRD registration"
     # Wait until the API server can see the new CRDs
     crds_ready=false
-    for i in 1 2 3 4 5 6 7 8 9 10; do
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
         if kubectl get crd gateways.gateway.networking.k8s.io >/dev/null 2>&1 && \
            kubectl get crd ipaddresspools.metallb.io >/dev/null 2>&1; then
             ok "CRDs registered"
@@ -326,7 +324,7 @@ if [[ "$MODE" == "helm" ]]; then
     # The MetalLB IPAddressPool has a validating webhook. The webhook
     # service must be up before the chart can create pool resources.
     endpoints=""
-    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
         # Webhook endpoints become non-empty when the controller pod is up
         endpoints=$(kubectl get endpoints metallb-webhook-service -n metallb-system -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null || echo "")
         if [[ -n "$endpoints" ]]; then
@@ -372,7 +370,7 @@ if [[ "$MODE" == "helm" ]]; then
 
     step "6/8 Waiting for MetalLB controller pod"
     metallb_ready=false
-    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
         if kubectl get pods -n metallb-system -l component=controller --no-headers 2>/dev/null | grep -q "1/1"; then
             ok "MetalLB controller ready"
             metallb_ready=true

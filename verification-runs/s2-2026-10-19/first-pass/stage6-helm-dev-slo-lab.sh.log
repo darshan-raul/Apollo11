@@ -1,0 +1,7 @@
+Generating 502 booking attempts for 150 seconds; inspect the pending/firing burn alert.
+Expected 502, got 201
+deployment.apps/flight scaled
+Waiting for deployment "flight" rollout to finish: 0 of 1 updated replicas are available...
+Waiting for deployment "flight" rollout to finish: 0 of 1 updated replicas are available...
+deployment "flight" successfully rolled out
+exit=1

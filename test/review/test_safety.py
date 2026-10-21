@@ -50,6 +50,36 @@ class SafetyTests(unittest.TestCase):
         self.assertIn('KUBE --context kind-apollo11-dev get ns', self.calls())
         self.assertIn('HELM --kube-context kind-apollo11-dev list', self.calls())
 
+    def early_stage_teardown_kubectl(self, foreign_route):
+        # Fake cluster: the Stage namespaces are gone, the platform CRDs remain,
+        # and optionally another team's HTTPRoute still uses them.
+        route = 'other-team/other-app' if foreign_route else ''
+        self.tool('kubectl', f"""echo "$*" >> "$CALL_LOG"
+case "$*" in
+  *"get crd -o name"*) echo customresourcedefinition.apiextensions.k8s.io/httproutes.gateway.networking.k8s.io ;;
+  *"get httproutes.gateway.networking.k8s.io -A"*) [[ -z "{route}" ]] || echo "{route}" ;;
+  *"get namespace"*) exit 1 ;;
+esac
+""")
+
+    def test_early_teardown_keeps_crds_used_outside_the_stage(self):
+        self.early_stage_teardown_kubectl(foreign_route=True)
+        for stage in (2, 3, 4):
+            self.log.unlink(missing_ok=True)
+            result = self.run_script(f'stages/stage{stage}/scripts/teardown.sh', 'kind-apollo11')
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('other-team/other-app', result.stderr)
+            self.assertNotIn('delete customresourcedefinition', self.calls())
+            self.assertNotIn('metallb-system:controller', self.calls())
+
+    def test_early_teardown_removes_owned_platform_when_unused(self):
+        self.early_stage_teardown_kubectl(foreign_route=False)
+        for stage in (2, 3, 4):
+            self.log.unlink(missing_ok=True)
+            self.run_script(f'stages/stage{stage}/scripts/teardown.sh', 'kind-apollo11')
+            self.assertIn('delete customresourcedefinition.apiextensions.k8s.io/httproutes.gateway.networking.k8s.io', self.calls())
+            self.assertIn('delete clusterrole metallb-system:controller', self.calls())
+
     def test_certificate_rejects_cloud_context(self):
         result = self.run_script('stages/stage3/scripts/generate-certs.sh', '--context', 'arn:aws:eks:unsafe')
         self.assertNotEqual(result.returncode, 0)

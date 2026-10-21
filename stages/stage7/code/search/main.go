@@ -269,6 +269,32 @@ func main() {
 		}
 	}()
 
+	r := newRouter()
+
+	port := getEnv("PORT", "8083")
+	srv := &http.Server{Addr: ":" + port, Handler: r}
+
+	go func() {
+		logJSON("INFO", "search-service", fmt.Sprintf("Starting on :%s", port), "", "", nil)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logJSON("ERROR", "search-service", fmt.Sprintf("Server error: %v", err), "", "", nil)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+	logJSON("INFO", "search-service", "Received SIGTERM, shutting down gracefully", "", "", nil)
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logJSON("ERROR", "search-service", fmt.Sprintf("Shutdown error: %v", err), "", "", nil)
+	}
+	logJSON("INFO", "search-service", "Server stopped", "", "", nil)
+}
+
+func newRouter() *gin.Engine {
 	r := gin.Default()
 
 	r.Use(func(c *gin.Context) {
@@ -461,25 +487,5 @@ func main() {
 		c.JSON(http.StatusOK, payload)
 	})
 
-	port := getEnv("PORT", "8083")
-	srv := &http.Server{Addr: ":" + port, Handler: r}
-
-	go func() {
-		logJSON("INFO", "search-service", fmt.Sprintf("Starting on :%s", port), "", "", nil)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logJSON("ERROR", "search-service", fmt.Sprintf("Server error: %v", err), "", "", nil)
-		}
-	}()
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
-	<-quit
-	logJSON("INFO", "search-service", "Received SIGTERM, shutting down gracefully", "", "", nil)
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		logJSON("ERROR", "search-service", fmt.Sprintf("Shutdown error: %v", err), "", "", nil)
-	}
-	logJSON("INFO", "search-service", "Server stopped", "", "", nil)
+	return r
 }

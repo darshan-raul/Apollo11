@@ -1,0 +1,99 @@
+{{- if .Values.observability.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blackbox-config
+  namespace: {{ .Values.observability.namespace }}
+  labels:
+    app.kubernetes.io/name: blackbox
+    app.kubernetes.io/part-of: apollo-airlines
+data:
+  blackbox.yml: |
+    modules:
+      http_2xx:
+        prober: http
+        timeout: 5s
+        http:
+          preferred_ip_protocol: ip4
+      https_apollo:
+        prober: http
+        timeout: 5s
+        http:
+          preferred_ip_protocol: ip4
+          valid_status_codes: [200]
+          fail_if_not_ssl: true
+          tls_config:
+            ca_file: /trust/ca.crt
+            server_name: frontend.apollo.local
+          headers:
+            Host: frontend.apollo.local
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blackbox
+  namespace: {{ .Values.observability.namespace }}
+  labels:
+    app.kubernetes.io/name: blackbox
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: blackbox}
+  template:
+    metadata:
+      labels: {app: blackbox}
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: blackbox
+          image: quay.io/prometheus/blackbox-exporter:v0.26.0
+          args: [--config.file=/etc/blackbox/blackbox.yml]
+          ports: [{name: http, containerPort: 9115}]
+          readinessProbe:
+            httpGet: {path: /-/healthy, port: http}
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 64Mi}
+          securityContext: {runAsNonRoot: true, runAsUser: 65534, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          volumeMounts:
+            - {name: config, mountPath: /etc/blackbox}
+            - {name: trust, mountPath: /trust}
+      volumes:
+        - name: config
+          configMap: {name: blackbox-config}
+        - name: trust
+          configMap: {name: blackbox-trust, optional: true}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blackbox
+  namespace: {{ .Values.observability.namespace }}
+  labels:
+    app.kubernetes.io/name: blackbox
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  selector: {app: blackbox}
+  ports: [{name: http, port: 9115, targetPort: http}]
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: blackbox-internal
+  namespace: {{ .Values.observability.namespace }}
+  labels: {app.kubernetes.io/part-of: apollo-airlines}
+spec:
+  interval: 15s
+  module: http_2xx
+  prober:
+    url: blackbox.{{ .Values.observability.namespace }}.svc:9115
+  targets:
+    staticConfig:
+      static:
+        {{- with .Values.observability.blackbox.internalTargets }}
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        - http://frontend.{{ .Values.namespaces.ui }}.svc:3000/healthz
+        {{- end }}
+{{- end }}

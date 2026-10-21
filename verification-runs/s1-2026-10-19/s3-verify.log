@@ -1,0 +1,100 @@
+
+=== 1. Core Namespaces ===
+  [PASS] Namespace apollo-airlines-apps exists
+  [PASS] Namespace apollo-airlines-ui exists
+  [PASS] Namespace envoy-gateway-system exists
+  [PASS] Namespace metallb-system exists
+
+=== 2. ServiceAccounts (Token Automount Security) ===
+  [PASS] SA apollo-airlines-apps/identity-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/flight-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/booking-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/redis exists (automount=false)
+  [PASS] SA apollo-airlines-apps/identity exists (automount=false)
+  [PASS] SA apollo-airlines-apps/flight exists (automount=false)
+  [PASS] SA apollo-airlines-apps/booking exists (automount=false)
+  [PASS] SA apollo-airlines-apps/search exists (automount=false)
+  [PASS] SA apollo-airlines-apps/notification exists (automount=false)
+  [PASS] SA apollo-airlines-apps/init-identity-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/init-flight-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/init-booking-db exists (automount=false)
+  [PASS] SA apollo-airlines-ui/frontend exists (automount=false)
+
+=== 3. StatefulSets & Pods (Stable Workload Identity) ===
+  [PASS] StatefulSet apollo-airlines-apps/identity-db ready (replicas=1)
+  [PASS] StatefulSet apollo-airlines-apps/flight-db ready (replicas=1)
+  [PASS] StatefulSet apollo-airlines-apps/booking-db ready (replicas=1)
+  [PASS] StatefulSet apollo-airlines-apps/redis ready (replicas=1)
+  [PASS] StatefulSet Pod apollo-airlines-apps/identity-db-0 is Ready
+  [PASS] StatefulSet Pod apollo-airlines-apps/flight-db-0 is Ready
+  [PASS] StatefulSet Pod apollo-airlines-apps/booking-db-0 is Ready
+  [PASS] StatefulSet Pod apollo-airlines-apps/redis-0 is Ready
+
+=== 4. Storage Provisioning (PVCs & PersistentVolumes) ===
+  [PASS] PVC pg-data-identity-db-0 is Bound (ReadWriteOnce, 1Gi)
+  [PASS] PVC pg-data-flight-db-0 is Bound (ReadWriteOnce, 1Gi)
+  [PASS] PVC pg-data-booking-db-0 is Bound (ReadWriteOnce, 1Gi)
+  [PASS] PVC redis-data-redis-0 is Bound (ReadWriteOnce, 1Gi)
+  [PASS] Cluster has 4 Bound PersistentVolumes backing StatefulSet storage
+
+=== 5. Headless Services & Stable DNS Inspection ===
+  [PASS] Headless Service identity-db-headless has clusterIP=None
+  [PASS] Headless Service flight-db-headless has clusterIP=None
+  [PASS] Headless Service booking-db-headless has clusterIP=None
+  [PASS] Headless Service redis-headless has clusterIP=None
+  [PASS] CoreDNS resolves identity-db-headless directly to pod IP: 10.244.2.42
+  [PASS] CoreDNS resolves flight-db-headless directly to pod IP: 10.244.2.43
+  [PASS] CoreDNS resolves booking-db-headless directly to pod IP: 10.244.1.40
+  [PASS] CoreDNS resolves redis-headless directly to pod IP: 10.244.1.41
+
+=== 6. Application Workloads & Seed Jobs ===
+  [PASS] Deployment apollo-airlines-apps/identity ready (2 replicas)
+  [PASS] Deployment apollo-airlines-apps/flight ready (2 replicas)
+  [PASS] Deployment apollo-airlines-apps/booking ready (2 replicas)
+  [PASS] Deployment apollo-airlines-apps/search ready (2 replicas)
+  [PASS] Deployment apollo-airlines-apps/notification ready (2 replicas)
+  [PASS] Deployment apollo-airlines-ui/frontend ready (2 replicas)
+  [PASS] Database seed job apollo-airlines-apps/seed-identity-db completed
+  [PASS] Database seed job apollo-airlines-apps/seed-flight-db completed
+  [PASS] Database seed job apollo-airlines-apps/seed-booking-db completed
+
+=== 7. Database Seed Integrity ===
+  [PASS] identity-db schema initialized via entrypoint; users table has 2 rows
+  [PASS] flight-db schema initialized via entrypoint; airports table has 6 rows
+  [PASS] flight-db flights table has 186 rows (31-day inventory seeded)
+
+=== 8. Envoy Gateway & MetalLB Access Stack ===
+  [PASS] GatewayClass 'eg' accepted
+  [PASS] Gateway apollo-gateway is Accepted and Programmed
+  [PASS] HTTPRoute apollo-airlines-apps/identity accepted
+  [PASS] HTTPRoute apollo-airlines-apps/flight accepted
+  [PASS] HTTPRoute apollo-airlines-apps/booking accepted
+  [PASS] HTTPRoute apollo-airlines-apps/search accepted
+  [PASS] HTTPRoute apollo-airlines-apps/notification accepted
+  [PASS] HTTPRoute apollo-airlines-ui/frontend accepted
+  [PASS] MetalLB assigned LoadBalancer IP: 172.18.0.50
+  [PASS] Envoy Gateway HTTPRoute to identity.apollo.local returned HTTP 200
+  [PASS] Envoy Gateway HTTPRoute to flight.apollo.local returned HTTP 200
+  [PASS] Envoy Gateway HTTPRoute to booking.apollo.local returned HTTP 200
+  [PASS] Envoy Gateway HTTPRoute to search.apollo.local returned HTTP 200
+  [PASS] Envoy Gateway frontend HTTPRoute returned HTTP 200
+
+=== 9. Flagship Workflow & Stateful Data Survival Proof ===
+  [PASS] Passenger login succeeded and returned JWT
+  [PASS] Query flight inventory returned valid flight ID: 795f2ece-d7d4-48b4-a5ea-ddedd6177ae8
+  [PASS] Booking created successfully via flagship workflow (id: ee7d60f4-8be7-4f24-be33-e49607a9d29e)
+  [INFO] Executing reversible failure experiment: Deleting pod booking-db-0 to test data persistence...
+  [PASS] Data survival proven: booking record persisted across booking-db-0 Pod restart via PVC
+Trusted HTTPS health: identity
+Trusted HTTPS health: flight
+Trusted HTTPS health: booking
+Trusted HTTPS health: search
+Trusted HTTPS login, populated search, booking, cancellation, and hostname rejection passed.
+  [PASS] trusted HTTPS workflow and hostname rejection
+
+=== Verification Summary ===
+  Total Passed: 69
+  Total Failed: 0
+
+Stage 3 verification succeeded with 0 failures.
+

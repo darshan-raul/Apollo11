@@ -1,0 +1,81 @@
+{"level":"ERROR","message":"DB not ready (will retry): dial tcp 10.96.46.202:5432: connect: connection refused","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:00:03Z","trace_id":""}
+{"level":"ERROR","message":"DB not ready (will retry): dial tcp 10.96.46.202:5432: connect: connection refused","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:00:05Z","trace_id":""}
+{"level":"ERROR","message":"DB not ready (will retry): dial tcp 10.96.46.202:5432: connect: connection refused","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:00:07Z","trace_id":""}
+{"level":"ERROR","message":"DB not ready (will retry): dial tcp 10.96.46.202:5432: connect: connection refused","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:00:10Z","trace_id":""}
+{"level":"ERROR","message":"DB not ready (will retry): dial tcp 10.96.46.202:5432: connect: connection refused","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:00:12Z","trace_id":""}
+{"level":"ERROR","message":"DB not ready (will retry): dial tcp 10.96.46.202:5432: connect: connection refused","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:00:14Z","trace_id":""}
+{"level":"ERROR","message":"DB not ready (will retry): dial tcp 10.96.46.202:5432: connect: connection refused","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:00:16Z","trace_id":""}
+{"level":"ERROR","message":"DB not ready (will retry): dial tcp 10.96.46.202:5432: connect: connection refused","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:00:18Z","trace_id":""}
+{"level":"ERROR","message":"DB connection timeout: context deadline exceeded","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:00:18Z","trace_id":""}
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /healthz                  --> main.main.func4 (7 handlers)
+[GIN-debug] GET    /healthz/startup          --> main.main.func5 (7 handlers)
+[GIN-debug] GET    /healthz/live             --> main.main.func6 (7 handlers)
+[GIN-debug] GET    /healthz/ready            --> main.main.func7 (7 handlers)
+[GIN-debug] GET    /readyz                   --> main.main.func8 (7 handlers)
+[GIN-debug] GET    /metrics                  --> github.com/gin-gonic/gin.WrapH.func1 (7 handlers)
+[GIN-debug] POST   /api/bookings             --> main.main.func9 (8 handlers)
+[GIN-debug] GET    /api/bookings/:id         --> main.main.func10 (8 handlers)
+[GIN-debug] GET    /api/bookings             --> main.main.func11 (8 handlers)
+[GIN-debug] GET    /api/admin/bookings       --> main.main.func12 (8 handlers)
+[GIN-debug] DELETE /api/bookings/:id         --> main.main.func13 (8 handlers)
+{"level":"INFO","message":"Starting on :8082","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:00:18Z","trace_id":""}
+[GIN] 2026/10/21 - 21:00:20 | 200 |   4.89ms |      10.244.2.1 | GET      "/healthz/startup"
+[GIN] 2026/10/21 - 21:00:20 | 503 |   5.07ms |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:00:25 | 503 |   7.01ms |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:00:30 | 200 | 464.52µs |      10.244.2.1 | GET      "/healthz/live"
+[GIN] 2026/10/21 - 21:00:30 | 503 |   2.25ms |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:00:35 | 200 |  10.37ms |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:00:40 | 200 | 515.995µs |      10.244.2.1 | GET      "/healthz/live"
+[GIN] 2026/10/21 - 21:00:40 | 200 | 368.479µs |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:00:45 | 200 |   1.49ms |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:00:50 | 200 | 137.184µs |      10.244.2.1 | GET      "/healthz/live"
+[GIN] 2026/10/21 - 21:00:50 | 200 | 280.707µs |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:00:53 | 200 |   1.61ms |       127.0.0.1 | GET      "/metrics"
+[GIN] 2026/10/21 - 21:00:55 | 200 | 257.155µs |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:01:00 | 200 | 572.174µs |      10.244.2.1 | GET      "/healthz/live"
+[GIN] 2026/10/21 - 21:01:00 | 200 | 524.156µs |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:01:00 | 200 |   6.25ms |     10.244.2.95 | GET      "/metrics"
+[GIN] 2026/10/21 - 21:01:05 | 200 | 831.314µs |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:01:10 | 200 | 145.627µs |      10.244.2.1 | GET      "/healthz/live"
+[GIN] 2026/10/21 - 21:01:10 | 200 | 281.175µs |      10.244.2.1 | GET      "/healthz/ready"
+{"level":"INFO","message":"Booking created","ref":"AA-2026-1814E6","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:01:11Z","trace_id":"191bc74c2033ccc5ff886208e7c8f8cd"}
+[GIN] 2026/10/21 - 21:01:11 | 201 | 227.63ms |     10.244.1.98 | POST     "/api/bookings"
+[GIN] 2026/10/21 - 21:01:15 | 200 | 544.856µs |      10.244.2.1 | GET      "/healthz/ready"
+{"id":"12cf392b-0dbd-44a2-813a-a0174f783de6","level":"INFO","message":"Booking cancelled","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:01:15Z","trace_id":"72b83392bcb3a5a486d7435e03c924b1"}
+[GIN] 2026/10/21 - 21:01:15 | 200 |  15.87ms |     10.244.1.98 | DELETE   "/api/bookings/12cf392b-0dbd-44a2-813a-a0174f783de6"
+[GIN] 2026/10/21 - 21:01:20 | 200 | 487.574µs |      10.244.2.1 | GET      "/healthz/live"
+[GIN] 2026/10/21 - 21:01:20 | 200 | 776.257µs |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:01:25 | 200 | 270.186µs |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:01:30 | 200 | 165.543µs |      10.244.2.1 | GET      "/healthz/live"
+[GIN] 2026/10/21 - 21:01:30 | 200 | 347.384µs |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:01:30 | 200 |   2.37ms |     10.244.2.95 | GET      "/metrics"
+[GIN] 2026/10/21 - 21:01:35 | 200 | 263.67µs |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:01:38 | 200 | 83.408µs |       127.0.0.1 | GET      "/healthz/startup"
+[GIN] 2026/10/21 - 21:01:38 | 200 | 235.303µs |       127.0.0.1 | GET      "/healthz/live"
+[GIN] 2026/10/21 - 21:01:38 | 200 | 295.552µs |       127.0.0.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:01:40 | 200 | 128.053µs |      10.244.2.1 | GET      "/healthz/live"
+[GIN] 2026/10/21 - 21:01:40 | 200 | 290.59µs |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:01:44 | 200 | 170.15µs |      172.18.0.1 | GET      "/healthz"
+[GIN] 2026/10/21 - 21:01:45 | 200 | 704.134µs |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:01:49 | 200 | 133.42µs |      172.18.0.1 | GET      "/healthz"
+[GIN] 2026/10/21 - 21:01:49 | 200 | 99.019µs |      172.18.0.1 | GET      "/healthz"
+[GIN] 2026/10/21 - 21:01:50 | 200 | 83.447µs |      10.244.2.1 | GET      "/healthz/live"
+[GIN] 2026/10/21 - 21:01:50 | 200 |   1.13ms |      10.244.2.1 | GET      "/healthz/ready"
+{"level":"INFO","message":"Booking created","ref":"AA-2026-7BF380","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:01:54Z","trace_id":"701311c75d6437cb43ab386b2cfb3b1d"}
+[GIN] 2026/10/21 - 21:01:54 | 201 |  51.23ms |      172.18.0.1 | POST     "/api/bookings"
+{"id":"fa74f804-a8df-4489-a57c-d9a4027601a6","level":"INFO","message":"Booking cancelled","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:01:54Z","trace_id":"bb84b9294a649dbf2a9782c2c09e97a3"}
+[GIN] 2026/10/21 - 21:01:54 | 200 |   4.87ms |      172.18.0.1 | DELETE   "/api/bookings/fa74f804-a8df-4489-a57c-d9a4027601a6"
+[GIN] 2026/10/21 - 21:01:54 | 200 |   1.07ms |      172.18.0.1 | GET      "/api/bookings/fa74f804-a8df-4489-a57c-d9a4027601a6"
+[GIN] 2026/10/21 - 21:01:55 | 200 | 309.089µs |      10.244.2.1 | GET      "/healthz/ready"
+{"level":"WARN","message":"User check failed","service":"booking-service","span_id":"","timestamp":"2026-10-21T21:01:59Z","trace_id":"41a53b87a51ee82bcb7684ec0e09877c"}
+[GIN] 2026/10/21 - 21:01:59 | 502 |   2.04ms |     10.244.1.99 | POST     "/api/bookings"
+[GIN] 2026/10/21 - 21:02:00 | 200 | 369.968µs |      10.244.2.1 | GET      "/healthz/live"
+[GIN] 2026/10/21 - 21:02:00 | 200 | 404.853µs |      10.244.2.1 | GET      "/healthz/ready"
+[GIN] 2026/10/21 - 21:02:00 | 200 |   3.53ms |     10.244.2.95 | GET      "/metrics"
+[GIN] 2026/10/21 - 21:02:05 | 200 |   1.22ms |      10.244.2.1 | GET      "/healthz/ready"

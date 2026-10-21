@@ -12,7 +12,6 @@ apollo_context_guard
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGE_DIR="$(dirname "$SCRIPT_DIR")"
-CHART_DIR="$STAGE_DIR/helm/apollo11"
 RELEASE_NAME="apollo11"
 
 MODE="helm"
@@ -101,6 +100,15 @@ if [[ "$PURGE" == "true" ]]; then
     kubectl delete priorityclass apollo-airlines-app-critical apollo-airlines-app-low --ignore-not-found >/dev/null 2>&1 || true
     for crd in $(kubectl get crd -o name 2>/dev/null | grep -E 'envoyproxy|gateway\.networking|metallb' || true); do
         kubectl delete "$crd" --ignore-not-found 2>&1 | tail -1
+    done
+
+    # Cluster-scoped RBAC and webhooks from MetalLB and Envoy Gateway outlive their namespaces
+    kubectl delete validatingwebhookconfiguration metallb-webhook-configuration --ignore-not-found >/dev/null 2>&1 || true
+    kubectl delete mutatingwebhookconfiguration envoy-gateway-topology-injector.envoy-gateway-system --ignore-not-found >/dev/null 2>&1 || true
+    for kind in clusterrolebinding clusterrole; do
+        for obj in $(kubectl get "$kind" -o name 2>/dev/null | grep -E 'metallb|eg-gateway-helm' || true); do
+            kubectl delete "$obj" --ignore-not-found >/dev/null 2>&1 || true
+        done
     done
 
     ok "purge complete"

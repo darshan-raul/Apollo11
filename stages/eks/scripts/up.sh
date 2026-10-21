@@ -61,7 +61,7 @@ step "4/4 Wait for the NLB to be provisioned by the AWS Load Balancer Controller
 NLB_NAME="${CLUSTER_NAME}-envoy-nlb"
 echo "  Waiting for NLB '$NLB_NAME' in $REGION..."
 NLB_DNS=""
-for i in $(seq 1 60); do
+for _ in $(seq 1 60); do
   NLB_STATE=$(aws elbv2 describe-load-balancers \
     --names "$NLB_NAME" \
     --region "$REGION" \

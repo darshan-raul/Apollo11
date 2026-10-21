@@ -1,0 +1,8 @@
+▶ Starting an in-cluster HTTP client
+▶ Authenticating and selecting a seeded flight
+▶ Creating a booking with trace_id=79af1bcc9bec1943a8461a84eb1e24ea
+▶ Waiting for Tempo to contain the cross-service span graph
+trace_id=79af1bcc9bec1943a8461a84eb1e24ea services=booking,flight,identity,notification
+▶ Cancelling the passenger booking and restoring its seat
+✓ passenger booking and cancellation succeeded; one trace contains booking → identity → flight → notification
+exit=0

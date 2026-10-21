@@ -1,0 +1,20 @@
+commit: 1ac5c663428f05b6ee2b873da52026aa585aebfd
+ 15 files changed, 92 insertions(+), 7 deletions(-)
+k6: k6 v2.3.0 (commit/e088784614, go1.26.8, linux/amd64)
+NAME                     CPU   MEM
+apollo11-control-plane   6     16140496Ki
+apollo11-worker          6     16140496Ki
+apollo11-worker2         6     16140496Ki
+6
+MemTotal:       16140496 kB
+NAME                            CPU(cores)   MEMORY(bytes)   
+booking-555d8bd968-x6l78        2m           16Mi            
+booking-db-0                    7m           25Mi            
+flight-5999cfd4b4-x8qdh         1m           36Mi            
+flight-db-0                     9m           26Mi            
+identity-957cc4696-nm7kg        6m           65Mi            
+identity-db-0                   13m          21Mi            
+notification-6bdf49b58f-6xvm2   1m           18Mi            
+redis-0                         14m          8Mi             
+search-797cd95cf9-988km         11m          25Mi            
+image=apollo11/search:latest

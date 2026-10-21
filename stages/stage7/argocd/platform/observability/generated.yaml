@@ -1,6 +1,4 @@
-# Generated from the Stage 7 Helm chart for the shared Argo CD observability Application.
-# Regenerate when observability templates or values change.
----
+# Generated from Stage 7 Helm observability templates; namespaced resources only.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -19,6 +17,53 @@ type: Opaque
 stringData:
   username: admin
   password: apollo-admin
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/part-of: apollo-airlines
+data:
+  alertmanager.yml: "route:\n  receiver: lab\n  group_by: [alertname, namespace]\n\
+    \  group_wait: 5s\n  group_interval: 10s\n  repeat_interval: 1h\nreceivers:\n\
+    \  - name: lab\n    webhook_configs:\n      - url: http://alert-receiver:8080/\n\
+    \        send_resolved: true\n"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alert-receiver-code
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: alert-receiver
+    app.kubernetes.io/part-of: apollo-airlines
+data:
+  receiver.py: "from http.server import BaseHTTPRequestHandler, HTTPServer\nimport\
+    \ json\nevents = []\nclass Receiver(BaseHTTPRequestHandler):\n    def do_GET(self):\n\
+    \        self.send_response(200)\n        self.send_header('Content-Type', 'application/json')\n\
+    \        self.end_headers()\n        self.wfile.write(json.dumps(events).encode())\n\
+    \    def do_POST(self):\n        event = json.loads(self.rfile.read(int(self.headers['Content-Length'])))\n\
+    \        events.append(event)\n        del events[:-100]\n        print(json.dumps(event),\
+    \ flush=True)\n        self.send_response(200)\n        self.end_headers()\nHTTPServer(('0.0.0.0',\
+    \ 8080), Receiver).serve_forever()\n"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blackbox-config
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: blackbox
+    app.kubernetes.io/part-of: apollo-airlines
+data:
+  blackbox.yml: "modules:\n  http_2xx:\n    prober: http\n    timeout: 5s\n    http:\n\
+    \      preferred_ip_protocol: ip4\n  https_apollo:\n    prober: http\n    timeout:\
+    \ 5s\n    http:\n      preferred_ip_protocol: ip4\n      valid_status_codes: [200]\n\
+    \      fail_if_not_ssl: true\n      tls_config:\n        ca_file: /trust/ca.crt\n\
+    \        server_name: frontend.apollo.local\n      headers:\n        Host: frontend.apollo.local\n"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -78,7 +123,7 @@ metadata:
     grafana_dashboard: '1'
 data:
   dashboard.json: '{"editable":true,"uid":"apollo-overview","title":"Apollo Overview","tags":["apollo"],"timezone":"browser","schemaVersion":39,"version":1,"refresh":"30s","time":{"from":"now-1h","to":"now"},"panels":[{"id":1,"type":"stat","title":"Backend
-    targets up","datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"h":4,"w":8,"x":0,"y":0},"targets":[{"expr":"count(up{namespace=\"apollo-airlines-dev-apps\"}
+    targets up","datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"h":4,"w":8,"x":0,"y":0},"targets":[{"expr":"count(up{namespace=\"apollo-airlines-apps\"}
     == 1)","refId":"A"}]},{"id":2,"type":"timeseries","title":"Requests/sec by service","datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"h":8,"w":12,"x":0,"y":4},"targets":[{"expr":"sum
     by (service) (rate(http_requests_total[5m]))","refId":"A"}]},{"id":3,"type":"timeseries","title":"p95
     latency by service","datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"h":8,"w":12,"x":12,"y":4},"targets":[{"expr":"histogram_quantile(0.95,
@@ -124,33 +169,21 @@ metadata:
     app.kubernetes.io/name: grafana
     app.kubernetes.io/part-of: apollo-airlines
 data:
-  alerting.yaml: "apiVersion: 1\ngroups:\n  - orgId: 1\n    name: apollo-alerts\n\
-    \    folder: Apollo\n    interval: 1m\n    rules:\n      - uid: apollo-booking-p95\n\
-    \        title: Apollo booking p95 latency\n        condition: A\n        data:\n\
-    \          - refId: A\n            datasourceUid: prometheus\n            relativeTimeRange:\n\
-    \              from: 600\n              to: 0\n            model:\n          \
-    \    expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_ms_bucket{service=\"\
-    booking\"}[5m])))\n              intervalMs: 1000\n              maxDataPoints:\
-    \ 43200\n              refId: A\n        noDataState: NoData\n        execErrState:\
-    \ Alerting\n        for: 5m\n        annotations:\n          summary: Booking\
-    \ p95 latency over threshold\n      - uid: apollo-error-rate\n        title: Apollo\
-    \ 5xx error rate\n        condition: A\n        data:\n          - refId: A\n\
-    \            datasourceUid: prometheus\n            relativeTimeRange:\n     \
-    \         from: 600\n              to: 0\n            model:\n              expr:\
-    \ sum by (service) (rate(http_requests_total{status=~\"5..\"}[5m])) / sum by (service)\
-    \ (rate(http_requests_total[5m]))\n              intervalMs: 1000\n          \
-    \    maxDataPoints: 43200\n              refId: A\n        noDataState: NoData\n\
-    \        execErrState: Alerting\n        for: 5m\n        annotations:\n     \
-    \     summary: Service 5xx rate elevated\n"
   datasources.yaml: "apiVersion: 1\ndatasources:\n  - name: Prometheus\n    uid: prometheus\n\
     \    type: prometheus\n    access: proxy\n    url: http://prometheus:9090\n  \
     \  isDefault: true\n    editable: true\n    jsonData:\n      timeInterval: 30s\n\
     \      manageAlerts: true\n  - name: Loki\n    uid: loki\n    type: loki\n   \
     \ access: proxy\n    url: http://loki:3100\n    editable: true\n    jsonData:\n\
-    \      maxLines: 1000\n  - name: Tempo\n    uid: tempo\n    type: tempo\n    access:\
-    \ proxy\n    url: http://tempo:3100\n    editable: true\n    jsonData:\n     \
-    \ tracesToLogsV2: {}\n      serviceMap:\n        datasourceUid: prometheus\n \
-    \     nodeGraph:\n        enabled: true\n      search:\n        hide: false\n"
+    \      maxLines: 1000\n      derivedFields:\n        - name: TraceID\n       \
+    \   matcherRegex: '\"trace_id\"\\s*:\\s*\"([0-9a-f]{32})\"'\n          datasourceUid:\
+    \ tempo\n          url: '$${__value.raw}'\n          urlDisplayLabel: View trace\n\
+    \  - name: Tempo\n    uid: tempo\n    type: tempo\n    access: proxy\n    url:\
+    \ http://tempo:3100\n    editable: true\n    jsonData:\n      tracesToLogsV2:\n\
+    \        datasourceUid: loki\n        spanStartTimeShift: '-2m'\n        spanEndTimeShift:\
+    \ '2m'\n        customQuery: true\n        query: '{service=~\".+\"} | json |\
+    \ trace_id=\"$${__span.traceId}\"'\n      serviceMap:\n        datasourceUid:\
+    \ prometheus\n      nodeGraph:\n        enabled: true\n      search:\n       \
+    \ hide: false\n"
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -171,8 +204,10 @@ data:
   config.alloy: "discovery.kubernetes \"pods\" {\n  role = \"pod\"\n  selectors {\n\
     \    role  = \"pod\"\n    field = \"spec.nodeName=\" + sys.env(\"NODE_NAME\")\n\
     \  }\n}\n\ndiscovery.relabel \"pod_logs\" {\n  targets = discovery.kubernetes.pods.targets\n\
-    \  rule {\n    source_labels = [\"__meta_kubernetes_namespace\"]\n    target_label\
-    \  = \"namespace\"\n  }\n  rule {\n    source_labels = [\"__meta_kubernetes_pod_label_app\"\
+    \  rule {\n    source_labels = [\"__meta_kubernetes_namespace\"]\n    regex =\
+    \ \"apollo-airlines-(.*-)?(apps|ui)\"\n    action = \"keep\"\n  }\n  rule {\n\
+    \    source_labels = [\"__meta_kubernetes_namespace\"]\n    target_label  = \"\
+    namespace\"\n  }\n  rule {\n    source_labels = [\"__meta_kubernetes_pod_label_app\"\
     ]\n    target_label  = \"service\"\n  }\n  rule {\n    source_labels = [\"__meta_kubernetes_pod_name\"\
     ]\n    target_label  = \"pod\"\n  }\n  rule {\n    source_labels = [\"__meta_kubernetes_pod_container_name\"\
     ]\n    target_label  = \"container\"\n  }\n}\n\nloki.source.kubernetes \"pods\"\
@@ -275,6 +310,54 @@ spec:
   resources:
     requests:
       storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  selector:
+    app: alertmanager
+  ports:
+  - name: http
+    port: 9093
+    targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-receiver
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: alert-receiver
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  selector:
+    app: alert-receiver
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blackbox
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: blackbox
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  selector:
+    app: blackbox
+  ports:
+  - name: http
+    port: 9115
+    targetPort: http
 ---
 apiVersion: v1
 kind: Service
@@ -488,6 +571,183 @@ spec:
       - name: config
         configMap:
           name: otel-collector-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+      containers:
+      - name: alertmanager
+        image: quay.io/prometheus/alertmanager:v0.28.1
+        args:
+        - --config.file=/etc/alertmanager/alertmanager.yml
+        - --storage.path=/data
+        - --cluster.listen-address=
+        ports:
+        - name: http
+          containerPort: 9093
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: http
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: config
+          mountPath: /etc/alertmanager
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: config
+        configMap:
+          name: alertmanager-config
+      - name: data
+        emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-receiver
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: alert-receiver
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alert-receiver
+  template:
+    metadata:
+      labels:
+        app: alert-receiver
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+      - name: receiver
+        image: python:3.12.10-alpine3.21
+        command:
+        - python
+        - -B
+        - /app/receiver.py
+        ports:
+        - name: http
+          containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: code
+          mountPath: /app
+      volumes:
+      - name: code
+        configMap:
+          name: alert-receiver-code
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blackbox
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: blackbox
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blackbox
+  template:
+    metadata:
+      labels:
+        app: blackbox
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: blackbox
+        image: quay.io/prometheus/blackbox-exporter:v0.26.0
+        args:
+        - --config.file=/etc/blackbox/blackbox.yml
+        ports:
+        - name: http
+          containerPort: 9115
+        readinessProbe:
+          httpGet:
+            path: /-/healthy
+            port: http
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65534
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: config
+          mountPath: /etc/blackbox
+        - name: trust
+          mountPath: /trust
+      volumes:
+      - name: config
+        configMap:
+          name: blackbox-config
+      - name: trust
+        configMap:
+          name: blackbox-trust
+          optional: true
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -754,7 +1014,7 @@ metadata:
 spec:
   parentRefs:
   - name: apollo-gateway
-    namespace: apollo-airlines-dev-apps
+    namespace: apollo-airlines-apps
   hostnames:
   - grafana.apollo.local
   rules:
@@ -765,6 +1025,25 @@ spec:
     backendRefs:
     - name: grafana
       port: 3000
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: blackbox-internal
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  interval: 15s
+  module: http_2xx
+  prober:
+    url: blackbox.apollo-observability.svc:9115
+  targets:
+    staticConfig:
+      static:
+      - http://frontend.apollo-airlines-dev-ui.svc:3000/healthz
+      - http://frontend.apollo-airlines-staging-ui.svc:3000/healthz
+      - http://frontend.apollo-airlines-prod-ui.svc:3000/healthz
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
@@ -790,7 +1069,18 @@ spec:
   ruleSelector:
     matchLabels:
       app.kubernetes.io/part-of: apollo-airlines
-  retention: 7d
+  alerting:
+    alertmanagers:
+    - namespace: apollo-observability
+      name: alertmanager
+      port: http
+  probeSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: apollo-airlines
+  probeNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: apollo-observability
+  retention: 30d
   resources:
     limits:
       cpu: 500m
@@ -825,7 +1115,7 @@ spec:
     interval: 30s
     rules:
     - alert: ApolloServiceDown
-      expr: up{namespace="apollo-airlines-dev-apps"} == 0
+      expr: up{namespace="apollo-airlines-apps"} == 0
       for: 2m
       labels:
         severity: critical
@@ -833,7 +1123,7 @@ spec:
       annotations:
         summary: Apollo backend metrics target is down
     - alert: ApolloServiceFlapping
-      expr: changes(up{namespace="apollo-airlines-dev-apps"}[10m]) > 6
+      expr: changes(up{namespace="apollo-airlines-apps"}[10m]) > 6
       labels:
         severity: warning
         team: platform
@@ -861,6 +1151,51 @@ spec:
         service: booking
       annotations:
         summary: Booking p95 latency exceeds 500 milliseconds
+  - name: apollo.booking-slo
+    interval: 30s
+    rules:
+    - record: apollo:booking_error_ratio:5m
+      expr: '(sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"5.."}[5m]))
+        or vector(0))
+
+        / sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[5m]))
+
+        and sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[5m]))
+        > 0
+
+        '
+    - record: apollo:booking_error_ratio:1h
+      expr: '(sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"5.."}[1h]))
+        or vector(0))
+
+        / sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[1h]))
+
+        and sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[1h]))
+        > 0
+
+        '
+    - record: apollo:booking_error_ratio:28d
+      expr: '(sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"5.."}[28d]))
+        or vector(0))
+
+        / sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[28d]))
+
+        and sum(rate(http_requests_total{service="booking",method="POST",path="/api/bookings",status=~"2..|5.."}[28d]))
+        > 0
+
+        '
+    - record: apollo:booking_error_budget_remaining:28d
+      expr: 1 - apollo:booking_error_ratio:28d / 0.005
+    - alert: ApolloBookingErrorBudgetBurn
+      expr: apollo:booking_error_ratio:5m > (14.4 * 0.005) and apollo:booking_error_ratio:1h
+        > (14.4 * 0.005)
+      for: 2m
+      labels:
+        severity: critical
+        service: booking
+      annotations:
+        summary: Booking creation consumes the 99.5 percent error budget at more than
+          14.4 times the allowed rate
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

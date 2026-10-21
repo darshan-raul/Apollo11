@@ -18,8 +18,8 @@ brings Prometheus metrics, Tempo traces, and Loki logs together.
 
 | Delivery path | Evidence |
 |---|---|
-| Helm/dev | **190/190** checks passed, followed by a clean purge |
-| Kustomize/dev | **180/180** checks passed, followed by a clean purge |
+| Helm/dev | **212/212** checks passed, followed by a clean purge |
+| Kustomize/dev | **201/201** checks passed, followed by a clean purge |
 | Argo CD | Four-Application layout statically validated: dev 58, staging 58, prod 60, shared observability 34 resources |
 
 The hosted CI run, image publication, and live Argo reconciliation remain
@@ -51,6 +51,8 @@ The `apollo-observability` namespace contains:
 | Component | Image | Role |
 |---|---|---|
 | Prometheus | `quay.io/prometheus/prometheus:v3.13.1` | Scrapes five ServiceMonitors and evaluates Apollo alert rules |
+| Alertmanager | `quay.io/prometheus/alertmanager:v0.28.1` | Alert routing, grouping, silences, and local webhook notification delivery |
+| Blackbox Exporter | `quay.io/prometheus/blackbox-exporter:v0.25.0` | Probes internal services and edge HTTPS ingress through the Envoy Gateway |
 | Grafana | `grafana/grafana:10.4.2` | Five provisioned dashboards and Prometheus/Loki/Tempo datasources |
 | OpenTelemetry Collector | `otel/opentelemetry-collector-contrib:0.99.0` | Per-node OTLP receiver and trace pipeline |
 | Tempo | `grafana/tempo:2.3.1` | Trace storage and query API |
@@ -222,3 +224,19 @@ extract the replacement and update local trust. Teardown removes the runtime
 certificate when it deletes the owned namespace.
 
 Follow [the ordered signal labs](SIGNALS.md) for metrics → dashboards → alerts/SLO → logs → traces → correlation.
+
+## CI and published image contract
+
+CI validates Stages 5–7, runs review regressions and Go tests, renders every
+Helm/Kustomize environment, checks stage shell scripts, and scans each built
+image with Trivy (fixable HIGH/CRITICAL findings block publication). It publishes
+the exact scanned artifact, without rebuilding it in the publication job.
+
+Images now use `ghcr.io/darshan-raul/apollo11/stageN/SERVICE:TAG`, where N matches
+this stage. Production Helm values and Kustomize names follow that layout.
+Do not substitute a Stage 5 image for Stage 6 telemetry or Stage 7 caching.
+Run `bash test/ci.sh` from the repository root for local validation; install
+Python/PyYAML, Go, Helm, kubectl and shellcheck first. The hosted run and first
+publication require a separately authorized push and remain unverified locally.
+
+Follow [alert delivery, edge probes and correlation](OBSERVABILITY.md) for the new observability exercises.

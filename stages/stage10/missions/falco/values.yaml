@@ -1,0 +1,17 @@
+driver:
+  kind: modern_ebpf
+collectors:
+  kubernetes:
+    enabled: false
+falco:
+  json_output: true
+  stdout_output:
+    enabled: true
+customRules:
+  apollo.yaml: |-
+    - rule: Apollo harmless marker
+      desc: Detect only the mission's harmless marker file creation
+      condition: evt.type in (open, openat, openat2) and evt.is_open_write=true and fd.name=/tmp/apollo-falco-marker
+      output: Apollo marker written (file=%fd.name process=%proc.name container=%container.id)
+      priority: NOTICE
+      tags: [apollo, training]

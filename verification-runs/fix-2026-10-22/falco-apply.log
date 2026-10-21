@@ -1,0 +1,42 @@
+Creating cluster "apollo11-falco" ...
+ • Ensuring node image (kindest/node:v1.34.0) 🖼️  ...
+ ✓ Ensuring node image (kindest/node:v1.34.0) 🖼️
+ • Preparing nodes 📦   ...
+ ✓ Preparing nodes 📦 
+ • Writing configuration 📜  ...
+ ✓ Writing configuration 📜
+ • Starting control-plane 🕹️  ...
+ ✓ Starting control-plane 🕹️
+ • Installing CNI 🔌  ...
+ ✓ Installing CNI 🔌
+ • Installing StorageClass 💾  ...
+ ✓ Installing StorageClass 💾
+ • Waiting ≤ 2m0s for control-plane = Ready ⏳  ...
+ ✓ Waiting ≤ 2m0s for control-plane = Ready ⏳
+ • Ready after 19s 💚
+Set kubectl context to "kind-apollo11-falco"
+You can now use your cluster with:
+
+kubectl cluster-info --context kind-apollo11-falco --kubeconfig /home/darshan/projects/Apollo11/stages/stage10/missions/falco/.kubeconfig
+
+Have a question, bug, or feature request? Let us know! https://kind.sigs.k8s.io/#community 🙂
+Release "falco" does not exist. Installing it now.
+NAME: falco
+LAST DEPLOYED: Thu Oct 22 03:36:55 2026
+NAMESPACE: falco
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+NOTES:
+Falco agents are spinning up on each node in your cluster. After a few
+seconds, they are going to start monitoring your containers looking for
+security issues.
+
+TIP:
+You can easily forward Falco events to Slack, Kafka, AWS Lambda and more with falcosidekick.
+Full list of outputs: https://github.com/falcosecurity/charts/tree/master/charts/falcosidekick.
+You can enable its deployment with `--set falcosidekick.enabled=true` or in your values.yaml.
+See: https://github.com/falcosecurity/charts/blob/master/charts/falcosidekick/values.yaml for configuration values.
+pod/apollo-marker created
+pod/apollo-marker condition met

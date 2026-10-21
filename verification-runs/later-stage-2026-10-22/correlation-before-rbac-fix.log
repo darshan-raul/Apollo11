@@ -1,0 +1,8 @@
+[0;36m▶ Starting an in-cluster HTTP client[0m
+[0;36m▶ Authenticating and selecting a seeded flight[0m
+[0;36m▶ Creating a booking with trace_id=27b70f2de1a47074df5b8a87739d31a5[0m
+[0;36m▶ Waiting for Tempo to contain the cross-service span graph[0m
+trace_id=27b70f2de1a47074df5b8a87739d31a5 services=booking,flight,identity,notification
+[0;36m▶ Cancelling the passenger booking and restoring its seat[0m
+[0;32m✓ passenger booking and cancellation succeeded; one trace contains booking → identity → flight → notification[0m
+[0;31m✗ trace exists in Tempo but matching logs never reached Loki[0m

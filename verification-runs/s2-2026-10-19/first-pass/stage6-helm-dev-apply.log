@@ -1,0 +1,601 @@
+== apply 2026-10-19T10:44:18+05:30
+▶ 0/8 Checking cluster
+✓ cluster reachable
+▶ 1/8 Building + loading images (tag: latest)
+=== Building Apollo Airlines service images (stage6) — tag: latest ===
+  Building apollo11/identity:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  49.15kB
+Step 1/7 : FROM python:3.12-slim
+ ---> 090ba77e2958
+Step 2/7 : WORKDIR /app
+ ---> Using cache
+ ---> 878f749aa9bb
+Step 3/7 : COPY requirements.txt .
+ ---> ea2286d60393
+Step 4/7 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Running in 446e9038d04f
+Collecting fastapi==0.111.0 (from -r requirements.txt (line 1))
+  Downloading fastapi-0.111.0-py3-none-any.whl.metadata (25 kB)
+Collecting uvicorn==0.30.1 (from -r requirements.txt (line 2))
+  Downloading uvicorn-0.30.1-py3-none-any.whl.metadata (6.3 kB)
+Collecting psycopg2-binary==2.9.9 (from -r requirements.txt (line 3))
+  Downloading psycopg2_binary-2.9.9-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.4 kB)
+Collecting python-jose==3.3.0 (from python-jose[cryptography]==3.3.0->-r requirements.txt (line 4))
+  Downloading python_jose-3.3.0-py2.py3-none-any.whl.metadata (5.4 kB)
+Collecting passlib==1.7.4 (from passlib[bcrypt]==1.7.4->-r requirements.txt (line 5))
+  Downloading passlib-1.7.4-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting bcrypt==4.1.3 (from -r requirements.txt (line 6))
+  Downloading bcrypt-4.1.3-cp39-abi3-manylinux_2_28_x86_64.whl.metadata (9.5 kB)
+Collecting pydantic==2.8.2 (from -r requirements.txt (line 7))
+  Downloading pydantic-2.8.2-py3-none-any.whl.metadata (125 kB)
+Collecting python-multipart==0.0.9 (from -r requirements.txt (line 8))
+  Downloading python_multipart-0.0.9-py3-none-any.whl.metadata (2.5 kB)
+Collecting opentelemetry-api==1.26.0 (from -r requirements.txt (line 10))
+  Downloading opentelemetry_api-1.26.0-py3-none-any.whl.metadata (1.4 kB)
+Collecting opentelemetry-sdk==1.26.0 (from -r requirements.txt (line 11))
+  Downloading opentelemetry_sdk-1.26.0-py3-none-any.whl.metadata (1.5 kB)
+Collecting opentelemetry-exporter-otlp-proto-grpc==1.26.0 (from -r requirements.txt (line 12))
+  Downloading opentelemetry_exporter_otlp_proto_grpc-1.26.0-py3-none-any.whl.metadata (2.3 kB)
+Collecting opentelemetry-instrumentation-fastapi==0.47b0 (from -r requirements.txt (line 13))
+  Downloading opentelemetry_instrumentation_fastapi-0.47b0-py3-none-any.whl.metadata (2.1 kB)
+Collecting opentelemetry-instrumentation-psycopg2==0.47b0 (from -r requirements.txt (line 14))
+  Downloading opentelemetry_instrumentation_psycopg2-0.47b0-py3-none-any.whl.metadata (1.9 kB)
+Collecting opentelemetry-instrumentation-requests==0.47b0 (from -r requirements.txt (line 15))
+  Downloading opentelemetry_instrumentation_requests-0.47b0-py3-none-any.whl.metadata (2.5 kB)
+Collecting requests==2.32.3 (from -r requirements.txt (line 16))
+  Downloading requests-2.32.3-py3-none-any.whl.metadata (4.6 kB)
+Collecting prometheus-client==0.20.0 (from -r requirements.txt (line 18))
+  Downloading prometheus_client-0.20.0-py3-none-any.whl.metadata (1.8 kB)
+Collecting setuptools==70.1.0 (from -r requirements.txt (line 20))
+  Downloading setuptools-70.1.0-py3-none-any.whl.metadata (6.0 kB)
+Collecting starlette<0.38.0,>=0.37.2 (from fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading starlette-0.37.2-py3-none-any.whl.metadata (5.9 kB)
+Collecting typing-extensions>=4.8.0 (from fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting fastapi-cli>=0.0.2 (from fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading fastapi_cli-0.0.32-py3-none-any.whl.metadata (6.7 kB)
+Collecting httpx>=0.23.0 (from fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting jinja2>=2.11.2 (from fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Collecting ujson!=4.0.2,!=4.1.0,!=4.2.0,!=4.3.0,!=5.0.0,!=5.1.0,>=4.0.1 (from fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading ujson-6.0.0-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (10.0 kB)
+Collecting orjson>=3.2.1 (from fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading orjson-3.13.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (42 kB)
+Collecting email_validator>=2.0.0 (from fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading email_validator-2.3.0-py3-none-any.whl.metadata (26 kB)
+Collecting click>=7.0 (from uvicorn==0.30.1->-r requirements.txt (line 2))
+  Downloading click-8.5.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting h11>=0.8 (from uvicorn==0.30.1->-r requirements.txt (line 2))
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting ecdsa!=0.15 (from python-jose==3.3.0->python-jose[cryptography]==3.3.0->-r requirements.txt (line 4))
+  Downloading ecdsa-0.19.2-py2.py3-none-any.whl.metadata (29 kB)
+Collecting rsa (from python-jose==3.3.0->python-jose[cryptography]==3.3.0->-r requirements.txt (line 4))
+  Downloading rsa-4.9.1-py3-none-any.whl.metadata (5.6 kB)
+Collecting pyasn1 (from python-jose==3.3.0->python-jose[cryptography]==3.3.0->-r requirements.txt (line 4))
+  Downloading pyasn1-0.6.4-py3-none-any.whl.metadata (8.4 kB)
+Collecting annotated-types>=0.4.0 (from pydantic==2.8.2->-r requirements.txt (line 7))
+  Downloading annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.20.1 (from pydantic==2.8.2->-r requirements.txt (line 7))
+  Downloading pydantic_core-2.20.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.6 kB)
+Collecting deprecated>=1.2.6 (from opentelemetry-api==1.26.0->-r requirements.txt (line 10))
+  Downloading deprecated-3.0.0-py3-none-any.whl.metadata (6.5 kB)
+Collecting importlib-metadata<=8.0.0,>=6.0 (from opentelemetry-api==1.26.0->-r requirements.txt (line 10))
+  Downloading importlib_metadata-8.0.0-py3-none-any.whl.metadata (4.6 kB)
+Collecting opentelemetry-semantic-conventions==0.47b0 (from opentelemetry-sdk==1.26.0->-r requirements.txt (line 11))
+  Downloading opentelemetry_semantic_conventions-0.47b0-py3-none-any.whl.metadata (2.4 kB)
+Collecting googleapis-common-protos~=1.52 (from opentelemetry-exporter-otlp-proto-grpc==1.26.0->-r requirements.txt (line 12))
+  Downloading googleapis_common_protos-1.75.5-py3-none-any.whl.metadata (8.5 kB)
+Collecting grpcio<2.0.0,>=1.0.0 (from opentelemetry-exporter-otlp-proto-grpc==1.26.0->-r requirements.txt (line 12))
+  Downloading grpcio-1.84.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.8 kB)
+Collecting opentelemetry-exporter-otlp-proto-common==1.26.0 (from opentelemetry-exporter-otlp-proto-grpc==1.26.0->-r requirements.txt (line 12))
+  Downloading opentelemetry_exporter_otlp_proto_common-1.26.0-py3-none-any.whl.metadata (1.8 kB)
+Collecting opentelemetry-proto==1.26.0 (from opentelemetry-exporter-otlp-proto-grpc==1.26.0->-r requirements.txt (line 12))
+  Downloading opentelemetry_proto-1.26.0-py3-none-any.whl.metadata (2.3 kB)
+Collecting opentelemetry-instrumentation-asgi==0.47b0 (from opentelemetry-instrumentation-fastapi==0.47b0->-r requirements.txt (line 13))
+  Downloading opentelemetry_instrumentation_asgi-0.47b0-py3-none-any.whl.metadata (2.0 kB)
+Collecting opentelemetry-instrumentation==0.47b0 (from opentelemetry-instrumentation-fastapi==0.47b0->-r requirements.txt (line 13))
+  Downloading opentelemetry_instrumentation-0.47b0-py3-none-any.whl.metadata (6.1 kB)
+Collecting opentelemetry-util-http==0.47b0 (from opentelemetry-instrumentation-fastapi==0.47b0->-r requirements.txt (line 13))
+  Downloading opentelemetry_util_http-0.47b0-py3-none-any.whl.metadata (2.5 kB)
+Collecting opentelemetry-instrumentation-dbapi==0.47b0 (from opentelemetry-instrumentation-psycopg2==0.47b0->-r requirements.txt (line 14))
+  Downloading opentelemetry_instrumentation_dbapi-0.47b0-py3-none-any.whl.metadata (1.9 kB)
+Collecting charset-normalizer<4,>=2 (from requests==2.32.3->-r requirements.txt (line 16))
+  Downloading charset_normalizer-3.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (46 kB)
+Collecting idna<4,>=2.5 (from requests==2.32.3->-r requirements.txt (line 16))
+  Downloading idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+Collecting urllib3<3,>=1.21.1 (from requests==2.32.3->-r requirements.txt (line 16))
+  Downloading urllib3-2.8.0-py3-none-any.whl.metadata (7.4 kB)
+Collecting certifi>=2017.4.17 (from requests==2.32.3->-r requirements.txt (line 16))
+  Downloading certifi-2026.10.18-py3-none-any.whl.metadata (2.5 kB)
+Collecting cryptography>=3.4.0 (from python-jose[cryptography]==3.3.0->-r requirements.txt (line 4))
+  Downloading cryptography-50.0.2-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (4.4 kB)
+Collecting wrapt<2.0.0,>=1.0.0 (from opentelemetry-instrumentation==0.47b0->opentelemetry-instrumentation-fastapi==0.47b0->-r requirements.txt (line 13))
+  Downloading wrapt-1.17.3-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.4 kB)
+Collecting asgiref~=3.0 (from opentelemetry-instrumentation-asgi==0.47b0->opentelemetry-instrumentation-fastapi==0.47b0->-r requirements.txt (line 13))
+  Downloading asgiref-3.12.1-py3-none-any.whl.metadata (9.4 kB)
+Collecting protobuf<5.0,>=3.19 (from opentelemetry-proto==1.26.0->opentelemetry-exporter-otlp-proto-grpc==1.26.0->-r requirements.txt (line 12))
+  Downloading protobuf-4.25.9-cp37-abi3-manylinux2014_x86_64.whl.metadata (541 bytes)
+Collecting cffi>=2.0.0 (from cryptography>=3.4.0->python-jose[cryptography]==3.3.0->-r requirements.txt (line 4))
+  Downloading cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.5 kB)
+Collecting six>=1.9.0 (from ecdsa!=0.15->python-jose==3.3.0->python-jose[cryptography]==3.3.0->-r requirements.txt (line 4))
+  Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting dnspython>=2.0.0 (from email_validator>=2.0.0->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading dnspython-2.9.0-py3-none-any.whl.metadata (5.7 kB)
+Collecting typer>=0.16.0 (from fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading typer-0.27.3-py3-none-any.whl.metadata (16 kB)
+Collecting rich-toolkit>=0.14.8 (from fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading rich_toolkit-0.20.6-py3-none-any.whl.metadata (3.0 kB)
+INFO: pip is looking at multiple versions of googleapis-common-protos to determine which version is compatible with other requirements. This could take a while.
+Collecting googleapis-common-protos~=1.52 (from opentelemetry-exporter-otlp-proto-grpc==1.26.0->-r requirements.txt (line 12))
+  Downloading googleapis_common_protos-1.75.4-py3-none-any.whl.metadata (8.5 kB)
+  Downloading googleapis_common_protos-1.75.3-py3-none-any.whl.metadata (8.5 kB)
+  Downloading googleapis_common_protos-1.75.2-py3-none-any.whl.metadata (8.5 kB)
+  Downloading googleapis_common_protos-1.75.1-py3-none-any.whl.metadata (8.5 kB)
+  Downloading googleapis_common_protos-1.75.0-py3-none-any.whl.metadata (8.6 kB)
+Collecting anyio (from httpx>=0.23.0->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading anyio-4.15.1-py3-none-any.whl.metadata (4.7 kB)
+Collecting httpcore==1.* (from httpx>=0.23.0->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting zipp>=0.5 (from importlib-metadata<=8.0.0,>=6.0->opentelemetry-api==1.26.0->-r requirements.txt (line 10))
+  Downloading zipp-4.1.1-py3-none-any.whl.metadata (3.6 kB)
+Collecting MarkupSafe>=2.0 (from jinja2>=2.11.2->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+Collecting httptools>=0.5.0 (from uvicorn[standard]>=0.12.0->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading httptools-0.9.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (3.5 kB)
+Collecting python-dotenv>=0.13 (from uvicorn[standard]>=0.12.0->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading python_dotenv-1.2.4-py3-none-any.whl.metadata (29 kB)
+Collecting pyyaml>=5.1 (from uvicorn[standard]>=0.12.0->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting uvloop!=0.15.0,!=0.15.1,>=0.14.0 (from uvicorn[standard]>=0.12.0->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading uvloop-0.23.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.1 kB)
+Collecting watchfiles>=0.13 (from uvicorn[standard]>=0.12.0->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading watchfiles-1.3.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+Collecting websockets>=10.4 (from uvicorn[standard]>=0.12.0->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading websockets-17.2-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.3 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography>=3.4.0->python-jose[cryptography]==3.3.0->-r requirements.txt (line 4))
+  Downloading pycparser-3.11-py3-none-any.whl.metadata (8.2 kB)
+Collecting rich>=13.7.1 (from rich-toolkit>=0.14.8->fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading rich-15.0.0-py3-none-any.whl.metadata (18 kB)
+Collecting shellingham>=1.3.0 (from typer>=0.16.0->fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading shellingham-1.5.4-py2.py3-none-any.whl.metadata (3.5 kB)
+Collecting annotated-doc>=0.0.2 (from typer>=0.16.0->fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading annotated_doc-0.0.5-py3-none-any.whl.metadata (6.5 kB)
+Collecting markdown-it-py>=2.2.0 (from rich>=13.7.1->rich-toolkit>=0.14.8->fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading markdown_it_py-4.2.0-py3-none-any.whl.metadata (7.4 kB)
+Collecting pygments<3.0.0,>=2.13.0 (from rich>=13.7.1->rich-toolkit>=0.14.8->fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich>=13.7.1->rich-toolkit>=0.14.8->fastapi-cli>=0.0.2->fastapi==0.111.0->-r requirements.txt (line 1))
+  Downloading mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Downloading fastapi-0.111.0-py3-none-any.whl (91 kB)
+Downloading uvicorn-0.30.1-py3-none-any.whl (62 kB)
+Downloading psycopg2_binary-2.9.9-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.0/3.0 MB 108.7 MB/s eta 0:00:00
+Downloading python_jose-3.3.0-py2.py3-none-any.whl (33 kB)
+Downloading passlib-1.7.4-py2.py3-none-any.whl (525 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 525.6/525.6 kB 118.5 MB/s eta 0:00:00
+Downloading bcrypt-4.1.3-cp39-abi3-manylinux_2_28_x86_64.whl (283 kB)
+Downloading pydantic-2.8.2-py3-none-any.whl (423 kB)
+Downloading python_multipart-0.0.9-py3-none-any.whl (22 kB)
+Downloading opentelemetry_api-1.26.0-py3-none-any.whl (61 kB)
+Downloading opentelemetry_sdk-1.26.0-py3-none-any.whl (109 kB)
+Downloading opentelemetry_exporter_otlp_proto_grpc-1.26.0-py3-none-any.whl (18 kB)
+Downloading opentelemetry_instrumentation_fastapi-0.47b0-py3-none-any.whl (11 kB)
+Downloading opentelemetry_instrumentation_psycopg2-0.47b0-py3-none-any.whl (10 kB)
+Downloading opentelemetry_instrumentation_requests-0.47b0-py3-none-any.whl (12 kB)
+Downloading requests-2.32.3-py3-none-any.whl (64 kB)
+Downloading prometheus_client-0.20.0-py3-none-any.whl (54 kB)
+Downloading setuptools-70.1.0-py3-none-any.whl (882 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 882.6/882.6 kB 188.4 MB/s eta 0:00:00
+Downloading opentelemetry_exporter_otlp_proto_common-1.26.0-py3-none-any.whl (17 kB)
+Downloading opentelemetry_instrumentation-0.47b0-py3-none-any.whl (29 kB)
+Downloading opentelemetry_instrumentation_asgi-0.47b0-py3-none-any.whl (15 kB)
+Downloading opentelemetry_instrumentation_dbapi-0.47b0-py3-none-any.whl (11 kB)
+Downloading opentelemetry_proto-1.26.0-py3-none-any.whl (52 kB)
+Downloading opentelemetry_semantic_conventions-0.47b0-py3-none-any.whl (138 kB)
+Downloading opentelemetry_util_http-0.47b0-py3-none-any.whl (6.9 kB)
+Downloading pydantic_core-2.20.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 149.9 MB/s eta 0:00:00
+Downloading annotated_types-0.8.0-py3-none-any.whl (13 kB)
+Downloading certifi-2026.10.18-py3-none-any.whl (134 kB)
+Downloading charset_normalizer-3.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (257 kB)
+Downloading click-8.5.0-py3-none-any.whl (125 kB)
+Downloading cryptography-50.0.2-cp311-abi3-manylinux_2_34_x86_64.whl (4.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.8/4.8 MB 28.2 MB/s eta 0:00:00
+Downloading deprecated-3.0.0-py3-none-any.whl (21 kB)
+Downloading ecdsa-0.19.2-py2.py3-none-any.whl (150 kB)
+Downloading email_validator-2.3.0-py3-none-any.whl (35 kB)
+Downloading fastapi_cli-0.0.32-py3-none-any.whl (14 kB)
+Downloading googleapis_common_protos-1.75.0-py3-none-any.whl (300 kB)
+Downloading grpcio-1.84.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (7.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.2/7.2 MB 9.1 MB/s eta 0:00:00
+Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+Downloading idna-3.20-py3-none-any.whl (69 kB)
+Downloading importlib_metadata-8.0.0-py3-none-any.whl (24 kB)
+Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+Downloading orjson-3.13.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (130 kB)
+Downloading starlette-0.37.2-py3-none-any.whl (71 kB)
+Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Downloading ujson-6.0.0-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (56 kB)
+Downloading urllib3-2.8.0-py3-none-any.whl (135 kB)
+Downloading pyasn1-0.6.4-py3-none-any.whl (84 kB)
+Downloading rsa-4.9.1-py3-none-any.whl (34 kB)
+Downloading anyio-4.15.1-py3-none-any.whl (132 kB)
+Downloading asgiref-3.12.1-py3-none-any.whl (25 kB)
+Downloading cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (221 kB)
+Downloading dnspython-2.9.0-py3-none-any.whl (354 kB)
+Downloading httptools-0.9.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (552 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 552.8/552.8 kB 17.6 MB/s eta 0:00:00
+Downloading markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (22 kB)
+Downloading protobuf-4.25.9-cp37-abi3-manylinux2014_x86_64.whl (295 kB)
+Downloading python_dotenv-1.2.4-py3-none-any.whl (23 kB)
+Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.9/807.9 kB 19.9 MB/s eta 0:00:00
+Downloading rich_toolkit-0.20.6-py3-none-any.whl (39 kB)
+Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+Downloading typer-0.27.3-py3-none-any.whl (123 kB)
+Downloading uvloop-0.23.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (4.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 21.3 MB/s eta 0:00:00
+Downloading watchfiles-1.3.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (458 kB)
+Downloading websockets-17.2-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (225 kB)
+Downloading wrapt-1.17.3-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (88 kB)
+Downloading zipp-4.1.1-py3-none-any.whl (10 kB)
+Downloading annotated_doc-0.0.5-py3-none-any.whl (5.3 kB)
+Downloading rich-15.0.0-py3-none-any.whl (310 kB)
+Downloading shellingham-1.5.4-py2.py3-none-any.whl (9.8 kB)
+Downloading pycparser-3.11-py3-none-any.whl (51 kB)
+Downloading markdown_it_py-4.2.0-py3-none-any.whl (91 kB)
+Downloading pygments-2.21.0-py3-none-any.whl (1.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 24.1 MB/s eta 0:00:00
+Downloading mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+Installing collected packages: passlib, zipp, wrapt, websockets, uvloop, urllib3, ujson, typing-extensions, six, shellingham, setuptools, pyyaml, python-multipart, python-dotenv, pygments, pycparser, pyasn1, psycopg2-binary, protobuf, prometheus-client, orjson, opentelemetry-util-http, mdurl, MarkupSafe, idna, httptools, h11, dnspython, click, charset-normalizer, certifi, bcrypt, asgiref, annotated-types, annotated-doc, uvicorn, rsa, requests, pydantic-core, opentelemetry-proto, markdown-it-py, jinja2, importlib-metadata, httpcore, grpcio, googleapis-common-protos, email_validator, ecdsa, deprecated, cffi, anyio, watchfiles, starlette, rich, python-jose, pydantic, opentelemetry-exporter-otlp-proto-common, opentelemetry-api, httpx, cryptography, typer, rich-toolkit, opentelemetry-semantic-conventions, opentelemetry-instrumentation, opentelemetry-sdk, opentelemetry-instrumentation-requests, opentelemetry-instrumentation-dbapi, opentelemetry-instrumentation-asgi, fastapi-cli, opentelemetry-instrumentation-psycopg2, opentelemetry-instrumentation-fastapi, opentelemetry-exporter-otlp-proto-grpc, fastapi
+Successfully installed MarkupSafe-3.0.4 annotated-doc-0.0.5 annotated-types-0.8.0 anyio-4.15.1 asgiref-3.12.1 bcrypt-4.1.3 certifi-2026.10.18 cffi-2.1.1 charset-normalizer-3.5.2 click-8.5.0 cryptography-50.0.2 deprecated-3.0.0 dnspython-2.9.0 ecdsa-0.19.2 email_validator-2.3.0 fastapi-0.111.0 fastapi-cli-0.0.32 googleapis-common-protos-1.75.0 grpcio-1.84.0 h11-0.16.0 httpcore-1.0.9 httptools-0.9.0 httpx-0.28.1 idna-3.20 importlib-metadata-8.0.0 jinja2-3.1.6 markdown-it-py-4.2.0 mdurl-0.1.2 opentelemetry-api-1.26.0 opentelemetry-exporter-otlp-proto-common-1.26.0 opentelemetry-exporter-otlp-proto-grpc-1.26.0 opentelemetry-instrumentation-0.47b0 opentelemetry-instrumentation-asgi-0.47b0 opentelemetry-instrumentation-dbapi-0.47b0 opentelemetry-instrumentation-fastapi-0.47b0 opentelemetry-instrumentation-psycopg2-0.47b0 opentelemetry-instrumentation-requests-0.47b0 opentelemetry-proto-1.26.0 opentelemetry-sdk-1.26.0 opentelemetry-semantic-conventions-0.47b0 opentelemetry-util-http-0.47b0 orjson-3.13.0 passlib-1.7.4 prometheus-client-0.20.0 protobuf-4.25.9 psycopg2-binary-2.9.9 pyasn1-0.6.4 pycparser-3.11 pydantic-2.8.2 pydantic-core-2.20.1 pygments-2.21.0 python-dotenv-1.2.4 python-jose-3.3.0 python-multipart-0.0.9 pyyaml-6.0.3 requests-2.32.3 rich-15.0.0 rich-toolkit-0.20.6 rsa-4.9.1 setuptools-70.1.0 shellingham-1.5.4 six-1.17.0 starlette-0.37.2 typer-0.27.3 typing-extensions-4.16.0 ujson-6.0.0 urllib3-2.8.0 uvicorn-0.30.1 uvloop-0.23.0 watchfiles-1.3.0 websockets-17.2 wrapt-1.17.3 zipp-4.1.1
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+
+[notice] A new release of pip is available: 25.0.1 -> 26.2.1
+[notice] To update, run: pip install --upgrade pip
+ ---> Removed intermediate container 446e9038d04f
+ ---> 0a0db2318821
+Step 5/7 : COPY . .
+ ---> 3042f07b2493
+Step 6/7 : EXPOSE 8080
+ ---> Running in fc48f9aa18ab
+ ---> Removed intermediate container fc48f9aa18ab
+ ---> e9be36121a16
+Step 7/7 : CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+ ---> Running in fb86bb0eedaf
+ ---> Removed intermediate container fb86bb0eedaf
+ ---> dfdf0eb12ca7
+Successfully built dfdf0eb12ca7
+Successfully tagged apollo11/identity:latest
+  Building apollo11/flight:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  48.64kB
+Step 1/12 : FROM golang:1.22-alpine AS builder
+ ---> 1699c10032ca
+Step 2/12 : WORKDIR /app
+ ---> Using cache
+ ---> ce9b91143eb7
+Step 3/12 : COPY go.mod go.sum ./
+ ---> 24d3993149d3
+Step 4/12 : RUN go mod download
+ ---> Running in a15748730ddb
+ ---> Removed intermediate container a15748730ddb
+ ---> 2a1fb5cbfc73
+Step 5/12 : COPY . .
+ ---> 90c6398bba94
+Step 6/12 : RUN CGO_ENABLED=0 GOOS=linux go build -o /flight-service
+ ---> Running in 9eebf987e096
+ ---> Removed intermediate container 9eebf987e096
+ ---> cad038bcfe53
+Step 7/12 : FROM alpine:3.19
+ ---> 6baf43584bcb
+Step 8/12 : RUN apk --no-cache add ca-certificates
+ ---> Using cache
+ ---> e498f83dbb30
+Step 9/12 : WORKDIR /app
+ ---> Using cache
+ ---> 0e5250c0ab2a
+Step 10/12 : COPY --from=builder /flight-service /app/flight-service
+ ---> 60250d4b357a
+Step 11/12 : EXPOSE 8081
+ ---> Running in 195218b5b880
+ ---> Removed intermediate container 195218b5b880
+ ---> f6fbb6776ebc
+Step 12/12 : CMD ["/app/flight-service"]
+ ---> Running in 361de416e24b
+ ---> Removed intermediate container 361de416e24b
+ ---> 40b92074d642
+Successfully built 40b92074d642
+Successfully tagged apollo11/flight:latest
+  Building apollo11/booking:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  49.15kB
+Step 1/12 : FROM golang:1.22-alpine AS builder
+ ---> 1699c10032ca
+Step 2/12 : WORKDIR /app
+ ---> Using cache
+ ---> ce9b91143eb7
+Step 3/12 : COPY go.mod go.sum ./
+ ---> 44281f3c2b9f
+Step 4/12 : RUN go mod download
+ ---> Running in b524b29e105d
+ ---> Removed intermediate container b524b29e105d
+ ---> e3fd9878765b
+Step 5/12 : COPY . .
+ ---> a27ee53ac4f4
+Step 6/12 : RUN CGO_ENABLED=0 GOOS=linux go build -o /booking-service
+ ---> Running in 5714898b20c0
+ ---> Removed intermediate container 5714898b20c0
+ ---> 4455664475f4
+Step 7/12 : FROM alpine:3.19
+ ---> 6baf43584bcb
+Step 8/12 : RUN apk --no-cache add ca-certificates
+ ---> Using cache
+ ---> e498f83dbb30
+Step 9/12 : WORKDIR /app
+ ---> Using cache
+ ---> 0e5250c0ab2a
+Step 10/12 : COPY --from=builder /booking-service /app/booking-service
+ ---> d460ac2ee256
+Step 11/12 : EXPOSE 8082
+ ---> Running in 7e67cd97289f
+ ---> Removed intermediate container 7e67cd97289f
+ ---> 9bcac1f9f724
+Step 12/12 : CMD ["/app/booking-service"]
+ ---> Running in e1820fe480d3
+ ---> Removed intermediate container e1820fe480d3
+ ---> fa34938389a2
+Successfully built fa34938389a2
+Successfully tagged apollo11/booking:latest
+  Building apollo11/search:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  31.23kB
+Step 1/12 : FROM golang:1.22-alpine AS builder
+ ---> 1699c10032ca
+Step 2/12 : WORKDIR /app
+ ---> Using cache
+ ---> ce9b91143eb7
+Step 3/12 : COPY go.mod go.sum ./
+ ---> 9a1030a7947b
+Step 4/12 : RUN go mod download
+ ---> Running in 9e69349385e3
+ ---> Removed intermediate container 9e69349385e3
+ ---> 84015cc245ca
+Step 5/12 : COPY . .
+ ---> 7ae8b09372cd
+Step 6/12 : RUN CGO_ENABLED=0 GOOS=linux go build -o /search-service
+ ---> Running in f28f079deaf0
+ ---> Removed intermediate container f28f079deaf0
+ ---> 6a4a4491a36f
+Step 7/12 : FROM alpine:3.19
+ ---> 6baf43584bcb
+Step 8/12 : RUN apk --no-cache add ca-certificates
+ ---> Using cache
+ ---> e498f83dbb30
+Step 9/12 : WORKDIR /app
+ ---> Using cache
+ ---> 0e5250c0ab2a
+Step 10/12 : COPY --from=builder /search-service /app/search-service
+ ---> 7e3bf3a4a0ed
+Step 11/12 : EXPOSE 8083
+ ---> Running in df5591f63361
+ ---> Removed intermediate container df5591f63361
+ ---> 027926729ad2
+Step 12/12 : CMD ["/app/search-service"]
+ ---> Running in bb4dce910c6e
+ ---> Removed intermediate container bb4dce910c6e
+ ---> 4375b9997e62
+Successfully built 4375b9997e62
+Successfully tagged apollo11/search:latest
+  Building apollo11/notification:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  31.74kB
+Step 1/12 : FROM golang:1.22-alpine AS builder
+ ---> 1699c10032ca
+Step 2/12 : WORKDIR /app
+ ---> Using cache
+ ---> ce9b91143eb7
+Step 3/12 : COPY go.mod go.sum ./
+ ---> 685ab66e8619
+Step 4/12 : RUN go mod download
+ ---> Running in ad92943d3fd0
+ ---> Removed intermediate container ad92943d3fd0
+ ---> 44676b9c607a
+Step 5/12 : COPY . .
+ ---> 147c7e3f1fe4
+Step 6/12 : RUN CGO_ENABLED=0 GOOS=linux go build -o /notification-service
+ ---> Running in 36b26719a669
+ ---> Removed intermediate container 36b26719a669
+ ---> a003a46bf5e6
+Step 7/12 : FROM alpine:3.19
+ ---> 6baf43584bcb
+Step 8/12 : RUN apk --no-cache add ca-certificates
+ ---> Using cache
+ ---> e498f83dbb30
+Step 9/12 : WORKDIR /app
+ ---> Using cache
+ ---> 0e5250c0ab2a
+Step 10/12 : COPY --from=builder /notification-service /app/notification-service
+ ---> 6ffcad2c5d00
+Step 11/12 : EXPOSE 8084
+ ---> Running in c369e88789ce
+ ---> Removed intermediate container c369e88789ce
+ ---> 72f682cd47f6
+Step 12/12 : CMD ["/app/notification-service"]
+ ---> Running in 77da389c6f29
+ ---> Removed intermediate container 77da389c6f29
+ ---> 226abdc8c95b
+Successfully built 226abdc8c95b
+Successfully tagged apollo11/notification:latest
+  Building apollo11/frontend:latest...
+    VITE_IDENTITY_URL=https://identity.apollo.local
+    VITE_FLIGHT_URL=https://flight.apollo.local
+    VITE_BOOKING_URL=https://booking.apollo.local
+    VITE_SEARCH_URL=https://search.apollo.local
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  109.6kB
+Step 1/19 : FROM node:20-alpine AS builder
+ ---> fb4cd12c85ee
+Step 2/19 : ARG VITE_IDENTITY_URL="http://localhost:30083"
+ ---> Using cache
+ ---> 61734c94f3b1
+Step 3/19 : ARG VITE_FLIGHT_URL="http://localhost:30081"
+ ---> Using cache
+ ---> e6a685b17b9a
+Step 4/19 : ARG VITE_BOOKING_URL="http://localhost:30082"
+ ---> Using cache
+ ---> b9b40451f080
+Step 5/19 : ARG VITE_SEARCH_URL="http://localhost:30084"
+ ---> Using cache
+ ---> 40aeab1ac1db
+Step 6/19 : ENV VITE_IDENTITY_URL=$VITE_IDENTITY_URL
+ ---> Using cache
+ ---> 81a911e44e09
+Step 7/19 : ENV VITE_FLIGHT_URL=$VITE_FLIGHT_URL
+ ---> Using cache
+ ---> 178473c75082
+Step 8/19 : ENV VITE_BOOKING_URL=$VITE_BOOKING_URL
+ ---> Using cache
+ ---> 84ec420afeda
+Step 9/19 : ENV VITE_SEARCH_URL=$VITE_SEARCH_URL
+ ---> Using cache
+ ---> 5d340f6b5db3
+Step 10/19 : WORKDIR /app
+ ---> Using cache
+ ---> 7f42faa8a809
+Step 11/19 : COPY package.json ./
+ ---> Using cache
+ ---> 80bb731f13f4
+Step 12/19 : RUN npm install
+ ---> Using cache
+ ---> fecc2c4e91a3
+Step 13/19 : COPY . .
+ ---> Using cache
+ ---> d64ce0bab659
+Step 14/19 : RUN npm run build
+ ---> Using cache
+ ---> 32f24a04bdd1
+Step 15/19 : FROM nginx:alpine
+ ---> 8b1e78743a03
+Step 16/19 : COPY --from=builder /app/dist /usr/share/nginx/html
+ ---> Using cache
+ ---> 4dc5fcc6bcc2
+Step 17/19 : COPY nginx.conf /etc/nginx/conf.d/default.conf
+ ---> Using cache
+ ---> 9143d1f1de39
+Step 18/19 : EXPOSE 3000
+ ---> Using cache
+ ---> 602328aa4b57
+Step 19/19 : CMD ["nginx", "-g", "daemon off;"]
+ ---> Using cache
+ ---> a2d4f2f63361
+Successfully built a2d4f2f63361
+Successfully tagged apollo11/frontend:latest
+
+=== Loading images into kind cluster 'apollo11' ===
+Image: "apollo11/identity:latest" with ID "sha256:dfdf0eb12ca7bda376c3beceb91eecfc010a63bdfd748509c3ef982d40d62eb6" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/identity:latest" with ID "sha256:dfdf0eb12ca7bda376c3beceb91eecfc010a63bdfd748509c3ef982d40d62eb6" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/identity:latest" with ID "sha256:dfdf0eb12ca7bda376c3beceb91eecfc010a63bdfd748509c3ef982d40d62eb6" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/identity:latest
+Image: "apollo11/flight:latest" with ID "sha256:40b92074d642f9204fb259e5f38bff4482790c67479323245a0db96a1d40e68e" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/flight:latest" with ID "sha256:40b92074d642f9204fb259e5f38bff4482790c67479323245a0db96a1d40e68e" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/flight:latest" with ID "sha256:40b92074d642f9204fb259e5f38bff4482790c67479323245a0db96a1d40e68e" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/flight:latest
+Image: "apollo11/booking:latest" with ID "sha256:fa34938389a227c34d45ea3c1a73c398e0934cdcfd40d5cc3aaef44f6c03ea1a" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/booking:latest" with ID "sha256:fa34938389a227c34d45ea3c1a73c398e0934cdcfd40d5cc3aaef44f6c03ea1a" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/booking:latest" with ID "sha256:fa34938389a227c34d45ea3c1a73c398e0934cdcfd40d5cc3aaef44f6c03ea1a" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/booking:latest
+Image: "apollo11/search:latest" with ID "sha256:4375b9997e62dd9d05ef671c445f08694a7a91ddff620c950e5eed21484211ef" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/search:latest" with ID "sha256:4375b9997e62dd9d05ef671c445f08694a7a91ddff620c950e5eed21484211ef" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/search:latest" with ID "sha256:4375b9997e62dd9d05ef671c445f08694a7a91ddff620c950e5eed21484211ef" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/search:latest
+Image: "apollo11/notification:latest" with ID "sha256:226abdc8c95b3adacbb2f0f318edf7512d5cffcc4d63759b920135ac7e438a59" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/notification:latest" with ID "sha256:226abdc8c95b3adacbb2f0f318edf7512d5cffcc4d63759b920135ac7e438a59" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/notification:latest" with ID "sha256:226abdc8c95b3adacbb2f0f318edf7512d5cffcc4d63759b920135ac7e438a59" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/notification:latest
+Image: "apollo11/frontend:latest" with ID "sha256:a2d4f2f633614246edcc10f8de40634ae6ef5c53565207859e1bd89064fc561b" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/frontend:latest" with ID "sha256:a2d4f2f633614246edcc10f8de40634ae6ef5c53565207859e1bd89064fc561b" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/frontend:latest" with ID "sha256:a2d4f2f633614246edcc10f8de40634ae6ef5c53565207859e1bd89064fc561b" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/frontend:latest
+
+Done.
+✓ all 6 application images built and loaded
+▶ 2/8 Pre-install: CRD bundle (Envoy Gateway + MetalLB)
+job.batch/eg-gateway-helm-certgen serverside-applied
+mutatingwebhookconfiguration.admissionregistration.k8s.io/envoy-gateway-topology-injector.envoy-gateway-system serverside-applied
+✓ Envoy Gateway bundle applied
+daemonset.apps/speaker serverside-applied
+validatingwebhookconfiguration.admissionregistration.k8s.io/metallb-webhook-configuration serverside-applied
+✓ MetalLB bundle applied
+✓ Prometheus Operator v0.93.0 ready
+▶ 3/8 Wait for CRD registration
+✓ CRDs registered
+▶ 4/8 Wait for MetalLB webhook to be ready
+✓ MetalLB webhook endpoint ready (10.244.1.167)
+▶ 5/8 Helm install (release: apollo11, env: dev)
+secret/apollo-edge-tls created
+secret/apollo-edge-tls created
+  using values file: /home/darshan/projects/Apollo11/stages/stage6/helm/apollo11/values-dev.yaml
+Release "apollo11" does not exist. Installing it now.
+NAME: apollo11
+LAST DEPLOYED: Mon Oct 19 10:50:17 2026
+NAMESPACE: apollo-airlines-apps
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+✓ helm install complete
+▶ 6/8 Waiting for MetalLB controller pod
+✓ MetalLB controller ready
+▶ 7/8 Waiting for Envoy Gateway
+✓ Envoy Gateway ready
+▶ 8/8 Waiting for StatefulSets (3 PG + 1 Redis)
+✓ statefulset/identity-db ready
+✓ statefulset/flight-db ready
+✓ statefulset/booking-db ready
+✓ statefulset/redis ready
+▶ 8b/8 Waiting for seed jobs
+✓ job/seed-identity-db Complete
+✓ job/seed-flight-db Complete
+✓ job/seed-booking-db Complete
+▶ 8c/8 Waiting for app Deployments (5 backends + frontend)
+✓ deployment/identity ready
+✓ deployment/flight ready
+✓ deployment/booking ready
+✓ deployment/search ready
+✓ deployment/notification ready
+✓ deployment/frontend ready
+▶ Waiting for Stage 6 observability workloads
+✓ deployment/grafana ready
+✓ deployment/loki ready
+✓ deployment/tempo ready
+✓ daemonset/otel-collector ready
+✓ daemonset/alloy ready
+✓ statefulset/prometheus-apollo ready
+▶ 8/8 Summary
+✓ Apollo Airlines installed via Helm
+  Run 'bash scripts/verify.sh --mode helm' to run the verify suite
+  Run 'bash scripts/teardown.sh --mode helm' to uninstall
+apply_exit=0

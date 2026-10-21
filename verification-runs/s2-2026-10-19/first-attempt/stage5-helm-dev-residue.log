@@ -1,0 +1,15 @@
+ns:
+pv:
+crd:
+cluster:
+clusterrole.rbac.authorization.k8s.io/eg-gateway-helm-certgen:envoy-gateway-system
+clusterrole.rbac.authorization.k8s.io/eg-gateway-helm-envoy-gateway-role
+clusterrole.rbac.authorization.k8s.io/metallb-system:controller
+clusterrole.rbac.authorization.k8s.io/metallb-system:speaker
+clusterrole.rbac.authorization.k8s.io/system:monitoring
+clusterrolebinding.rbac.authorization.k8s.io/eg-gateway-helm-certgen:envoy-gateway-system
+clusterrolebinding.rbac.authorization.k8s.io/eg-gateway-helm-envoy-gateway-rolebinding
+clusterrolebinding.rbac.authorization.k8s.io/metallb-system:controller
+clusterrolebinding.rbac.authorization.k8s.io/metallb-system:speaker
+clusterrolebinding.rbac.authorization.k8s.io/system:monitoring
+validatingwebhookconfiguration.admissionregistration.k8s.io/metallb-webhook-configuration

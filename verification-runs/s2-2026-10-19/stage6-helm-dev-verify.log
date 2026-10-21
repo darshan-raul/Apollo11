@@ -1,0 +1,255 @@
+▶ Stage 6 namespaces, operator, and custom resources
+[PASS] ns/apollo-observability
+[PASS] prometheus-operator ready
+[PASS] crd/prometheuses.monitoring.coreos.com
+[PASS] crd/servicemonitors.monitoring.coreos.com
+[PASS] crd/prometheusrules.monitoring.coreos.com
+[PASS] prometheus/apollo
+[PASS] prometheus-apollo ready
+[PASS] 5 ServiceMonitors
+[PASS] prometheusrule/apollo-services
+▶ Stage 6 telemetry endpoints and collector DNS
+[PASS] identity OTLP endpoint uses cross-namespace FQDN
+[PASS] identity exposes real request counters
+[PASS] identity exposes latency histogram
+[PASS] flight OTLP endpoint uses cross-namespace FQDN
+[PASS] flight exposes real request counters
+[PASS] flight exposes latency histogram
+[PASS] booking OTLP endpoint uses cross-namespace FQDN
+[PASS] booking exposes real request counters
+[PASS] booking exposes latency histogram
+[PASS] search OTLP endpoint uses cross-namespace FQDN
+[PASS] search exposes real request counters
+[PASS] search exposes latency histogram
+[PASS] notification OTLP endpoint uses cross-namespace FQDN
+[PASS] notification exposes real request counters
+[PASS] notification exposes latency histogram
+▶ Stage 6 observability workloads
+[PASS] grafana ready
+[PASS] loki ready
+[PASS] tempo ready
+[PASS] otel-collector DaemonSet 2/2 ready
+[PASS] alloy DaemonSet 2/2 ready
+▶ Prometheus discovery, rules, Grafana, Tempo, and Loki APIs
+[PASS] Prometheus has at least 5 healthy backend targets
+[PASS] Prometheus loaded Apollo rules
+[PASS] Grafana API healthy
+[PASS] 5 Grafana dashboards provisioned
+[PASS] Tempo API ready
+[PASS] Loki API ready
+[PASS] Envoy -> Grafana /api/health -> 200
+[PASS] cross-service booking trace reached Tempo
+▶ Alloy log delivery and trace/log correlation
+[PASS] Loki query API returned Kubernetes logs
+▶ Namespaces (2 expected: apollo-airlines-apps, apollo-airlines-ui)
+[PASS] ns/apollo-airlines-apps
+[PASS] ns/apollo-airlines-ui
+▶ ServiceAccounts (13 expected: 6 apps + 4 data + 3 init)
+[PASS] sa apollo-airlines-apps/identity
+[PASS] sa apollo-airlines-apps/flight
+[PASS] sa apollo-airlines-apps/booking
+[PASS] sa apollo-airlines-apps/search
+[PASS] sa apollo-airlines-apps/notification
+[PASS] sa apollo-airlines-ui/frontend
+[PASS] sa apollo-airlines-apps/identity-db
+[PASS] sa apollo-airlines-apps/flight-db
+[PASS] sa apollo-airlines-apps/booking-db
+[PASS] sa apollo-airlines-apps/redis
+[PASS] sa apollo-airlines-apps/init-identity-db
+[PASS] sa apollo-airlines-apps/init-flight-db
+[PASS] sa apollo-airlines-apps/init-booking-db
+▶ ConfigMap + Secret
+[PASS] cm/apollo-airlines-config in apollo-airlines-apps
+[PASS] cm/apollo-airlines-config in apollo-airlines-ui
+[PASS] secret/apollo-airlines-secrets in apollo-airlines-apps
+▶ StatefulSets (4 expected: 3 PG + 1 Redis, all 1/1 Ready)
+[PASS] statefulset/identity-db ready=1
+[PASS] statefulset/flight-db ready=1
+[PASS] statefulset/booking-db ready=1
+[PASS] statefulset/redis ready=1
+▶ StatefulSet pods (4 expected, all Ready)
+[PASS] pod/identity-db-0 Ready
+[PASS] pod/flight-db-0 Ready
+[PASS] pod/booking-db-0 Ready
+[PASS] pod/redis-0 Ready
+▶ PVCs (4 expected, all Bound)
+[PASS] pvc apollo-airlines-apps/pg-data-identity-db-0 Bound
+[PASS] pvc apollo-airlines-apps/pg-data-flight-db-0 Bound
+[PASS] pvc apollo-airlines-apps/pg-data-booking-db-0 Bound
+[PASS] pvc apollo-airlines-apps/redis-data-redis-0 Bound
+▶ Headless Services (4 expected)
+[PASS] svc/identity-db-headless headless
+[PASS] svc/flight-db-headless headless
+[PASS] svc/booking-db-headless headless
+[PASS] svc/redis-headless headless
+▶ App Deployments (5 expected, all >=1 Ready)
+[PASS] deployment/identity ready=1
+[PASS] deployment/flight ready=1
+[PASS] deployment/booking ready=1
+[PASS] deployment/search ready=1
+[PASS] deployment/notification ready=1
+[PASS] deployment/frontend startupProbe path=/healthz/startup
+[PASS] deployment/frontend livenessProbe path=/healthz/live
+[PASS] deployment/frontend readinessProbe path=/healthz/ready
+▶ StatefulSet probes (liveness + readiness, no startup probe)
+[PASS] statefulset/identity-db livenessProbe command=pg_isready
+[PASS] statefulset/identity-db readinessProbe command=pg_isready
+[PASS] statefulset/identity-db has no startupProbe
+[PASS] statefulset/flight-db livenessProbe command=pg_isready
+[PASS] statefulset/flight-db readinessProbe command=pg_isready
+[PASS] statefulset/flight-db has no startupProbe
+[PASS] statefulset/booking-db livenessProbe command=pg_isready
+[PASS] statefulset/booking-db readinessProbe command=pg_isready
+[PASS] statefulset/booking-db has no startupProbe
+[PASS] statefulset/redis livenessProbe command=redis-cli
+[PASS] statefulset/redis readinessProbe command=redis-cli
+[PASS] statefulset/redis has no startupProbe
+▶ Frontend Deployment (1 expected)
+[PASS] deployment/frontend ready=1
+▶ Probes on 6 app Deployments (startup/live/ready, all 3 distinct)
+[PASS] deployment/identity startupProbe path=/healthz/startup
+[PASS] deployment/identity livenessProbe path=/healthz/live
+[PASS] deployment/identity readinessProbe path=/healthz/ready
+[PASS] deployment/flight startupProbe path=/healthz/startup
+[PASS] deployment/flight livenessProbe path=/healthz/live
+[PASS] deployment/flight readinessProbe path=/healthz/ready
+[PASS] deployment/booking startupProbe path=/healthz/startup
+[PASS] deployment/booking livenessProbe path=/healthz/live
+[PASS] deployment/booking readinessProbe path=/healthz/ready
+[PASS] deployment/search startupProbe path=/healthz/startup
+[PASS] deployment/search livenessProbe path=/healthz/live
+[PASS] deployment/search readinessProbe path=/healthz/ready
+[PASS] deployment/notification startupProbe path=/healthz/startup
+[PASS] deployment/notification livenessProbe path=/healthz/live
+[PASS] deployment/notification readinessProbe path=/healthz/ready
+▶ Resources: CPU and memory requests == limits on all 10 workloads
+[PASS] deployment/identity Guaranteed resources cpu=100m memory=128Mi
+[PASS] deployment/flight Guaranteed resources cpu=100m memory=128Mi
+[PASS] deployment/booking Guaranteed resources cpu=200m memory=256Mi
+[PASS] deployment/search Guaranteed resources cpu=100m memory=128Mi
+[PASS] deployment/notification Guaranteed resources cpu=50m memory=64Mi
+[PASS] deployment/frontend Guaranteed resources cpu=50m memory=64Mi
+[PASS] statefulset/identity-db Guaranteed resources cpu=200m memory=256Mi
+[PASS] statefulset/flight-db Guaranteed resources cpu=200m memory=256Mi
+[PASS] statefulset/booking-db Guaranteed resources cpu=200m memory=256Mi
+[PASS] statefulset/redis Guaranteed resources cpu=100m memory=128Mi
+▶ terminationGracePeriodSeconds (30s apps, 60s data workloads)
+[PASS] deployment/identity terminationGracePeriodSeconds=30
+[PASS] deployment/flight terminationGracePeriodSeconds=30
+[PASS] deployment/booking terminationGracePeriodSeconds=30
+[PASS] deployment/search terminationGracePeriodSeconds=30
+[PASS] deployment/notification terminationGracePeriodSeconds=30
+[PASS] deployment/frontend terminationGracePeriodSeconds=30
+[PASS] statefulset/identity-db terminationGracePeriodSeconds=60
+[PASS] statefulset/flight-db terminationGracePeriodSeconds=60
+[PASS] statefulset/booking-db terminationGracePeriodSeconds=60
+[PASS] statefulset/redis terminationGracePeriodSeconds=60
+▶ PriorityClasses (apollo-airlines-app-critical, apollo-airlines-app-low)
+[PASS] priorityclass/apollo-airlines-app-critical exists
+[PASS] priorityclass/apollo-airlines-app-low exists
+▶ Stage 4 Contract Verification (lifecycle.preStop and topologySpreadConstraints)
+[PASS] deployment/identity lifecycle.preStop configured
+[PASS] deployment/identity topologySpreadConstraints configured
+[PASS] deployment/flight lifecycle.preStop configured
+[PASS] deployment/flight topologySpreadConstraints configured
+[PASS] deployment/booking lifecycle.preStop configured
+[PASS] deployment/booking topologySpreadConstraints configured
+[PASS] deployment/search lifecycle.preStop configured
+[PASS] deployment/search topologySpreadConstraints configured
+[PASS] deployment/notification lifecycle.preStop configured
+[PASS] deployment/notification topologySpreadConstraints configured
+[PASS] deployment/frontend lifecycle.preStop configured
+[PASS] deployment/frontend topologySpreadConstraints configured
+[PASS] deployment/booking priorityClassName=apollo-airlines-app-critical
+[PASS] deployment/search priorityClassName=apollo-airlines-app-critical
+[PASS] deployment/notification priorityClassName=apollo-airlines-app-low
+▶ PodDisruptionBudgets match the selected environment
+[PASS] pdb/booking-pdb disabled in dev
+[PASS] pdb/frontend-pdb disabled in dev
+▶ Seed Jobs (3 expected: identity, flight, booking — all Complete)
+[PASS] job/seed-identity-db Complete
+[PASS] job/seed-flight-db Complete
+[PASS] job/seed-booking-db Complete
+▶ Database URLs expanded from Secret-backed environment variables
+[PASS] deployment/identity DATABASE_URL contains no unexpanded variable
+[PASS] deployment/flight DATABASE_URL contains no unexpanded variable
+[PASS] deployment/booking DATABASE_URL contains no unexpanded variable
+▶ Live probe endpoints respond inside all 6 application pods
+[PASS] identity /healthz/startup responds
+[PASS] identity /healthz/live responds
+[PASS] identity /healthz/ready responds
+[PASS] flight /healthz/startup responds
+[PASS] flight /healthz/live responds
+[PASS] flight /healthz/ready responds
+[PASS] booking /healthz/startup responds
+[PASS] booking /healthz/live responds
+[PASS] booking /healthz/ready responds
+[PASS] search /healthz/startup responds
+[PASS] search /healthz/live responds
+[PASS] search /healthz/ready responds
+[PASS] notification /healthz/startup responds
+[PASS] notification /healthz/live responds
+[PASS] notification /healthz/ready responds
+[PASS] frontend /healthz/startup responds
+[PASS] frontend /healthz/live responds
+[PASS] frontend /healthz/ready responds
+▶ Seed data is present
+[PASS] identity seed has 2 users
+[PASS] flight seed has 6 airports
+[PASS] flight seed has 186 flights
+▶ Frontend bundle contains routed API hosts and no localhost API URLs
+[PASS] frontend bundle has all four routed API hosts
+▶ Helm release and workload ownership metadata
+[PASS] Helm release apollo11 status=deployed
+[PASS] deployment/identity managed-by=Helm
+[PASS] deployment/flight managed-by=Helm
+[PASS] deployment/booking managed-by=Helm
+[PASS] deployment/search managed-by=Helm
+[PASS] deployment/notification managed-by=Helm
+[PASS] deployment/frontend managed-by=Helm
+[PASS] statefulset/identity-db managed-by=Helm
+[PASS] statefulset/flight-db managed-by=Helm
+[PASS] statefulset/booking-db managed-by=Helm
+[PASS] statefulset/redis managed-by=Helm
+▶ Envoy Gateway access stack
+[PASS] ns/envoy-gateway-system
+[PASS] ns/metallb-system
+[PASS] gatewayclass/eg
+[PASS] gateway/apollo-gateway Programmed
+▶ HTTPRoutes (6 expected: identity, flight, booking, search, notification, frontend)
+[PASS] httproute/identity
+[PASS] httproute/flight
+[PASS] httproute/booking
+[PASS] httproute/search
+[PASS] httproute/notification
+[PASS] httproute/frontend (cross-namespace)
+▶ ReferenceGrant (cross-namespace)
+[PASS] referencegrant/apollo-gateway-grant
+▶ MetalLB IP pool + L2 advertisement
+[PASS] ipaddresspool/apollo-pool
+[PASS] l2advertisement/apollo-l2
+▶ HTTPRoutes are attached and live through the MetalLB address
+[PASS] Envoy LoadBalancer address=172.18.0.50
+[PASS] all 6 HTTPRoutes report an Envoy parent
+[PASS] Envoy -> identity /healthz -> 200
+[PASS] Envoy -> flight /healthz -> 200
+[PASS] Envoy -> booking /healthz -> 200
+[PASS] Envoy -> search /healthz -> 200
+[PASS] Envoy -> notification /healthz -> 200
+[PASS] Envoy -> frontend / -> 200
+[PASS] login flow through Envoy returned a token
+[PASS] Envoy HTTPS -> identity.apollo.local /healthz -> 200
+[PASS] Envoy HTTPS -> booking.apollo.local /healthz -> 200
+[PASS] Envoy HTTPS -> frontend.apollo.local /healthz -> 200
+Trusted HTTPS health: identity
+Trusted HTTPS health: flight
+Trusted HTTPS health: booking
+Trusted HTTPS health: search
+Trusted HTTPS login, populated search, booking, cancellation, and hostname rejection passed.
+[PASS] trusted HTTPS API workflow and hostname rejection
+
+============================================
+  PASS: 212  /  FAIL: 0  /  TOTAL: 212
+============================================
+All Stage 6 checks passed.
+verify_exit=0

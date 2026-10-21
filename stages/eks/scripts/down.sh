@@ -18,7 +18,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGE_DIR="$(dirname "$SCRIPT_DIR")"
 TF_DIR="$STAGE_DIR/terraform"
-STAGE3_DIR="$STAGE_DIR/../stage3"
 
 REGION="${AWS_REGION:-us-east-1}"
 CLUSTER_NAME="${CLUSTER_NAME:-apollo11-dev}"
@@ -78,7 +77,7 @@ ok "Envoy Gateway LB configuration uninstalled (the NLB may take 30-60s to actua
 # security group dependencies will block.
 NLB_NAME="${CLUSTER_NAME}-envoy-nlb"
 echo "  Waiting for NLB '$NLB_NAME' to be removed..."
-for i in $(seq 1 60); do
+for _ in $(seq 1 60); do
   state=$(aws elbv2 describe-load-balancers \
     --names "$NLB_NAME" \
     --region "$REGION" \

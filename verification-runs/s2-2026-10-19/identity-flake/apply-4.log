@@ -1,0 +1,2 @@
+[0;36m▶ 0/9 Checking cluster[0m
+[0;31m✗ kubectl cannot reach a cluster. Did you 'kind create cluster'?[0m

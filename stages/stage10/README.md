@@ -5,7 +5,7 @@ description: "Status and intended modular shape for advanced Apollo Airlines ope
 
 # Stage 10: Mission Extensions
 
-> **Status: not implemented. Do not apply the files currently in this directory.**
+> **Status: two new optional missions added; live validation status is recorded in the gap tracker. Legacy code/k8s files remain untrusted and must not be applied.**
 
 The approved mission catalog is defined in [`ROADMAP.md`](../../ROADMAP.md).
 
@@ -28,3 +28,13 @@ Stage 8. They are not introduced here as new concepts.
 Each mission must begin with a working baseline, introduce one mechanism, run
 an observable experiment, and return the cluster to the baseline. A learner
 should not need to install every extension to complete the core curriculum.
+
+## New independent missions
+
+- [CloudNativePG](missions/cloudnativepg/README.md): replicated booking-evidence
+  data, primary failure, row survival, and separate logical restore.
+- [Falco](missions/falco/README.md): harmless runtime event, detection, rule
+  mismatch, recovery and cleanup.
+
+Each owns a disposable kind cluster and private kubeconfig. These additions do
+not mark the remaining Stage 10 catalog or the Stage 8 baseline complete.

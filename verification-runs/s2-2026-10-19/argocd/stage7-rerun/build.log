@@ -1,0 +1,292 @@
+=== Building Apollo Airlines service images (stage7) — tag: latest ===
+  Building apollo11/identity:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  49.15kB
+Step 1/7 : FROM python:3.12-slim
+ ---> 090ba77e2958
+Step 2/7 : WORKDIR /app
+ ---> Using cache
+ ---> 878f749aa9bb
+Step 3/7 : COPY requirements.txt .
+ ---> Using cache
+ ---> ea2286d60393
+Step 4/7 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Using cache
+ ---> 0a0db2318821
+Step 5/7 : COPY . .
+ ---> Using cache
+ ---> 636b71d538af
+Step 6/7 : EXPOSE 8080
+ ---> Using cache
+ ---> 4e2fb468a17a
+Step 7/7 : CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+ ---> Using cache
+ ---> cd036dc09f7e
+Successfully built cd036dc09f7e
+Successfully tagged apollo11/identity:latest
+  Building apollo11/flight:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  48.64kB
+Step 1/12 : FROM golang:1.22-alpine AS builder
+ ---> 1699c10032ca
+Step 2/12 : WORKDIR /app
+ ---> Using cache
+ ---> ce9b91143eb7
+Step 3/12 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 24d3993149d3
+Step 4/12 : RUN go mod download
+ ---> Using cache
+ ---> 2a1fb5cbfc73
+Step 5/12 : COPY . .
+ ---> Using cache
+ ---> 90c6398bba94
+Step 6/12 : RUN CGO_ENABLED=0 GOOS=linux go build -o /flight-service
+ ---> Using cache
+ ---> cad038bcfe53
+Step 7/12 : FROM alpine:3.19
+ ---> 6baf43584bcb
+Step 8/12 : RUN apk --no-cache add ca-certificates
+ ---> Using cache
+ ---> e498f83dbb30
+Step 9/12 : WORKDIR /app
+ ---> Using cache
+ ---> 0e5250c0ab2a
+Step 10/12 : COPY --from=builder /flight-service /app/flight-service
+ ---> Using cache
+ ---> 60250d4b357a
+Step 11/12 : EXPOSE 8081
+ ---> Using cache
+ ---> f6fbb6776ebc
+Step 12/12 : CMD ["/app/flight-service"]
+ ---> Using cache
+ ---> 40b92074d642
+Successfully built 40b92074d642
+Successfully tagged apollo11/flight:latest
+  Building apollo11/booking:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  49.15kB
+Step 1/12 : FROM golang:1.22-alpine AS builder
+ ---> 1699c10032ca
+Step 2/12 : WORKDIR /app
+ ---> Using cache
+ ---> ce9b91143eb7
+Step 3/12 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 44281f3c2b9f
+Step 4/12 : RUN go mod download
+ ---> Using cache
+ ---> e3fd9878765b
+Step 5/12 : COPY . .
+ ---> Using cache
+ ---> a27ee53ac4f4
+Step 6/12 : RUN CGO_ENABLED=0 GOOS=linux go build -o /booking-service
+ ---> Using cache
+ ---> 4455664475f4
+Step 7/12 : FROM alpine:3.19
+ ---> 6baf43584bcb
+Step 8/12 : RUN apk --no-cache add ca-certificates
+ ---> Using cache
+ ---> e498f83dbb30
+Step 9/12 : WORKDIR /app
+ ---> Using cache
+ ---> 0e5250c0ab2a
+Step 10/12 : COPY --from=builder /booking-service /app/booking-service
+ ---> Using cache
+ ---> d460ac2ee256
+Step 11/12 : EXPOSE 8082
+ ---> Using cache
+ ---> 9bcac1f9f724
+Step 12/12 : CMD ["/app/booking-service"]
+ ---> Using cache
+ ---> fa34938389a2
+Successfully built fa34938389a2
+Successfully tagged apollo11/booking:latest
+  Building apollo11/search:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  39.42kB
+Step 1/12 : FROM golang:1.22-alpine AS builder
+ ---> 1699c10032ca
+Step 2/12 : WORKDIR /app
+ ---> Using cache
+ ---> ce9b91143eb7
+Step 3/12 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 94f8ff1af2bc
+Step 4/12 : RUN go mod download
+ ---> Using cache
+ ---> 3c21feba69f0
+Step 5/12 : COPY . .
+ ---> Using cache
+ ---> 8706299f9374
+Step 6/12 : RUN CGO_ENABLED=0 GOOS=linux go build -o /search-service
+ ---> Using cache
+ ---> e76d58bc002f
+Step 7/12 : FROM alpine:3.19
+ ---> 6baf43584bcb
+Step 8/12 : RUN apk --no-cache add ca-certificates
+ ---> Using cache
+ ---> e498f83dbb30
+Step 9/12 : WORKDIR /app
+ ---> Using cache
+ ---> 0e5250c0ab2a
+Step 10/12 : COPY --from=builder /search-service /app/search-service
+ ---> Using cache
+ ---> 0e238f3539c8
+Step 11/12 : EXPOSE 8083
+ ---> Using cache
+ ---> 88490885b202
+Step 12/12 : CMD ["/app/search-service"]
+ ---> Using cache
+ ---> ec4b36170fbd
+Successfully built ec4b36170fbd
+Successfully tagged apollo11/search:latest
+  Building apollo11/notification:latest...
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  31.74kB
+Step 1/12 : FROM golang:1.22-alpine AS builder
+ ---> 1699c10032ca
+Step 2/12 : WORKDIR /app
+ ---> Using cache
+ ---> ce9b91143eb7
+Step 3/12 : COPY go.mod go.sum ./
+ ---> Using cache
+ ---> 685ab66e8619
+Step 4/12 : RUN go mod download
+ ---> Using cache
+ ---> 44676b9c607a
+Step 5/12 : COPY . .
+ ---> Using cache
+ ---> 147c7e3f1fe4
+Step 6/12 : RUN CGO_ENABLED=0 GOOS=linux go build -o /notification-service
+ ---> Using cache
+ ---> a003a46bf5e6
+Step 7/12 : FROM alpine:3.19
+ ---> 6baf43584bcb
+Step 8/12 : RUN apk --no-cache add ca-certificates
+ ---> Using cache
+ ---> e498f83dbb30
+Step 9/12 : WORKDIR /app
+ ---> Using cache
+ ---> 0e5250c0ab2a
+Step 10/12 : COPY --from=builder /notification-service /app/notification-service
+ ---> Using cache
+ ---> 6ffcad2c5d00
+Step 11/12 : EXPOSE 8084
+ ---> Using cache
+ ---> 72f682cd47f6
+Step 12/12 : CMD ["/app/notification-service"]
+ ---> Using cache
+ ---> 226abdc8c95b
+Successfully built 226abdc8c95b
+Successfully tagged apollo11/notification:latest
+  Building apollo11/frontend:latest...
+    VITE_IDENTITY_URL=https://identity.apollo.local
+    VITE_FLIGHT_URL=https://flight.apollo.local
+    VITE_BOOKING_URL=https://booking.apollo.local
+    VITE_SEARCH_URL=https://search.apollo.local
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon  109.6kB
+Step 1/19 : FROM node:20-alpine AS builder
+ ---> fb4cd12c85ee
+Step 2/19 : ARG VITE_IDENTITY_URL="http://localhost:30083"
+ ---> Using cache
+ ---> 61734c94f3b1
+Step 3/19 : ARG VITE_FLIGHT_URL="http://localhost:30081"
+ ---> Using cache
+ ---> e6a685b17b9a
+Step 4/19 : ARG VITE_BOOKING_URL="http://localhost:30082"
+ ---> Using cache
+ ---> b9b40451f080
+Step 5/19 : ARG VITE_SEARCH_URL="http://localhost:30084"
+ ---> Using cache
+ ---> 40aeab1ac1db
+Step 6/19 : ENV VITE_IDENTITY_URL=$VITE_IDENTITY_URL
+ ---> Using cache
+ ---> 81a911e44e09
+Step 7/19 : ENV VITE_FLIGHT_URL=$VITE_FLIGHT_URL
+ ---> Using cache
+ ---> 178473c75082
+Step 8/19 : ENV VITE_BOOKING_URL=$VITE_BOOKING_URL
+ ---> Using cache
+ ---> 84ec420afeda
+Step 9/19 : ENV VITE_SEARCH_URL=$VITE_SEARCH_URL
+ ---> Using cache
+ ---> 5d340f6b5db3
+Step 10/19 : WORKDIR /app
+ ---> Using cache
+ ---> 7f42faa8a809
+Step 11/19 : COPY package.json ./
+ ---> Using cache
+ ---> 80bb731f13f4
+Step 12/19 : RUN npm install
+ ---> Using cache
+ ---> fecc2c4e91a3
+Step 13/19 : COPY . .
+ ---> Using cache
+ ---> d64ce0bab659
+Step 14/19 : RUN npm run build
+ ---> Using cache
+ ---> 32f24a04bdd1
+Step 15/19 : FROM nginx:alpine
+ ---> 8b1e78743a03
+Step 16/19 : COPY --from=builder /app/dist /usr/share/nginx/html
+ ---> Using cache
+ ---> 4dc5fcc6bcc2
+Step 17/19 : COPY nginx.conf /etc/nginx/conf.d/default.conf
+ ---> Using cache
+ ---> 9143d1f1de39
+Step 18/19 : EXPOSE 3000
+ ---> Using cache
+ ---> 602328aa4b57
+Step 19/19 : CMD ["nginx", "-g", "daemon off;"]
+ ---> Using cache
+ ---> a2d4f2f63361
+Successfully built a2d4f2f63361
+Successfully tagged apollo11/frontend:latest
+
+=== Loading images into kind cluster 'apollo11' ===
+Image: "apollo11/identity:latest" with ID "sha256:cd036dc09f7e024f587af3af191e560b724e332366f1743345441a992a3a6f7f" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/identity:latest" with ID "sha256:cd036dc09f7e024f587af3af191e560b724e332366f1743345441a992a3a6f7f" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/identity:latest" with ID "sha256:cd036dc09f7e024f587af3af191e560b724e332366f1743345441a992a3a6f7f" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/identity:latest
+Image: "apollo11/flight:latest" with ID "sha256:40b92074d642f9204fb259e5f38bff4482790c67479323245a0db96a1d40e68e" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/flight:latest" with ID "sha256:40b92074d642f9204fb259e5f38bff4482790c67479323245a0db96a1d40e68e" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/flight:latest" with ID "sha256:40b92074d642f9204fb259e5f38bff4482790c67479323245a0db96a1d40e68e" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/flight:latest
+Image: "apollo11/booking:latest" with ID "sha256:fa34938389a227c34d45ea3c1a73c398e0934cdcfd40d5cc3aaef44f6c03ea1a" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/booking:latest" with ID "sha256:fa34938389a227c34d45ea3c1a73c398e0934cdcfd40d5cc3aaef44f6c03ea1a" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/booking:latest" with ID "sha256:fa34938389a227c34d45ea3c1a73c398e0934cdcfd40d5cc3aaef44f6c03ea1a" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/booking:latest
+Image: "apollo11/search:latest" with ID "sha256:ec4b36170fbdb3af203d7227d0e3ac286c7a718589e5ad5ce75d62bb7e465152" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/search:latest" with ID "sha256:ec4b36170fbdb3af203d7227d0e3ac286c7a718589e5ad5ce75d62bb7e465152" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/search:latest" with ID "sha256:ec4b36170fbdb3af203d7227d0e3ac286c7a718589e5ad5ce75d62bb7e465152" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/search:latest
+Image: "apollo11/notification:latest" with ID "sha256:226abdc8c95b3adacbb2f0f318edf7512d5cffcc4d63759b920135ac7e438a59" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/notification:latest" with ID "sha256:226abdc8c95b3adacbb2f0f318edf7512d5cffcc4d63759b920135ac7e438a59" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/notification:latest" with ID "sha256:226abdc8c95b3adacbb2f0f318edf7512d5cffcc4d63759b920135ac7e438a59" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/notification:latest
+Image: "apollo11/frontend:latest" with ID "sha256:a2d4f2f633614246edcc10f8de40634ae6ef5c53565207859e1bd89064fc561b" not yet present on node "apollo11-worker2", loading...
+Image: "apollo11/frontend:latest" with ID "sha256:a2d4f2f633614246edcc10f8de40634ae6ef5c53565207859e1bd89064fc561b" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/frontend:latest" with ID "sha256:a2d4f2f633614246edcc10f8de40634ae6ef5c53565207859e1bd89064fc561b" not yet present on node "apollo11-worker", loading...
+  loaded apollo11/frontend:latest
+
+Done.

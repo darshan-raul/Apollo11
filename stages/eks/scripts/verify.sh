@@ -11,9 +11,6 @@
 # Run from stages/eks: ./scripts/verify.sh
 set -uo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STAGE_DIR="$(dirname "$SCRIPT_DIR")"
-TF_DIR="$STAGE_DIR/terraform"
 
 REGION="${AWS_REGION:-us-east-1}"
 CLUSTER_NAME="${CLUSTER_NAME:-apollo11-dev}"

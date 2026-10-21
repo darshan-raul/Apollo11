@@ -26,7 +26,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../scripts/context.sh"
 apollo_context_guard
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STAGE_DIR="$(dirname "$SCRIPT_DIR")"
 BUNDLE_DIR="$SCRIPT_DIR/bundles"
 BUNDLE_FILE="$BUNDLE_DIR/argocd-install.yaml"
 ARGO_VERSION="v3.5.1"
@@ -129,7 +128,7 @@ fi
 # Wait for core components
 # ---------------------------------------------------------------------------
 step "4/6 Waiting for argocd-server"
-for i in $(seq 1 30); do
+for _ in $(seq 1 30); do
     ready=$(kubectl get pods -n "$ARGOCD_NS" -l app.kubernetes.io/name=argocd-server -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "")
     if [[ "$ready" == "True" ]]; then
         ok "argocd-server Ready"
@@ -140,7 +139,7 @@ done
 [[ "$ready" == "True" ]] || fail "argocd-server not Ready after 120s"
 
 step "5/6 Waiting for argocd-application-controller"
-for i in $(seq 1 30); do
+for _ in $(seq 1 30); do
     ready=$(kubectl get pods -n "$ARGOCD_NS" -l app.kubernetes.io/name=argocd-application-controller -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "")
     if [[ "$ready" == "True" ]]; then
         ok "argocd-application-controller Ready"
@@ -154,7 +153,7 @@ step "6/6 Checking initial admin credential Secret"
 # Do not print credentials into terminal/session logs. The learner can retrieve
 # the password explicitly when they are ready to log in.
 PASSWORD_READY=false
-for i in $(seq 1 10); do
+for _ in $(seq 1 10); do
     if kubectl get secret argocd-initial-admin-secret -n "$ARGOCD_NS" >/dev/null 2>&1; then
         PASSWORD_READY=true
         break

@@ -121,12 +121,12 @@ TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 # Rewrite apollo11/identity:latest → <ECR_REGISTRY>/<CLUSTER_NAME>/identity:latest
-for f in $(find "$APP_SRC" -name '*.yaml'); do
+while IFS= read -r -d '' f; do
   rel="${f#$APP_SRC/}"
   out="$TMP_DIR/$rel"
   mkdir -p "$(dirname "$out")"
   sed -E "s#(image:[[:space:]]*)apollo11/([a-z]+):latest#\\1${ECR_REGISTRY}/${CLUSTER_NAME}/\\2:latest#g" "$f" > "$out"
-done
+done < <(find "$APP_SRC" -name '*.yaml' -print0)
 kubectl apply -f "$TMP_DIR" --recursive
 ok "apps applied with ECR image tags"
 
@@ -170,7 +170,7 @@ done
 # Terraform already applied these. We just wait for the Gateway to be
 # Programmed (i.e., the Envoy data plane Service has an NLB IP/hostname).
 step "8/10 Wait for Envoy Gateway 'apollo-gateway' to be Programmed"
-for i in $(seq 1 60); do
+for _ in $(seq 1 60); do
   prog=$(kubectl get gateway apollo-gateway -n apollo-airlines-apps -o jsonpath='{.status.conditions[?(@.type=="Programmed")].status}' 2>/dev/null || echo "")
   if [[ "$prog" == "True" ]]; then
     ok "Gateway is Programmed"
@@ -191,7 +191,7 @@ ENVOY_SVC=$(kubectl get svc -n envoy-gateway-system -l gateway.envoyproxy.io/own
 if [[ -z "$ENVOY_SVC" ]]; then
   fail "no Envoy data plane Service found. Check: kubectl get svc -n envoy-gateway-system"
 fi
-for i in $(seq 1 60); do
+for _ in $(seq 1 60); do
   NLB_HOSTNAME=$(kubectl get svc "$ENVOY_SVC" -n envoy-gateway-system -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
   if [[ -n "$NLB_HOSTNAME" ]]; then
     ok "NLB hostname: $NLB_HOSTNAME"

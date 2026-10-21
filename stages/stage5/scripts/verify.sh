@@ -431,7 +431,7 @@ if [[ "$flights" -ge 180 ]]; then pass "flight seed has $flights flights"; else 
 
 step "Frontend bundle contains routed API hosts and no localhost API URLs"
 bundle_urls=$(kubectl exec -n apollo-airlines-ui deployment/frontend -- \
-    grep -R -o -E 'http://(localhost:[0-9]+|[a-z]+\.apollo\.local)' \
+    grep -R -o -E 'https?://(localhost:[0-9]+|[a-z]+\.apollo\.local)' \
     /usr/share/nginx/html/assets 2>/dev/null || echo "")
 missing_hosts=()
 for host in identity flight booking search; do

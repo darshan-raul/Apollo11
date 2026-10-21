@@ -1,5 +1,5 @@
 # Stage 1: Build React app
-FROM node:20-alpine AS builder
+FROM node:22.23.4-alpine3.24 AS builder
 
 ARG VITE_IDENTITY_URL="http://localhost:30083"
 ARG VITE_FLIGHT_URL="http://localhost:30081"
@@ -20,7 +20,10 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Serve with NGINX
-FROM nginx:alpine
+FROM nginx:1.30.6-alpine3.24
+
+# Pick up Alpine security fixes published after this image was built.
+RUN apk upgrade --no-cache
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 

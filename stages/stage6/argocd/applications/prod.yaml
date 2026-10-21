@@ -34,7 +34,7 @@ spec:
         - values-prod.yaml
       parameters:
         - name: image.repository
-          value: ghcr.io/darshan-raul/apollo11
+          value: ghcr.io/darshan-raul/apollo11/stage6
         - name: image.tag
           value: v1.0.0
         - name: namespaces.apps

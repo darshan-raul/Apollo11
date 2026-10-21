@@ -19,7 +19,7 @@ for env in dev staging prod; do
     render=$(mktemp)
     helm template "apollo11-$env" "$CHART_DIR" \
         -f "$CHART_DIR/values-$env.yaml" \
-        --set image.repository=ghcr.io/darshan-raul/apollo11 \
+        --set image.repository=ghcr.io/darshan-raul/apollo11/stage6 \
         --set namespaces.apps="$apps_ns" \
         --set namespaces.ui="$ui_ns" \
         --set gateway.createClass=false \
@@ -38,8 +38,8 @@ for env in dev staging prod; do
         exit 1
     fi
     count=$(grep -c '^kind:' "$render")
-    expected=58
-    [[ "$env" == "prod" ]] && expected=60
+    expected=60
+    [[ "$env" == "prod" ]] && expected=62
     if [[ "$count" -ne "$expected" ]]; then
         echo "ERROR: $env rendered $count resources; expected $expected" >&2
         rm -f "$render"
@@ -57,7 +57,7 @@ if grep -E '^  namespace:' "$obs_render" | awk '{print $2}' | grep -Ev '^apollo-
     exit 1
 fi
 obs_count=$(grep -c '^kind:' "$obs_render")
-[[ "$obs_count" -eq 34 ]] || { echo "ERROR: observability rendered $obs_count resources; expected 34" >&2; rm -f "$obs_render"; exit 1; }
+[[ "$obs_count" -eq 44 ]] || { echo "ERROR: observability rendered $obs_count resources; expected 44" >&2; rm -f "$obs_render"; exit 1; }
 rm -f "$obs_render"
 echo "observability: $obs_count shared namespaced resources"
 

@@ -1,0 +1,14 @@
+horizontalpodautoscaler.autoscaling "search-hpa" deleted from apollo-airlines-apps namespace
+deployment.apps/search scaled
+deployment "search" successfully rolled out
+deployment.apps/search env updated
+Waiting for deployment "search" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "search" rollout to finish: 1 old replicas are pending termination...
+deployment "search" successfully rolled out
+deployment.apps/search env updated
+Waiting for deployment "search" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "search" rollout to finish: 1 old replicas are pending termination...
+deployment "search" successfully rolled out
+deployment.apps/search scaled
+deployment "search" successfully rolled out
+horizontalpodautoscaler.autoscaling/search-hpa created

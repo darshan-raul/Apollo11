@@ -24,7 +24,7 @@ images to GHCR on every change to `main`.
 | **Verify target** | **153 Helm checks / 142 Kustomize checks / 74 Argo CD checks** |
 
 **Verified 2026-08-22 on a fresh three-node kind v1.35.0 cluster:** Helm/dev
-153/153, Kustomize/dev 142/142, and Argo CD v3.5.1 74/74 (including real
+174/174, Kustomize/dev 163/163, and Argo CD v3.5.1 74/74 (including real
 self-heal). Each path completed a full purge with no namespace, PVC, or related
 CRD residue. The active root GitHub Actions workflow is statically validated;
 its hosted run and first GHCR release publish occur on the next push/tag.
@@ -372,3 +372,17 @@ remain available. Re-run the certificate generator and require a trusted HTTPS
 response plus login/search recovery. If the old certificate was deleted,
 extract the replacement and update local trust. Teardown removes the runtime
 certificate when it deletes the owned namespace.
+
+## CI and published image contract
+
+CI validates Stages 5–7, runs review regressions and Go tests, renders every
+Helm/Kustomize environment, checks stage shell scripts, and scans each built
+image with Trivy (fixable HIGH/CRITICAL findings block publication). It publishes
+the exact scanned artifact, without rebuilding it in the publication job.
+
+Images now use `ghcr.io/darshan-raul/apollo11/stageN/SERVICE:TAG`, where N matches
+this stage. Production Helm values and Kustomize names follow that layout.
+Do not substitute a Stage 5 image for Stage 6 telemetry or Stage 7 caching.
+Run `bash test/ci.sh` from the repository root for local validation; install
+Python/PyYAML, Go, Helm, kubectl and shellcheck first. The hosted run and first
+publication require a separately authorized push and remain unverified locally.

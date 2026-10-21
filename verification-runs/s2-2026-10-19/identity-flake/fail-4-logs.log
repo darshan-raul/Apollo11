@@ -1,0 +1,60 @@
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 16s.
+INFO:     10.244.1.1:39102 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:39118 - "GET /healthz/live HTTP/1.1" 200 OK
+INFO:     10.244.1.1:39120 - "GET /healthz/ready HTTP/1.1" 200 OK
+INFO:     10.244.1.1:43236 - "GET /healthz/ready HTTP/1.1" 200 OK
+INFO:     10.244.1.1:43252 - "GET /healthz/live HTTP/1.1" 200 OK
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 32s.
+INFO:     10.244.1.1:43262 - "GET /healthz/ready HTTP/1.1" 200 OK
+INFO:     10.244.1.1:37770 - "GET /healthz/ready HTTP/1.1" 200 OK
+INFO:     10.244.1.1:37778 - "GET /healthz/live HTTP/1.1" 200 OK
+INFO:     10.244.1.1:37790 - "GET /healthz/ready HTTP/1.1" 200 OK
+INFO:     10.244.1.1:46618 - "GET /healthz/live HTTP/1.1" 200 OK
+INFO:     10.244.1.1:46634 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:38934 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 1s.
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 2s.
+INFO:     10.244.1.1:38928 - "GET /healthz/live HTTP/1.1" 200 OK
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 4s.
+INFO:     10.244.1.1:38090 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 8s.
+INFO:     10.244.1.1:38096 - "GET /healthz/live HTTP/1.1" 200 OK
+INFO:     10.244.1.1:38098 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:49862 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 16s.
+INFO:     10.244.1.1:49864 - "GET /healthz/live HTTP/1.1" 200 OK
+INFO:     10.244.1.1:49876 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:33572 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:33574 - "GET /healthz/live HTTP/1.1" 200 OK
+INFO:     10.244.1.1:33590 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 32s.
+INFO:     10.244.1.1:37098 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:37110 - "GET /healthz/live HTTP/1.1" 200 OK
+INFO:     10.244.1.1:37120 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:41774 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:41780 - "GET /healthz/live HTTP/1.1" 200 OK
+INFO:     10.244.1.1:41796 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:58954 - "GET /healthz/ready HTTP/1.1" 200 OK
+INFO:     10.244.1.1:58956 - "GET /healthz/live HTTP/1.1" 200 OK
+INFO:     10.244.1.1:58964 - "GET /healthz/ready HTTP/1.1" 200 OK
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 1s.
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 2s.
+INFO:     10.244.1.1:38612 - "GET /healthz/ready HTTP/1.1" 200 OK
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 4s.
+INFO:     10.244.1.1:38618 - "GET /healthz/live HTTP/1.1" 200 OK
+INFO:     10.244.1.1:38632 - "GET /healthz/ready HTTP/1.1" 200 OK
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 8s.
+INFO:     10.244.1.1:41112 - "GET /healthz/ready HTTP/1.1" 200 OK
+INFO:     10.244.1.1:41122 - "GET /healthz/live HTTP/1.1" 200 OK
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 16s.
+INFO:     10.244.1.1:41138 - "GET /healthz/ready HTTP/1.1" 200 OK
+INFO:     10.244.1.1:49552 - "GET /healthz/live HTTP/1.1" 200 OK
+Transient error StatusCode.UNAVAILABLE encountered while exporting traces to otel-collector.apollo-observability.svc.cluster.local:4317, retrying in 32s.
+INFO:     10.244.1.1:53542 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:53550 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:53554 - "GET /healthz/live HTTP/1.1" 200 OK
+INFO:     10.244.1.1:33696 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:33712 - "GET /healthz/live HTTP/1.1" 200 OK
+INFO:     10.244.1.1:51990 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:51998 - "GET /healthz/ready HTTP/1.1" 503 Service Unavailable
+INFO:     10.244.1.1:52004 - "GET /healthz/live HTTP/1.1" 200 OK

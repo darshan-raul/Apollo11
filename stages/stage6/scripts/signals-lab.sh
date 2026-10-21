@@ -40,6 +40,10 @@ for _ in $(seq 1 60); do
 done
 kubectl rollout status statefulset/prometheus-apollo -n apollo-observability --timeout=240s
 if [[ "$SUBSTAGE" -ge 2 ]]; then kubectl rollout status deployment/grafana -n apollo-observability --timeout=240s; fi
+if [[ "$SUBSTAGE" -ge 3 ]]; then
+  kubectl rollout status deployment/alertmanager -n apollo-observability --timeout=240s
+  kubectl rollout status deployment/alert-receiver -n apollo-observability --timeout=240s
+fi
 if [[ "$SUBSTAGE" -ge 4 ]]; then
   kubectl rollout status deployment/loki -n apollo-observability --timeout=240s
   kubectl rollout status daemonset/alloy -n apollo-observability --timeout=240s

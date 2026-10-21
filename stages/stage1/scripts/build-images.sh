@@ -62,7 +62,7 @@ if ! kind get clusters | grep -q "^${CLUSTER}$"; then
     echo "Run: kind create cluster --name ${CLUSTER}"
     echo ""
     echo "Done. Images built:"
-    for svc in $SERVICES; do
+    for svc in "${SERVICES[@]}"; do
         echo "  ${REGISTRY}/${svc}:latest"
     done
     exit 0

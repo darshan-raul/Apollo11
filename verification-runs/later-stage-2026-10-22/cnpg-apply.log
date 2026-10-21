@@ -1,0 +1,71 @@
+Creating cluster "apollo11-cloudnativepg" ...
+ • Ensuring node image (kindest/node:v1.34.0) 🖼️  ...
+ ✓ Ensuring node image (kindest/node:v1.34.0) 🖼️
+ • Preparing nodes 📦 📦 📦   ...
+ ✓ Preparing nodes 📦 📦 📦 
+ • Writing configuration 📜  ...
+ ✓ Writing configuration 📜
+ • Starting control-plane 🕹️  ...
+ ✓ Starting control-plane 🕹️
+ • Installing CNI 🔌  ...
+ ✓ Installing CNI 🔌
+ • Installing StorageClass 💾  ...
+ ✓ Installing StorageClass 💾
+ • Joining worker nodes 🚜  ...
+ ✓ Joining worker nodes 🚜
+ • Waiting ≤ 2m0s for control-plane = Ready ⏳  ...
+ ✓ Waiting ≤ 2m0s for control-plane = Ready ⏳
+ • Ready after 7s 💚
+Set kubectl context to "kind-apollo11-cloudnativepg"
+You can now use your cluster with:
+
+kubectl cluster-info --context kind-apollo11-cloudnativepg --kubeconfig /home/darshan/projects/Apollo11/stages/stage10/missions/cloudnativepg/.kubeconfig
+
+Have a nice day! 👋
+Release "cnpg" does not exist. Installing it now.
+I1022 00:47:59.169561  665702 warnings.go:107] "Warning: unrecognized format \"int64\""
+I1022 00:47:59.169531  665702 warnings.go:107] "Warning: unrecognized format \"int64\""
+I1022 00:47:59.175954  665702 warnings.go:107] "Warning: unrecognized format \"int64\""
+I1022 00:47:59.177185  665702 warnings.go:107] "Warning: unrecognized format \"int64\""
+I1022 00:47:59.307090  665702 warnings.go:107] "Warning: unrecognized format \"int64\""
+I1022 00:47:59.307197  665702 warnings.go:107] "Warning: unrecognized format \"int32\""
+I1022 00:47:59.315684  665702 warnings.go:107] "Warning: unrecognized format \"int32\""
+I1022 00:47:59.315733  665702 warnings.go:107] "Warning: unrecognized format \"int64\""
+NAME: cnpg
+LAST DEPLOYED: Thu Oct 22 00:47:58 2026
+NAMESPACE: cnpg-system
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+NOTES:
+CloudNativePG operator should be installed in namespace "cnpg-system".
+You can now create a PostgreSQL cluster with 3 nodes as follows:
+
+cat <<EOF | kubectl apply -f -
+# Example of PostgreSQL cluster
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: cluster-example
+  
+spec:
+  instances: 3
+  storage:
+    size: 1Gi
+EOF
+
+kubectl get -A cluster
+namespace/apollo-data-lab created
+cluster.postgresql.cnpg.io/booking-lab created
+cluster.postgresql.cnpg.io/booking-lab condition met
+NAME                                     AGE     INSTANCES   READY   STATUS                     PRIMARY
+cluster.postgresql.cnpg.io/booking-lab   5m17s   2           2       Cluster in healthy state   booking-lab-1
+
+NAME                READY   STATUS    RESTARTS   AGE
+pod/booking-lab-1   1/1     Running   0          2m30s
+pod/booking-lab-2   1/1     Running   0          11s
+
+NAME                                  STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/booking-lab-1   Bound    pvc-f9027c44-c5c7-4129-a41c-cdc05c6ebf04   1Gi        RWO            standard       <unset>                 5m16s
+persistentvolumeclaim/booking-lab-2   Bound    pvc-8b593abc-5347-4ca6-b234-d05656389009   1Gi        RWO            standard       <unset>                 2m19s

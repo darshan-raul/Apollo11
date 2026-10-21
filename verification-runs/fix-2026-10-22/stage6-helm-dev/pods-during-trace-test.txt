@@ -1,0 +1,14 @@
+NAME                           READY   STATUS        RESTARTS   AGE     IP            NODE               NOMINATED NODE   READINESS GATES
+booking-785d6f54f-f2ss7        1/1     Running       0          2m10s   10.244.2.85   apollo11-worker2   <none>           <none>
+booking-db-0                   1/1     Running       0          2m10s   10.244.1.95   apollo11-worker    <none>           <none>
+flight-8657878457-5wt78        1/1     Running       0          2m10s   10.244.2.80   apollo11-worker2   <none>           <none>
+flight-db-0                    1/1     Running       0          2m10s   10.244.2.89   apollo11-worker2   <none>           <none>
+identity-846c96bf69-h8cp9      1/1     Running       0          2m10s   10.244.1.90   apollo11-worker    <none>           <none>
+identity-db-0                  1/1     Running       0          2m10s   10.244.2.94   apollo11-worker2   <none>           <none>
+notification-9c58d5488-99zfp   1/1     Running       0          2m10s   10.244.1.82   apollo11-worker    <none>           <none>
+redis-0                        1/1     Running       0          2m10s   10.244.1.96   apollo11-worker    <none>           <none>
+search-7d54ccd64-4pbtl         1/1     Running       0          2m10s   10.244.1.89   apollo11-worker    <none>           <none>
+seed-booking-db-66nnm          0/1     Completed     0          2m10s   10.244.2.82   apollo11-worker2   <none>           <none>
+seed-flight-db-jm4zz           0/1     Completed     0          2m10s   10.244.1.84   apollo11-worker    <none>           <none>
+seed-identity-db-gksnj         0/1     Completed     0          2m10s   10.244.1.83   apollo11-worker    <none>           <none>
+stage6-trace-13379             1/1     Terminating   0          15s     10.244.1.99   apollo11-worker    <none>           <none>

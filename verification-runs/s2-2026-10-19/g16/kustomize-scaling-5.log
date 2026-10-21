@@ -1,0 +1,51 @@
+
+==> Designating apollo11-worker as the preferred search worker
+node/apollo11-worker labeled
+node/apollo11-worker modified
+Waiting for deployment "search" rollout to finish: 0 of 1 updated replicas are available...
+Waiting for deployment "search" rollout to finish: 0 of 1 updated replicas are available...
+Waiting for deployment "search" rollout to finish: 0 of 1 updated replicas are available...
+deployment "search" successfully rolled out
+NAME                      READY   STATUS    RESTARTS   AGE   IP             NODE              NOMINATED NODE   READINESS GATES
+search-65b46db454-8ngl4   1/1     Running   0          11s   10.244.1.232   apollo11-worker   <none>           <none>
+
+==> Temporarily tuning the HPA for a short local demonstration
+Production values: CPU target=70%, scale-down window=300s
+Lab values:        CPU target=10%, scale-down window=30s
+
+==> Starting bounded in-cluster HTTP load
+Waiting for deployment "search-load" rollout to finish: 0 of 4 updated replicas are available...
+Waiting for deployment "search-load" rollout to finish: 1 of 4 updated replicas are available...
+Waiting for deployment "search-load" rollout to finish: 2 of 4 updated replicas are available...
+Waiting for deployment "search-load" rollout to finish: 3 of 4 updated replicas are available...
+deployment "search-load" successfully rolled out
+
+==> Watching for HPA scale-out
+    0s  ready replicas=1  search-hpa   Deployment/search   cpu: <unknown>/10%   1     3     1     12m
+   10s  ready replicas=1  search-hpa   Deployment/search   cpu: <unknown>/10%   1     3     1     12m
+   20s  ready replicas=1  search-hpa   Deployment/search   cpu: <unknown>/10%   1     3     1     13m
+   30s  ready replicas=1  search-hpa   Deployment/search   cpu: 97%/10%   1     3     1     13m
+   40s  ready replicas=2  search-hpa   Deployment/search   cpu: 97%/10%   1     3     1     13m
+
+==> Search replicas after scale-out
+NAME                      READY   STATUS    RESTARTS   AGE   IP             NODE               NOMINATED NODE   READINESS GATES
+search-65b46db454-8ngl4   1/1     Running   0          53s   10.244.1.232   apollo11-worker    <none>           <none>
+search-65b46db454-pbl4k   1/1     Running   0          13s   10.244.2.36    apollo11-worker2   <none>           <none>
+search-65b46db454-r9689   0/1     Pending   0          12s   <none>         <none>             <none>           <none>
+Observed search replicas across 2 workers.
+
+==> Stopping load and watching scale-in to minReplicas=1
+    0s  ready replicas=2  search-hpa   Deployment/search   cpu: 97%/10%   1     3     1     13m
+   10s  ready replicas=2  search-hpa   Deployment/search   cpu: 98%/10%   1     3     3     13m
+   20s  ready replicas=2  search-hpa   Deployment/search   cpu: 81%/10%   1     3     3     13m
+   30s  ready replicas=2  search-hpa   Deployment/search   cpu: 81%/10%   1     3     3     13m
+   40s  ready replicas=2  search-hpa   Deployment/search   cpu: 6%/10%   1     3     3     14m
+   50s  ready replicas=2  search-hpa   Deployment/search   cpu: 1%/10%   1     3     3     14m
+   60s  ready replicas=2  search-hpa   Deployment/search   cpu: 1%/10%   1     3     3     14m
+   70s  ready replicas=1  search-hpa   Deployment/search   cpu: 1%/10%   1     3     2     14m
+
+==> Lab complete
+Observed real HTTP load, HPA scale-out, cross-worker placement, and scale-in.
+
+==> Cleaning up the load generator and restoring cluster settings
+Lab state removed. The chart-defined HPA policy is restored.

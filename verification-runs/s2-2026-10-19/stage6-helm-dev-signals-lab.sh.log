@@ -1,0 +1,248 @@
+# Source: apollo11/templates/observability/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: observability-stack
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: apollo-observability
+    app.kubernetes.io/part-of: apollo-airlines
+---
+# Source: apollo11/templates/observability/serviceaccount.yaml
+# ClusterRole: the observability stack reads service endpoints, pods,
+# configmaps across all namespaces for the Prometheus operator's ServiceMonitor
+# discovery. We do NOT grant write or cluster-wide admin rights.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: apollo-observability
+  labels:
+    app.kubernetes.io/part-of: apollo-airlines
+rules:
+  - apiGroups: [""]
+    resources: [services, endpoints, pods, configmaps, namespaces]
+    verbs: [get, list, watch]
+  - apiGroups: ["apps"]
+    resources: [deployments, statefulsets, daemonsets]
+    verbs: [get, list, watch]
+  - apiGroups: ["extensions", "networking.k8s.io"]
+    resources: [ingresses]
+    verbs: [get, list, watch]
+  # ServiceMonitors + PodMonitors are how Prometheus discovers targets.
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: [servicemonitors, podmonitors, prometheusrules]
+    verbs: [get, list, watch]
+  - nonResourceURLs: ["/metrics", "/metrics/"]
+    verbs: [get]
+---
+# Source: apollo11/templates/observability/serviceaccount.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: apollo-observability
+  labels:
+    app.kubernetes.io/part-of: apollo-airlines
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: apollo-observability
+subjects:
+  - kind: ServiceAccount
+    name: observability-stack
+    namespace: apollo-observability
+
+---
+# Source: apollo11/templates/observability/prometheus/deployment.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  type: ClusterIP
+  selector:
+    prometheus: apollo
+  ports:
+    - name: http
+      port: 9090
+      targetPort: web
+      protocol: TCP
+
+---
+# Source: apollo11/templates/observability/prometheus/deployment.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: apollo
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: apollo-airlines
+spec:
+  image: "quay.io/prometheus/prometheus:v3.13.1"
+  replicas: 1
+  serviceAccountName: observability-stack
+  serviceMonitorNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: apollo-observability
+  serviceMonitorSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: apollo-airlines
+  ruleNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: apollo-observability
+  ruleSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: apollo-airlines
+  retention: "30d"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  storage:
+    volumeClaimTemplate:
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 1Gi
+  securityContext:
+    fsGroup: 65534
+    runAsNonRoot: true
+    runAsUser: 65534
+---
+# Source: apollo11/templates/observability/servicemonitors/booking-sm.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: booking
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: booking
+    app.kubernetes.io/part-of: apollo-airlines
+    release: apollo11
+spec:
+  selector:
+    matchLabels:
+      app: booking
+  namespaceSelector:
+    any: true
+  endpoints:
+    - port: http
+      path: /metrics
+      scheme: http
+      interval: 30s
+      scrapeTimeout: 10s
+      honorLabels: true
+  jobLabel: app
+
+---
+# Source: apollo11/templates/observability/servicemonitors/flight-sm.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: flight
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: flight
+    app.kubernetes.io/part-of: apollo-airlines
+    release: apollo11
+spec:
+  selector:
+    matchLabels:
+      app: flight
+  namespaceSelector:
+    any: true
+  endpoints:
+    - port: http
+      path: /metrics
+      scheme: http
+      interval: 30s
+      scrapeTimeout: 10s
+      honorLabels: true
+  jobLabel: app
+
+---
+# Source: apollo11/templates/observability/servicemonitors/identity-sm.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: identity
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: identity
+    app.kubernetes.io/part-of: apollo-airlines
+    release: apollo11
+spec:
+  selector:
+    matchLabels:
+      app: identity
+  namespaceSelector:
+    any: true
+  endpoints:
+    - port: http
+      path: /metrics
+      scheme: http
+      interval: 30s
+      scrapeTimeout: 10s
+      honorLabels: true
+  jobLabel: app
+
+---
+# Source: apollo11/templates/observability/servicemonitors/notification-sm.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: notification
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: notification
+    app.kubernetes.io/part-of: apollo-airlines
+    release: apollo11
+spec:
+  selector:
+    matchLabels:
+      app: notification
+  namespaceSelector:
+    any: true
+  endpoints:
+    - port: http
+      path: /metrics
+      scheme: http
+      interval: 30s
+      scrapeTimeout: 10s
+      honorLabels: true
+  jobLabel: app
+
+---
+# Source: apollo11/templates/observability/servicemonitors/search-sm.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: search
+  namespace: apollo-observability
+  labels:
+    app.kubernetes.io/name: search
+    app.kubernetes.io/part-of: apollo-airlines
+    release: apollo11
+spec:
+  selector:
+    matchLabels:
+      app: search
+  namespaceSelector:
+    any: true
+  endpoints:
+    - port: http
+      path: /metrics
+      scheme: http
+      interval: 30s
+      scrapeTimeout: 10s
+      honorLabels: true
+  jobLabel: app
+exit=0

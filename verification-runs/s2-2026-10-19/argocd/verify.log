@@ -1,0 +1,84 @@
+[0;36m▶ 1/5 Argo CD control plane[0m
+[0;32m[PASS][0m argocd-server has 1 Ready pod(s)
+[0;32m[PASS][0m argocd-repo-server has 1 Ready pod(s)
+[0;32m[PASS][0m argocd-application-controller has 1 Ready pod(s)
+[0;32m[PASS][0m argocd-redis has 1 Ready pod(s)
+[0;36m▶ 2/5 Shared platform and AppProject boundary[0m
+[0;32m[PASS][0m crd/applications.argoproj.io
+[0;32m[PASS][0m crd/gateways.gateway.networking.k8s.io
+[0;32m[PASS][0m crd/ipaddresspools.metallb.io
+[0;32m[PASS][0m shared gatewayclass/eg
+[0;32m[PASS][0m shared ipaddresspool/apollo-pool
+[0;32m[PASS][0m appproject/apollo-airlines
+[0;32m[PASS][0m tenant Applications cannot create cluster-scoped resources
+[0;32m[PASS][0m project destination apollo-airlines-dev-apps
+[0;32m[PASS][0m namespace/apollo-airlines-dev-apps
+[0;32m[PASS][0m project destination apollo-airlines-dev-ui
+[0;32m[PASS][0m namespace/apollo-airlines-dev-ui
+[0;32m[PASS][0m project destination apollo-airlines-staging-apps
+[0;32m[PASS][0m namespace/apollo-airlines-staging-apps
+[0;32m[PASS][0m project destination apollo-airlines-staging-ui
+[0;32m[PASS][0m namespace/apollo-airlines-staging-ui
+[0;32m[PASS][0m project destination apollo-airlines-prod-apps
+[0;32m[PASS][0m namespace/apollo-airlines-prod-apps
+[0;32m[PASS][0m project destination apollo-airlines-prod-ui
+[0;32m[PASS][0m namespace/apollo-airlines-prod-ui
+[0;36m▶ 3/5 Three isolated Applications[0m
+[0;32m[PASS][0m application/apollo11-dev
+[0;32m[PASS][0m apollo11-dev uses expected repo
+[0;32m[PASS][0m apollo11-dev destination=apollo-airlines-dev-apps
+[0;32m[PASS][0m apollo11-dev parameter namespaces.apps=apollo-airlines-dev-apps
+[0;32m[PASS][0m apollo11-dev parameter namespaces.ui=apollo-airlines-dev-ui
+[0;32m[PASS][0m apollo11-dev parameter gateway.createClass=false
+[0;32m[PASS][0m apollo11-dev parameter metallb.enabled=false
+[0;32m[PASS][0m apollo11-dev enables automated sync
+[0;32m[PASS][0m apollo11-dev sync=Synced
+[0;32m[PASS][0m apollo11-dev health=Healthy
+[0;32m[PASS][0m application/apollo11-staging
+[0;32m[PASS][0m apollo11-staging uses expected repo
+[0;32m[PASS][0m apollo11-staging destination=apollo-airlines-staging-apps
+[0;32m[PASS][0m apollo11-staging parameter namespaces.apps=apollo-airlines-staging-apps
+[0;32m[PASS][0m apollo11-staging parameter namespaces.ui=apollo-airlines-staging-ui
+[0;32m[PASS][0m apollo11-staging parameter gateway.createClass=false
+[0;32m[PASS][0m apollo11-staging parameter metallb.enabled=false
+[0;32m[PASS][0m apollo11-staging enables automated sync
+[0;32m[PASS][0m apollo11-staging sync=Synced
+[0;32m[PASS][0m apollo11-staging health=Healthy
+[0;32m[PASS][0m application/apollo11-prod
+[0;32m[PASS][0m apollo11-prod uses expected repo
+[0;32m[PASS][0m apollo11-prod destination=apollo-airlines-prod-apps
+[0;32m[PASS][0m apollo11-prod parameter namespaces.apps=apollo-airlines-prod-apps
+[0;32m[PASS][0m apollo11-prod parameter namespaces.ui=apollo-airlines-prod-ui
+[0;32m[PASS][0m apollo11-prod parameter gateway.createClass=false
+[0;32m[PASS][0m apollo11-prod parameter metallb.enabled=false
+[0;32m[PASS][0m apollo11-prod is manual-sync
+[0;36m▶ 4/5 Dev and staging workloads are independently healthy[0m
+[0;32m[PASS][0m dev deployment/identity ready=1
+[0;32m[PASS][0m dev deployment/flight ready=1
+[0;32m[PASS][0m dev deployment/booking ready=1
+[0;32m[PASS][0m dev deployment/search ready=1
+[0;32m[PASS][0m dev deployment/notification ready=1
+[0;32m[PASS][0m dev deployment/frontend ready=1
+[0;32m[PASS][0m dev statefulset/identity-db ready=1
+[0;32m[PASS][0m dev statefulset/flight-db ready=1
+[0;32m[PASS][0m dev statefulset/booking-db ready=1
+[0;32m[PASS][0m dev statefulset/redis ready=1
+[0;32m[PASS][0m dev gateway Programmed
+[0;32m[PASS][0m staging deployment/identity ready=2
+[0;32m[PASS][0m staging deployment/flight ready=2
+[0;32m[PASS][0m staging deployment/booking ready=2
+[0;32m[PASS][0m staging deployment/search ready=2
+[0;32m[PASS][0m staging deployment/notification ready=2
+[0;32m[PASS][0m staging deployment/frontend ready=2
+[0;32m[PASS][0m staging statefulset/identity-db ready=1
+[0;32m[PASS][0m staging statefulset/flight-db ready=1
+[0;32m[PASS][0m staging statefulset/booking-db ready=1
+[0;32m[PASS][0m staging statefulset/redis ready=1
+[0;32m[PASS][0m staging gateway Programmed
+[0;36m▶ 5/5 Argo CD self-heals declarative drift[0m
+[0;32m[PASS][0m dev booking replicas self-healed 2 -> 1
+
+============================================
+  [0;32mPASS: 74[0m  /  [0;31mFAIL: 0[0m  /  TOTAL: 74
+============================================
+[0;32mAll Argo CD GitOps checks passed.[0m

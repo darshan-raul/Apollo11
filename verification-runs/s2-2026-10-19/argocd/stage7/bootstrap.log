@@ -1,0 +1,38 @@
+▶ 0/6 Checking cluster + ArgoCD
+✓ ArgoCD is installed
+▶ 1/6 Installing shared Gateway/LoadBalancer/observability platform
+✓ shared Stage 7 platform, operator, and isolated namespaces ready
+▶ 2/6 Registering AppProject
+appproject.argoproj.io/apollo-airlines created
+✓ AppProject apollo-airlines
+▶ 3/6 Registering Applications
+application.argoproj.io/apollo11-dev created
+✓ Application dev
+application.argoproj.io/apollo11-observability created
+✓ Application observability
+application.argoproj.io/apollo11-prod created
+✓ Application prod
+application.argoproj.io/apollo11-staging created
+✓ Application staging
+▶ 4/6 Waiting for ArgoCD to pick up the new Applications
+✓ apollo11-dev reconciled at 2026-10-19T09:20:59Z
+✓ apollo11-staging reconciled at 2026-10-19T09:21:00Z
+✓ apollo11-prod reconciled at 2026-10-19T09:21:00Z
+✓ apollo11-observability reconciled at 2026-10-19T09:21:00Z
+▶ 5/6 Force-syncing dev + staging
+✓ hard refresh requested
+▶ 6/6 Summary
+
+  Applications registered in namespace 'argocd':
+    apollo11-dev
+    apollo11-observability
+    apollo11-prod
+    apollo11-staging
+
+  Next steps:
+    1. Watch:        kubectl get applications -n argocd -w
+    2. Open the UI:  kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+                     open http://localhost:8080
+    3. Verify:       bash scripts/verify.sh
+
+✓ Bootstrap complete

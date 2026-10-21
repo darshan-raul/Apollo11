@@ -155,7 +155,7 @@ step "4/6 Waiting for ArgoCD to pick up the new Applications"
 # resource tree (status.resources) which only gets populated after
 # the first reconciliation.
 for app in apollo11-dev apollo11-staging apollo11-prod apollo11-observability; do
-    for i in $(seq 1 15); do
+    for _ in $(seq 1 15); do
         # application_controller is the label selector for the controller pod
         # (not the application itself). We just wait for the App CR to have
         # an observedGeneration matching its metadata.generation.

@@ -134,6 +134,15 @@ if [[ "$PURGE" == "true" ]]; then
     kubectl delete gatewayclass eg --ignore-not-found >/dev/null 2>&1 || true
     kubectl delete priorityclass apollo-airlines-app-critical apollo-airlines-app-low --ignore-not-found >/dev/null 2>&1 || true
 
+    # Cluster-scoped RBAC and webhooks from MetalLB and Envoy Gateway outlive their namespaces
+    kubectl delete validatingwebhookconfiguration metallb-webhook-configuration --ignore-not-found >/dev/null 2>&1 || true
+    kubectl delete mutatingwebhookconfiguration envoy-gateway-topology-injector.envoy-gateway-system --ignore-not-found >/dev/null 2>&1 || true
+    for kind in clusterrolebinding clusterrole; do
+        for obj in $(kubectl get "$kind" -o name 2>/dev/null | grep -E 'metallb|eg-gateway-helm' || true); do
+            kubectl delete "$obj" --ignore-not-found >/dev/null 2>&1 || true
+        done
+    done
+
     ok "purge complete"
 fi
 

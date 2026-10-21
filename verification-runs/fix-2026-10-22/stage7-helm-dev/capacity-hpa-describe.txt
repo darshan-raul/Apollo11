@@ -1,0 +1,45 @@
+Name:                                                  search-hpa
+Namespace:                                             apollo-airlines-apps
+Labels:                                                app.kubernetes.io/instance=apollo11
+                                                       app.kubernetes.io/managed-by=Helm
+                                                       app.kubernetes.io/name=apollo11
+                                                       app.kubernetes.io/part-of=apollo-airlines
+                                                       app.kubernetes.io/version=1.0.0
+                                                       hermes=managed
+Annotations:                                           meta.helm.sh/release-name: apollo11
+                                                       meta.helm.sh/release-namespace: apollo-airlines-apps
+CreationTimestamp:                                     Thu, 22 Oct 2026 02:00:33 +0530
+Reference:                                             Deployment/search
+Metrics:                                               ( current / target )
+  resource cpu on pods  (as a percentage of request):  18% (18m) / 70%
+Min replicas:                                          1
+Max replicas:                                          3
+Behavior:
+  Scale Up:
+    Stabilization Window: 0 seconds
+    Select Policy: Max
+    Policies:
+      - Type: Percent  Value: 100  Period: 30 seconds
+      - Type: Pods     Value: 4    Period: 30 seconds
+  Scale Down:
+    Stabilization Window: 300 seconds
+    Select Policy: Max
+    Policies:
+      - Type: Percent  Value: 50  Period: 60 seconds
+Deployment pods:       3 current / 3 desired
+Conditions:
+  Type            Status  Reason               Message
+  ----            ------  ------               -------
+  AbleToScale     True    ScaleDownStabilized  recent recommendations were higher than current one, applying the highest recent recommendation
+  ScalingActive   True    ValidMetricFound     the HPA was able to successfully calculate a replica count from cpu resource utilization (percentage of request)
+  ScalingLimited  False   DesiredWithinRange   the desired count is within the acceptable range
+  ScaledToZero    False   NotScaledToZero      the HPA controller did not scale the workload to zero
+Events:
+  Type     Reason                        Age                From                       Message
+  ----     ------                        ----               ----                       -------
+  Warning  FailedGetResourceMetric       19m                horizontal-pod-autoscaler  failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+  Warning  FailedComputeMetricsReplicas  19m                horizontal-pod-autoscaler  invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: unable to get metrics for resource cpu: no metrics returned from resource metrics API
+  Warning  FailedGetResourceMetric       19m (x3 over 19m)  horizontal-pod-autoscaler  failed to get cpu utilization: did not receive metrics for targeted pods (pods might be unready)
+  Warning  FailedComputeMetricsReplicas  19m (x3 over 19m)  horizontal-pod-autoscaler  invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: failed to get cpu utilization: did not receive metrics for targeted pods (pods might be unready)
+  Normal   SuccessfulRescale             9m39s              horizontal-pod-autoscaler  New size: 2; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale             6m23s              horizontal-pod-autoscaler  New size: 3; reason: cpu resource utilization (percentage of request) above target

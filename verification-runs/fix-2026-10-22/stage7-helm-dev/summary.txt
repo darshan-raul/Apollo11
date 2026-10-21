@@ -1,0 +1,10 @@
+apply exit=0
+verify exit=0
+[0;32m[PASS][0m trusted HTTPS API workflow and hostname rejection
+  [0;32mPASS: 227[0m  /  [0;31mFAIL: 0[0m  /  TOTAL: 227
+[0;32mAll Stage 7 checks passed.[0m
+trace-test.sh exit=0
+observability-lab.sh exit=0
+capacity exit=99
+teardown exit=0
+residue lines: 2

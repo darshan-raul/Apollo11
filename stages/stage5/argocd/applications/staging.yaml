@@ -28,7 +28,7 @@ spec:
         - values-staging.yaml
       parameters:
         - name: image.repository
-          value: ghcr.io/darshan-raul/apollo11
+          value: ghcr.io/darshan-raul/apollo11/stage5
         - name: image.tag
           value: latest
         - name: namespaces.apps

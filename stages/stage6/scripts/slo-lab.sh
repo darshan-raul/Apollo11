@@ -45,6 +45,8 @@ client -fsS -X DELETE -H "Authorization: Bearer $TOKEN" "http://booking:8082/api
 BOOKING_ID=""
 kubectl scale deployment/flight -n "$NS" --replicas=0 >/dev/null
 kubectl rollout status deployment/flight -n "$NS" --timeout=120s >/dev/null
+# Terminating pods keep serving through the preStop hook; wait until none remain.
+kubectl wait --for=delete pod -l app=flight -n "$NS" --timeout=120s >/dev/null
 echo 'Generating 502 booking attempts for 150 seconds; inspect the pending/firing burn alert.'
 end=$((SECONDS + 150))
 while [[ "$SECONDS" -lt "$end" ]]; do

@@ -1,0 +1,38 @@
+Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
+Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
+pod "booking-lab-1" deleted from apollo-data-lab namespace
+Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
+Failover and row survival proved in 7s
+Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
+DROP DATABASE
+NOTICE:  database "booking_restore" does not exist, skipping
+Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
+CREATE DATABASE
+Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
+SET
+SET
+SET
+SET
+SET
+SET
+ set_config 
+------------
+ 
+(1 row)
+
+SET
+SET
+SET
+SET
+ALTER TABLE
+DROP TABLE
+SET
+SET
+CREATE TABLE
+COPY 1
+ALTER TABLE
+Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
+Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
+DROP DATABASE
+cluster.postgresql.cnpg.io/booking-lab condition met
+PASS: replicated row survived primary loss; logical backup restored separately.

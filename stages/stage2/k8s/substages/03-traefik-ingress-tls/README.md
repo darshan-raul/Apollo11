@@ -65,10 +65,11 @@ Expected output shows the certificate subject:
 
 ## 3. Break (Safe, Reversible Failure)
 
-Delete the TLS secret in `apollo-airlines-apps` to observe how the ingress controller handles missing certificate secrets:
+Delete the TLS secret in both namespaces to observe how the ingress controller handles missing certificate secrets. Traefik pools every certificate it can read, and `apollo-airlines-ui` holds a copy of the same wildcard, so deleting only the `apollo-airlines-apps` copy leaves `*.apollo.local` still being served:
 
 ```bash
 kubectl delete secret apollo-tls-secret -n apollo-airlines-apps
+kubectl delete secret apollo-tls-secret -n apollo-airlines-ui
 ```
 
 ### Observe Failure Evidence

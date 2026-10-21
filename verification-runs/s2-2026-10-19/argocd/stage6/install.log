@@ -1,0 +1,26 @@
+▶ 0/6 Checking cluster
+✓ cluster reachable
+▶ 1/6 Using offline bundle: /home/darshan/projects/Apollo11/stages/stage6/argocd/bundles/argocd-install.yaml
+▶ 2/6 Creating argocd namespace
+✓ namespace argocd
+▶ 3/6 Applying ArgoCD manifests
+networkpolicy.networking.k8s.io/argocd-redis-network-policy serverside-applied
+networkpolicy.networking.k8s.io/argocd-repo-server-network-policy serverside-applied
+networkpolicy.networking.k8s.io/argocd-server-network-policy serverside-applied
+✓ manifests applied
+▶ 4/6 Waiting for argocd-server
+✓ argocd-server Ready
+▶ 5/6 Waiting for argocd-application-controller
+✓ argocd-application-controller Ready
+▶ 6/6 Checking initial admin credential Secret
+✓ initial admin credential Secret is ready
+
+  Retrieve it explicitly:
+    kubectl -n argocd get secret argocd-initial-admin-secret \
+      -o jsonpath='{.data.password}' | base64 -d; echo
+
+  To open the UI:
+    kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+    open http://localhost:8080
+✓ ArgoCD install complete
+  Next: bash scripts/bootstrap.sh

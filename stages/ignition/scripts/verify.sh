@@ -35,8 +35,8 @@ kube() {
 
 wait_for_restart() {
   local before="$1"
-  local attempt current
-  for attempt in $(seq 1 30); do
+  local current
+  for _ in $(seq 1 30); do
     current="$(kube get pod apollo-shell -o jsonpath='{.status.containerStatuses[0].restartCount}' 2>/dev/null || true)"
     if [[ "${current:-0}" -gt "${before}" ]]; then
       kube wait --for=condition=Ready pod/apollo-shell --timeout=60s >/dev/null 2>&1
@@ -48,8 +48,7 @@ wait_for_restart() {
 }
 
 wait_for_absence() {
-  local attempt
-  for attempt in $(seq 1 5); do
+  for _ in $(seq 1 5); do
     if ! kube get pod apollo-shell >/dev/null 2>&1; then
       return 0
     fi

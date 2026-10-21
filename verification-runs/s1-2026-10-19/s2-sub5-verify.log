@@ -1,0 +1,90 @@
+
+=== 1. Core Namespaces ===
+  [PASS] Namespace apollo-airlines-apps exists
+  [PASS] Namespace apollo-airlines-ui exists
+
+=== 2. Configuration & Secrets ===
+  [PASS] ConfigMap apollo-airlines-config exists in apollo-airlines-apps
+  [PASS] ConfigMap apollo-airlines-config exists in apollo-airlines-ui
+  [PASS] Secret apollo-airlines-secrets exists in apollo-airlines-apps
+
+=== 3. ServiceAccounts (Strict Token Automount Security) ===
+  [PASS] SA apollo-airlines-apps/identity-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/flight-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/booking-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/redis exists (automount=false)
+  [PASS] SA apollo-airlines-apps/identity exists (automount=false)
+  [PASS] SA apollo-airlines-apps/flight exists (automount=false)
+  [PASS] SA apollo-airlines-apps/booking exists (automount=false)
+  [PASS] SA apollo-airlines-apps/search exists (automount=false)
+  [PASS] SA apollo-airlines-apps/notification exists (automount=false)
+  [PASS] SA apollo-airlines-apps/init-identity-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/init-flight-db exists (automount=false)
+  [PASS] SA apollo-airlines-apps/init-booking-db exists (automount=false)
+  [PASS] SA apollo-airlines-ui/frontend exists (automount=false)
+
+=== 4. Infrastructure Workloads & Seed Jobs ===
+  [PASS] Infra deployment apollo-airlines-apps/identity-db ready
+  [PASS] Infra deployment apollo-airlines-apps/flight-db ready
+  [PASS] Infra deployment apollo-airlines-apps/booking-db ready
+  [PASS] Infra deployment apollo-airlines-apps/redis ready
+  [PASS] Database init job apollo-airlines-apps/init-identity-db completed
+  [PASS] Database init job apollo-airlines-apps/init-flight-db completed
+  [PASS] Database init job apollo-airlines-apps/init-booking-db completed
+
+=== 5. Application Workloads & Services ===
+  [PASS] App deployment apollo-airlines-apps/identity ready
+  [PASS] App deployment apollo-airlines-apps/flight ready
+  [PASS] App deployment apollo-airlines-apps/booking ready
+  [PASS] App deployment apollo-airlines-apps/search ready
+  [PASS] App deployment apollo-airlines-apps/notification ready
+  [PASS] UI deployment apollo-airlines-ui/frontend ready
+
+=== 6. Endpoints & EndpointSlice Discovery ===
+  [PASS] Service identity has ready endpoints (10.244.1.5 10.244.2.6)
+  [PASS] Service flight has ready endpoints (10.244.1.6 10.244.2.7)
+  [PASS] Service booking has ready endpoints (10.244.1.7 10.244.2.8)
+  [PASS] Service search has ready endpoints (10.244.1.8 10.244.2.9)
+  [PASS] Service notification has ready endpoints (10.244.1.9 10.244.2.10)
+  [PASS] Service identity-db has ready endpoints (10.244.2.2)
+  [PASS] Service flight-db has ready endpoints (10.244.1.2)
+  [PASS] Service booking-db has ready endpoints (10.244.2.3)
+  [PASS] Service redis has ready endpoints (10.244.1.3)
+  [PASS] Service frontend has ready endpoints (10.244.1.10 10.244.2.11)
+
+=== 7. Networking Edge Access & Route Verification ===
+  [INFO] Detected networking architecture: envoy-gateway
+  [PASS] GatewayClass eg accepted by Envoy Gateway controller
+  [PASS] Gateway apollo-gateway is Accepted and Programmed
+  [PASS] HTTPRoute apollo-airlines-apps/identity accepted
+  [PASS] HTTPRoute apollo-airlines-apps/flight accepted
+  [PASS] HTTPRoute apollo-airlines-apps/booking accepted
+  [PASS] HTTPRoute apollo-airlines-apps/search accepted
+  [PASS] HTTPRoute apollo-airlines-apps/notification accepted
+  [PASS] HTTPRoute apollo-airlines-ui/frontend accepted
+  [PASS] Envoy Proxy assigned MetalLB LoadBalancer IP: 172.18.0.50
+  [PASS] Envoy Gateway HTTPRoute to identity.apollo.local returned HTTP 200
+  [PASS] Envoy Gateway HTTPRoute to flight.apollo.local returned HTTP 200
+  [PASS] Envoy Gateway HTTPRoute to booking.apollo.local returned HTTP 200
+  [PASS] Envoy Gateway HTTPRoute to search.apollo.local returned HTTP 200
+  [PASS] Envoy Gateway cross-namespace HTTPRoute to frontend returned HTTP 200
+  [PASS] Envoy Gateway HTTPS listener (port 443 TLS) to identity.apollo.local returned HTTP 200
+  [PASS] Envoy Gateway HTTPS listener (port 443 TLS) to booking.apollo.local returned HTTP 200
+  [PASS] Envoy Gateway HTTPS listener (port 443 TLS) to frontend returned HTTP 200
+
+=== 8. End-to-End Application & Auth Verification ===
+  [PASS] Passenger authentication succeeded and returned JWT
+  [PASS] Flight inventory query returned flights from flight-db
+Trusted HTTPS health: identity
+Trusted HTTPS health: flight
+Trusted HTTPS health: booking
+Trusted HTTPS health: search
+Trusted HTTPS login, populated search, booking, cancellation, and hostname rejection passed.
+  [PASS] trusted HTTPS workflow and hostname rejection
+
+=== Verification Summary ===
+  Total Passed: 61
+  Total Failed: 0
+
+Stage 2 verification succeeded with 0 failures.
+

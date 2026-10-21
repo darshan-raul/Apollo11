@@ -23,7 +23,7 @@ MetalLB) is unchanged.
 | **Workloads changed** | 4 (3 PostgreSQL + redis) |
 | **Workloads unchanged** | 6 (all app Deployments, frontend, gateway, MetalLB) |
 | **Code changes** | None (app code doesn't know or care about Deployment vs StatefulSet) |
-| **Verify target** | **68/68 checks pass** |
+| **Verify target** | **69/69 checks pass** |
 
 ---
 
@@ -403,7 +403,7 @@ curl -H 'Host: frontend.apollo.local' http://frontend.172-18-0-50.nip.io/
 ./scripts/verify.sh
 ```
 
-**Expected: 68/68 checks pass.** Coverage:
+**Expected: 69/69 checks pass.** Coverage:
 
 | Group | Checks | Description |
 |---|---|---|

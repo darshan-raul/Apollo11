@@ -53,7 +53,7 @@ spec:
       # whatever the values file says.
       parameters:
         - name: image.repository
-          value: ghcr.io/darshan-raul/apollo11
+          value: ghcr.io/darshan-raul/apollo11/stage7
         - name: image.tag
           value: latest
         - name: namespaces.apps

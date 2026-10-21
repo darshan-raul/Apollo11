@@ -1,0 +1,22 @@
+[0;36m▶ 0/9 Checking cluster[0m
+[0;32m✓ cluster reachable[0m
+[0;36m▶ 1/8 Skipping build (--skip-build)[0m
+[0;36m▶ 2/9 Pre-install: CRD bundles and Stage 7 metrics dependencies[0m
+job.batch/eg-gateway-helm-certgen serverside-applied
+mutatingwebhookconfiguration.admissionregistration.k8s.io/envoy-gateway-topology-injector.envoy-gateway-system serverside-applied
+[0;32m✓ Envoy Gateway bundle applied[0m
+daemonset.apps/speaker serverside-applied
+validatingwebhookconfiguration.admissionregistration.k8s.io/metallb-webhook-configuration serverside-applied
+[0;32m✓ MetalLB bundle applied[0m
+[0;32m✓ Prometheus Operator v0.93.0 ready[0m
+[0;32m✓ metrics-server ready[0m
+[0;36m▶ 3/8 Wait for CRD registration[0m
+[0;32m✓ CRDs registered[0m
+[0;36m▶ 4/8 Wait for MetalLB webhook to be ready[0m
+[0;32m✓ MetalLB webhook endpoint ready (10.244.1.187)[0m
+[0;36m▶ 5/8 Helm install (release: apollo11, env: dev)[0m
+secret/apollo-edge-tls created
+secret/apollo-edge-tls created
+  using values file: /home/darshan/projects/Apollo11/stages/stage7/helm/apollo11/values-dev.yaml
+Release "apollo11" does not exist. Installing it now.
+Error: resource Deployment/apollo-airlines-apps/identity not ready. status: Failed, message: Progress deadline exceeded

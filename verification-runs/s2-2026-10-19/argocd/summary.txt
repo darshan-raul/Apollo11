@@ -1,0 +1,12 @@
+s7 build=0
+s7 install=0
+s7 bootstrap=0
+s7 verify=1
+s7 teardown=0
+  PASS: 80  /  FAIL: 8  /  TOTAL: 88
+s6 build=0
+s6 install=0
+s6 bootstrap=0
+s6 verify=1
+s6 teardown=0
+  PASS: 79  /  FAIL: 9  /  TOTAL: 88
