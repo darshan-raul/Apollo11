@@ -167,7 +167,7 @@ the existing Stage 8 tree does not inherit implementation trust.
 * ☐ Replace kindnet with **Calico** and prove default-deny and least-privilege
   **NetworkPolicy** behavior.
 * ☐ Deliver and rotate external secrets using **Vault** and the **External
-  Secrets Operator**.
+  Secrets Operator**, and roll the workloads that read them with **Reloader**.
 * ☐ Enforce admission and supply-chain policy with **Kyverno**, **Trivy**, and
   **Cosign**.
 
@@ -329,7 +329,7 @@ duplicating the full snapshot.
 | Stage 5 | Packaging only, code unchanged |
 | Stage 6 | Full `/metrics` + OTEL SDK integrated |
 | Stage 7 | Search gets Redis caching (X-Cache header) |
-| Stage 8 | **Planned clean rebuild:** Stage 7 baseline → RBAC/PSA/hardening → Calico policy → Vault/ESO → Kyverno + Trivy/Cosign |
+| Stage 8 | **Planned clean rebuild:** Stage 7 baseline → RBAC/PSA/hardening → Calico policy → Vault/ESO + Reloader → Kyverno + Trivy/Cosign |
 | Stage 9 | **Planned:** AWS/EKS lifecycle with DNS/TLS, scaling, node failure, upgrade, Velero restore, cost, and teardown drills |
 | Stage 10 | **Planned optional missions:** service mesh, progressive delivery, debugging, traffic inspection, chaos, advanced DR |
 | Stage 11 | **Planned optional specializations:** operator/CRD, KEDA, k3s, Backstage, Kubecost, Cluster API |
@@ -360,6 +360,7 @@ duplicating the full snapshot.
 | GitOps | Argo CD |
 | Progressive Deployment | Argo Rollouts |
 | Secret Delivery | Vault, External Secrets Operator |
+| Config-Change Rollouts | Reloader |
 | Ingress Controller | Traefik |
 | Gateway API | Envoy Gateway, MetalLB |
 | Network Policy | Calico |
