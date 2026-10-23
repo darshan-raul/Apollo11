@@ -1,0 +1,7 @@
+frontend http=200 bundle=assets/index-CA_5_Ehp.js
+API URLs baked into the substage 2 bundle:
+http://booking.apollo.local
+http://flight.apollo.local
+http://identity.apollo.local
+http://search.apollo.local
+identity.apollo.local resolves on host: 172.18.0.50     frontend.apollo.local identity.apollo.local flight.apollo.local booking.apollo.local search.apollo.local traefik.apollo.local

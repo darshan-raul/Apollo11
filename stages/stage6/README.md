@@ -3,9 +3,13 @@ title: "Stage 6 — Mission Ops"
 description: "Instrument Apollo Airlines with Prometheus metrics, OpenTelemetry traces, Grafana dashboards, and Loki logs."
 ---
 
-> **Current verification status:** the context, TLS, and contract fixes in this
-> working tree require a fresh runtime lifecycle. Counts below record earlier
-> revisions; use the current verifier's summary rather than expecting those totals.
+> **Verification status:** Helm/dev **212/212** and Kustomize/dev **201/201** on
+> 2026-10-22, with trace and log correlation and the observability lab passing
+> (`verification-runs/fix-2026-10-22/`). Those runs predate the non-root image
+> change (tracker G17); a re-run is pending (G1f). Argo CD has not passed live
+> (G1d), and the ordered signal path has not been run live (G27).
+> Hosted CI has failed at its validation step on every run so far, so no image
+> has been published to GHCR yet (tracker G2a, G15).
 
 # Stage 6: Mission Ops
 
@@ -14,7 +18,7 @@ API. The five backend services expose real Prometheus metrics, propagate W3C
 trace context, and export traces through an OpenTelemetry Collector. Grafana
 brings Prometheus metrics, Tempo traces, and Loki logs together.
 
-**Status:** Complete and fresh-cluster verified on 2026-08-25.
+**Status:** Complete locally; see the verification status above.
 
 | Delivery path | Evidence |
 |---|---|
@@ -22,8 +26,8 @@ brings Prometheus metrics, Tempo traces, and Loki logs together.
 | Kustomize/dev | **201/201** checks passed, followed by a clean purge |
 | Argo CD | Four-Application layout statically validated: dev 58, staging 58, prod 60, shared observability 34 resources |
 
-The hosted CI run, image publication, and live Argo reconciliation remain
-external checks: they require a push or a Git revision containing this work.
+Hosted CI has not passed yet (tracker G2a, G15), so no images are published.
+Live Argo CD reconciliation has not passed (G1d).
 
 ## What changed from Stage 5
 
@@ -236,7 +240,8 @@ Images now use `ghcr.io/darshan-raul/apollo11/stageN/SERVICE:TAG`, where N match
 this stage. Production Helm values and Kustomize names follow that layout.
 Do not substitute a Stage 5 image for Stage 6 telemetry or Stage 7 caching.
 Run `bash test/ci.sh` from the repository root for local validation; install
-Python/PyYAML, Go, Helm, kubectl and shellcheck first. The hosted run and first
-publication require a separately authorized push and remain unverified locally.
+Python/PyYAML, Go, Helm, kubectl and shellcheck first. Hosted runs have failed
+at the validation step so far, so GHCR holds no Apollo11 images yet (tracker
+G2a, G15).
 
 Follow [alert delivery, edge probes and correlation](OBSERVABILITY.md) for the new observability exercises.

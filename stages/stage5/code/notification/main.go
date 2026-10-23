@@ -133,12 +133,17 @@ func main() {
 	})
 
 	r.GET("/metrics", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"service":                  "notification",
-			"http_requests_total":      0,
-			"http_request_duration_ms": 0,
-			"db_connections_active":    0,
-		})
+		metrics := `# HELP http_requests_total Total HTTP requests observed by the service.
+# TYPE http_requests_total counter
+http_requests_total{service="notification"} 0
+# HELP http_request_duration_ms Most recently observed request duration in milliseconds.
+# TYPE http_request_duration_ms gauge
+http_request_duration_ms{service="notification"} 0
+# HELP db_connections_active Active database connections owned by the service.
+# TYPE db_connections_active gauge
+db_connections_active{service="notification"} 0
+`
+		c.Data(http.StatusOK, "text/plain; version=0.0.4; charset=utf-8", []byte(metrics))
 	})
 
 	r.POST("/api/notify", func(c *gin.Context) {

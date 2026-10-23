@@ -3,19 +3,23 @@ title: "Stage 7: Orbital Maneuvering — HPA + VPA + Redis cache + practical sch
 description: "Add HPA, recommendation-only VPA, Redis cache-aside, PriorityClasses, and an observable taint, affinity, and topology-spread exercise."
 ---
 
-> **Current verification status:** the context, TLS, and contract fixes in this
-> working tree require a fresh runtime lifecycle. Counts below record earlier
-> revisions; use the current verifier's summary rather than expecting those totals.
+> **Verification status:** Helm/dev **227/227** and Kustomize/dev **216/216** on
+> 2026-10-22, plus the capacity profile scaling 1→2→3 (`verification-runs/fix-2026-10-22/`).
+> Those runs predate the non-root image change (tracker G17); a re-run is pending
+> (G1f). Argo CD has not passed live (G1d); Helm/staging with live VPA dates from
+> 2026-08-25 (G1e).
+> Hosted CI has failed at its validation step on every run so far, so no image
+> has been published to GHCR yet (tracker G2a, G15).
 
 # Stage 7: Orbital Maneuvering
 
-**Status:** Complete; practical scaling closure verified on 2026-08-26.
+**Status:** Complete locally; see the verification status above.
 
 | Delivery path | Result |
 |---|---|
 | Helm/dev | **227/227** checks + practical scaling lab, followed by a clean purge |
 | Kustomize/dev | **216/216** checks, followed by a clean purge |
-| Helm/staging | **211/211** checks with live VPA on 2026-08-25; current render validates statically |
+| Helm/staging | **211/211** checks with live VPA on 2026-08-25, before the 2026-10-22 image upgrade; current render validates statically |
 
 Both refreshed dev purges left zero Apollo namespaces, PVCs, Stage 7
 controllers, related CRDs, lab Deployments, worker labels, or taints. Production
@@ -464,8 +468,9 @@ Images now use `ghcr.io/darshan-raul/apollo11/stageN/SERVICE:TAG`, where N match
 this stage. Production Helm values and Kustomize names follow that layout.
 Do not substitute a Stage 5 image for Stage 6 telemetry or Stage 7 caching.
 Run `bash test/ci.sh` from the repository root for local validation; install
-Python/PyYAML, Go, Helm, kubectl and shellcheck first. The hosted run and first
-publication require a separately authorized push and remain unverified locally.
+Python/PyYAML, Go, Helm, kubectl and shellcheck first. Hosted runs have failed
+at the validation step so far, so GHCR holds no Apollo11 images yet (tracker
+G2a, G15).
 
 Follow [alert delivery, edge probes and correlation](OBSERVABILITY.md) for the new observability exercises.
 

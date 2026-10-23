@@ -1,0 +1,17 @@
+Ignition verification on context kind-apollo11
+PASS: manifest passes client-side validation
+PASS: cluster API is reachable
+PASS: all cluster nodes become Ready
+PASS: declarative Pod becomes Ready
+PASS: Pod carries the ignition stage label
+PASS: Pod uses restartPolicy Always
+PASS: healthy Pod serves the expected response
+PASS: kubelet restarts the crashed container
+PASS: container restart preserves the Pod UID
+PASS: restarted container recovers HTTP behavior
+PASS: deleted bare Pod stays absent without a controller
+PASS: reapplied Pod becomes Ready
+PASS: reapplied Pod receives a new UID
+PASS: reapplied Pod recovers HTTP behavior
+
+Ignition verification: 14 passed, 0 failed

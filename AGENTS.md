@@ -45,13 +45,13 @@ Open gaps and the multi-session plan to close them live in
 [`GAPS_TRACKER.md`](GAPS_TRACKER.md). Read it at the start of every session and
 update row status and evidence when work lands.
 
-## Verification status after the October gap fixes
+## Verification status
 
-The working tree changes context isolation, certificate ownership, frontend API
-URLs, token automount, booking SLO rules, and the cache benchmark. Earlier live
-pass counts below remain historical evidence only. These changes must pass a
-fresh apply → inspect → break → recover → teardown lifecycle before completion
-claims are updated. See `verification-runs/GAP_CLOSURE.md` for current evidence.
+The October fixes were verified live on 2026-10-19 and 2026-10-22, and
+Launchpad, Ignition and Stage 1 again on 2026-10-24. The latest evidence for
+each path, and what is still unproven (Argo CD for Stages 6–7, staging, hosted
+CI), is tracked per task in [`GAPS_TRACKER.md`](GAPS_TRACKER.md). Counts in
+this file are corrected under tracker G11.
 
 ## Current Implementation Map
 
@@ -639,7 +639,7 @@ drain needed.
 
 **Location:** `stages/stage5/`
 
-**Status:** ✅ Implementation complete and locally verified (2026-08-22). Helm/dev passed **174/174** and Kustomize/dev **163/163** (re-run 2026-10-19; earlier 153/142), and Argo CD passed **74/74** (re-run 2026-10-19) using a temporary local Git fixture. Every path completed a clean purge with zero namespace/PVC/related-CRD residue. The hosted GitHub Actions run and first GHCR release publication remain external checks triggered by the next push/tag.
+**Status:** ✅ Implementation complete and locally verified (2026-08-22). Helm/dev passed **174/174** and Kustomize/dev **163/163** (re-run 2026-10-19; earlier 153/142), and Argo CD passed **74/74** (re-run 2026-10-19) using a temporary local Git fixture. Every path completed a clean purge with zero namespace/PVC/related-CRD residue. Hosted GitHub Actions runs have failed at the validation step so far, so nothing is published to GHCR (tracker G2a, G15).
 
 **k8s manifest changes:** None at the workload level (Stage 5 is a packaging layer). The chart's `templates/` produce the same Deployments/StatefulSets/Services that Stage 4's `k8s/` tree contains.
 
@@ -676,7 +676,7 @@ drain needed.
 
 Dev and staging auto-converge on git push; prod is human-gated and pins the image to `v1.0.0`. Its source revision remains `main` until that release tag actually exists; pin `targetRevision` as part of the release transaction.
 
-**Code changes vs stage4:** None (snapshot of `stages/stage4/code/`).
+**Code changes vs stage4:** Same application behavior as Stage 4, on newer base images and dependencies (2026-10-22 upgrade). Stage 4's non-root users, `.dockerignore` files and Prometheus-text `/metrics` were restored on 2026-10-24 (tracker G17).
 
 ---
 
@@ -922,7 +922,7 @@ advertise an uninstalled tool as part of the current learner environment.
 | Stage 2 | ✅ Complete | 5-substage progressive access ladder: 01-internal-dns 46/46, 02-nodeport 48/48, 03-traefik-ingress-tls 49/49, 04-metallb 46/46, 05-envoy-gateway 61/61. Envoy Gateway v1.5.0 + MetalLB carries forward. |
 | Stage 3 | ✅ Complete | 4 StatefulSets + PVCs + entrypoint-hook schema + seed jobs, 69/69 verify (Envoy+MetalLB access stack persists for stages 4–11) |
 | Stage 4 | ✅ Complete | Probes (startup/live/ready) on 6 apps, Guaranteed QoS on all 10 pods, PDBs for booking + frontend, graceful SIGTERM on all backends, topology spread, PriorityClasses, Eviction API proof, 149/149 verify |
-| Stage 5 | ✅ Complete locally | Helm 174/174, Kustomize 163/163 (re-run 2026-10-22 on upgraded images), Argo CD 74/74 (re-run 2026-10-19); all clean lifecycle tests passed. Hosted Actions/GHCR publication awaits the next push/tag. |
+| Stage 5 | ✅ Complete locally | Helm 174/174, Kustomize 163/163 (re-run 2026-10-22 on upgraded images), Argo CD 74/74 (re-run 2026-10-19); all clean lifecycle tests passed. Hosted CI fails at validation; nothing published (G2a, G15). |
 | Stage 6 | ✅ Complete locally | Helm 212/212 and Kustomize dev 201/201 (re-run 2026-10-22 on upgraded images); full metrics/traces/logs behavior, Alertmanager delivery, Blackbox edge probe, trace↔log correlation and clean purges verified. Identity uses the `python` tier (200m/256Mi); 128Mi stalled it. Argo CD's 4-Application layout validates statically; live reconciliation awaits the next explicitly authorized Git revision. |
 | Stage 7 | ✅ Complete locally | Helm/dev 227/227 + practical scale 1→3→1 across 2 workers; Kustomize/dev 216/216 (re-run 2026-10-22); k6 capacity profile scaled Search 1→2→3 under normal HPA policy after the `nodeTaintsPolicy: Honor` fix; clean purges and zero lab residue. Earlier Helm/staging 211/211 proved live VPA; current renders validate statically. |
 | Stage 8 | ⚠️ Clean rebuild pending | Current worktree is not a trusted input; replacement starts from verified Stage 7 Helm. |

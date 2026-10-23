@@ -3,9 +3,9 @@ title: "Stage 3: Mission Data — Persistent Storage, StatefulSets"
 description: "Replace emptyDir with PVCs, convert all 4 stateful workloads (3 PG + redis) to StatefulSets, move DB schema to the Postgres entrypoint hook (/docker-entrypoint-initdb.d/), and keep data seeding as one-shot jobs. The Envoy Gateway + MetalLB access stack from Stage 2 carries over unchanged."
 ---
 
-> **Current verification status:** the context, TLS, and contract fixes in this
-> working tree require a fresh runtime lifecycle. Counts below record earlier
-> revisions; use the current verifier's summary rather than expecting those totals.
+> **Verification status:** a fresh lifecycle passed **69/69** on 2026-10-19,
+> including PVC data survival and the HTTPS certificate break and recovery
+> (`verification-runs/s1-2026-10-19/`). Gaps: tracker G19.
 
 # Stage 3: Mission Data
 

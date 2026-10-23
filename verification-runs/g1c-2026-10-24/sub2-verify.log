@@ -1,0 +1,72 @@
+
+[0;36m=== 1. Core Namespaces ===[0m
+  [0;32m[PASS][0m Namespace apollo-airlines-apps exists
+  [0;32m[PASS][0m Namespace apollo-airlines-ui exists
+
+[0;36m=== 2. Configuration & Secrets ===[0m
+  [0;32m[PASS][0m ConfigMap apollo-airlines-config exists in apollo-airlines-apps
+  [0;32m[PASS][0m ConfigMap apollo-airlines-config exists in apollo-airlines-ui
+  [0;32m[PASS][0m Secret apollo-airlines-secrets exists in apollo-airlines-apps
+
+[0;36m=== 3. ServiceAccounts (Strict Token Automount Security) ===[0m
+  [0;32m[PASS][0m SA apollo-airlines-apps/identity-db exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/flight-db exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/booking-db exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/redis exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/identity exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/flight exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/booking exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/search exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/notification exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/init-identity-db exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/init-flight-db exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/init-booking-db exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-ui/frontend exists (automount=false)
+
+[0;36m=== 4. Infrastructure Workloads & Seed Jobs ===[0m
+  [0;32m[PASS][0m Infra deployment apollo-airlines-apps/identity-db ready
+  [0;32m[PASS][0m Infra deployment apollo-airlines-apps/flight-db ready
+  [0;32m[PASS][0m Infra deployment apollo-airlines-apps/booking-db ready
+  [0;32m[PASS][0m Infra deployment apollo-airlines-apps/redis ready
+  [0;32m[PASS][0m Database init job apollo-airlines-apps/init-identity-db completed
+  [0;32m[PASS][0m Database init job apollo-airlines-apps/init-flight-db completed
+  [0;32m[PASS][0m Database init job apollo-airlines-apps/init-booking-db completed
+
+[0;36m=== 5. Application Workloads & Services ===[0m
+  [0;32m[PASS][0m App deployment apollo-airlines-apps/identity ready
+  [0;32m[PASS][0m App deployment apollo-airlines-apps/flight ready
+  [0;32m[PASS][0m App deployment apollo-airlines-apps/booking ready
+  [0;32m[PASS][0m App deployment apollo-airlines-apps/search ready
+  [0;32m[PASS][0m App deployment apollo-airlines-apps/notification ready
+  [0;32m[PASS][0m UI deployment apollo-airlines-ui/frontend ready
+
+[0;36m=== 6. Endpoints & EndpointSlice Discovery ===[0m
+  [0;32m[PASS][0m Service identity has ready endpoints (10.244.1.16 10.244.2.22)
+  [0;32m[PASS][0m Service flight has ready endpoints (10.244.1.17 10.244.2.23)
+  [0;32m[PASS][0m Service booking has ready endpoints (10.244.1.18 10.244.2.24)
+  [0;32m[PASS][0m Service search has ready endpoints (10.244.1.19 10.244.2.25)
+  [0;32m[PASS][0m Service notification has ready endpoints (10.244.1.20 10.244.2.26)
+  [0;32m[PASS][0m Service identity-db has ready endpoints (10.244.2.18)
+  [0;32m[PASS][0m Service flight-db has ready endpoints (10.244.1.13)
+  [0;32m[PASS][0m Service booking-db has ready endpoints (10.244.2.19)
+  [0;32m[PASS][0m Service redis has ready endpoints (10.244.1.14)
+  [0;32m[PASS][0m Service frontend has ready endpoints (10.244.1.21 10.244.2.27)
+
+[0;36m=== 7. Networking Edge Access & Route Verification ===[0m
+  [1;33m[INFO][0m Detected networking architecture: nodeport
+  [0;32m[PASS][0m NodePort 30080 (frontend) accessible from host (HTTP 200)
+  [0;32m[PASS][0m NodePort 30081 (flight) accessible from host (HTTP 200)
+  [0;32m[PASS][0m NodePort 30082 (booking) accessible from host (HTTP 200)
+  [0;32m[PASS][0m NodePort 30083 (identity) accessible from host (HTTP 200)
+  [0;32m[PASS][0m NodePort 30084 (search) accessible from host (HTTP 200)
+
+[0;36m=== 8. End-to-End Application & Auth Verification ===[0m
+  [0;32m[PASS][0m Passenger authentication succeeded and returned JWT
+  [0;32m[PASS][0m Flight inventory query returned flights from flight-db
+
+[0;36m=== Verification Summary ===[0m
+  Total Passed: [0;32m48[0m
+  Total Failed: [0;31m0[0m
+
+[0;32mStage 2 verification succeeded with 0 failures.[0m
+

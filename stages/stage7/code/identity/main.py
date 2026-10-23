@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from typing import Optional
 
+import bcrypt
 import psycopg2
 import psycopg2.errors
 from psycopg2.extras import RealDictCursor
@@ -16,7 +17,6 @@ from fastapi import FastAPI, HTTPException, Header, Depends, Request
 from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from passlib.context import CryptContext
 from jose import jwt, JWTError
 
 # OpenTelemetry SDK + instrumentations
@@ -34,7 +34,6 @@ JWT_SECRET = os.getenv("JWT_SECRET", "apollo-airlines-dev-secret")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@identity-db:5432/identity")
 OTEL_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "otel-collector:4317")
@@ -251,7 +250,7 @@ async def register(body: RegisterRequest, request: Request):
             cur.close()
             conn.close()
             raise HTTPException(status_code=409, detail="Email already registered")
-        password_hash = pwd_context.hash(body.password)
+        password_hash = bcrypt.hashpw(body.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
         cur.execute(
             """INSERT INTO users (email, password_hash)
                VALUES (%s, %s)
@@ -290,7 +289,7 @@ async def login(body: LoginRequest, request: Request):
     conn.close()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    if not pwd_context.verify(body.password, user["password_hash"]):
+    if not bcrypt.checkpw(body.password.encode("utf-8"), user["password_hash"].encode("utf-8")):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not user["is_active"]:
         raise HTTPException(status_code=403, detail="Account is inactive")

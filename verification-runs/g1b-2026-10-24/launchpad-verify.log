@@ -1,0 +1,76 @@
+PASS: default profile has ten workloads
+PASS: Dozzle is excluded from the default profile
+PASS: tools profile contains Dozzle
+PASS: identity is healthy
+PASS: identity runs as non-root
+PASS: identity root filesystem is read-only
+PASS: identity blocks privilege escalation
+PASS: identity drops Linux capabilities
+PASS: identity has a writable /tmp tmpfs
+PASS: identity /healthz returns 200
+PASS: identity /readyz returns 200
+PASS: identity exposes Prometheus request metrics
+PASS: identity exposes Prometheus duration metrics
+PASS: identity exposes Prometheus DB metrics
+PASS: flight is healthy
+PASS: flight runs as non-root
+PASS: flight root filesystem is read-only
+PASS: flight blocks privilege escalation
+PASS: flight drops Linux capabilities
+PASS: flight has a writable /tmp tmpfs
+PASS: flight /healthz returns 200
+PASS: flight /readyz returns 200
+PASS: flight exposes Prometheus request metrics
+PASS: flight exposes Prometheus duration metrics
+PASS: flight exposes Prometheus DB metrics
+PASS: booking is healthy
+PASS: booking runs as non-root
+PASS: booking root filesystem is read-only
+PASS: booking blocks privilege escalation
+PASS: booking drops Linux capabilities
+PASS: booking has a writable /tmp tmpfs
+PASS: booking /healthz returns 200
+PASS: booking /readyz returns 200
+PASS: booking exposes Prometheus request metrics
+PASS: booking exposes Prometheus duration metrics
+PASS: booking exposes Prometheus DB metrics
+PASS: search is healthy
+PASS: search runs as non-root
+PASS: search root filesystem is read-only
+PASS: search blocks privilege escalation
+PASS: search drops Linux capabilities
+PASS: search has a writable /tmp tmpfs
+PASS: search /healthz returns 200
+PASS: search /readyz returns 200
+PASS: search exposes Prometheus request metrics
+PASS: search exposes Prometheus duration metrics
+PASS: search exposes Prometheus DB metrics
+PASS: notification is healthy
+PASS: notification runs as non-root
+PASS: notification root filesystem is read-only
+PASS: notification blocks privilege escalation
+PASS: notification drops Linux capabilities
+PASS: notification has a writable /tmp tmpfs
+PASS: notification /healthz returns 200
+PASS: notification /readyz returns 200
+PASS: notification exposes Prometheus request metrics
+PASS: notification exposes Prometheus duration metrics
+PASS: notification exposes Prometheus DB metrics
+PASS: frontend is healthy
+PASS: frontend runs as non-root
+PASS: frontend root filesystem is read-only
+PASS: frontend blocks privilege escalation
+PASS: frontend drops Linux capabilities
+PASS: frontend has a writable /tmp tmpfs
+PASS: frontend /healthz returns 200
+PASS: frontend /readyz returns 200
+PASS: frontend exposes Prometheus request metrics
+PASS: frontend exposes Prometheus duration metrics
+PASS: frontend exposes Prometheus DB metrics
+PASS: seeded passenger can log in
+PASS: flight table contains full 30-day schedule (186 rows >= 186)
+PASS: flagship workflow creates a confirmed booking
+PASS: verification booking is cancelled
+PASS: flagship request ID appears in service logs
+
+Launchpad verification: 74 passed, 0 failed

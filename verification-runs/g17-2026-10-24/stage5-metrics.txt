@@ -1,0 +1,7 @@
+stage5 search uid=10001
+# HELP http_requests_total Total HTTP requests observed by the service.
+# TYPE http_requests_total counter
+http_requests_total{service="search"} 0
+# HELP http_request_duration_ms Most recently observed request duration in milliseconds.
+admin True
+passenger True

@@ -1,0 +1,11 @@
+## Break 1: kill httpd
+uid=d03023e2-ae28-4e82-bd2c-1eb993349119 restarts=0
+uid=d03023e2-ae28-4e82-bd2c-1eb993349119 restarts=1
+http: Apollo11 Ignition ready
+## Break 2: delete bare Pod
+Error from server (NotFound): pods "apollo-shell" not found
+## Recover: reapply
+uid=f25e857d-0507-4e16-819b-c4776f506b50 restarts=0
+http: Apollo11 Ignition ready
+## Cleanup workload (cluster kept for Stage 1)
+pod "apollo-shell" deleted from default namespace

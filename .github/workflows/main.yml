@@ -29,15 +29,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pin the same Helm and kubectl versions the local lifecycle runs used.
+      # The committed generated.yaml files are Helm 4 renders; Helm 3 emits
+      # different whitespace, so test/generated.py --check fails under Helm 3.
       - name: Set up Helm
         uses: azure/setup-helm@v4
         with:
-          version: v3.16.2
+          version: v4.3.1
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
         with:
-          version: v1.30.0
+          version: v1.37.1
 
       - uses: actions/setup-go@v5
         with:
@@ -108,7 +111,8 @@ jobs:
         # code in March 2026, so a tag alone is not a trustworthy reference.
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          version: 'v0.70.0'
+          # Same Trivy release used for the local image-gate evidence.
+          version: 'v0.75.0'
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/stage${{ matrix.stage }}/${{ matrix.service }}:sha-${{ github.sha }}
           format: 'table'
           exit-code: '1'

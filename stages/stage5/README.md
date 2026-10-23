@@ -3,9 +3,12 @@ title: "Stage 5: Payload Integration — Helm + Kustomize + GitHub Actions"
 description: "Package the Stage 4 (probes + QoS + graceful SIGTERM) workloads as a versioned Helm chart for the local learning environment with Kustomize overlays for dev/staging/prod and a CI workflow that builds + pushes images to GHCR."
 ---
 
-> **Current verification status:** the context, TLS, and contract fixes in this
-> working tree require a fresh runtime lifecycle. Counts below record earlier
-> revisions; use the current verifier's summary rather than expecting those totals.
+> **Verification status:** Helm/dev **174/174** and Kustomize/dev **163/163** on
+> 2026-10-22 with clean purges (`verification-runs/fix-2026-10-22/`); Argo CD
+> **74/74** on 2026-10-19. Those runs predate the non-root image change
+> (tracker G17); a re-run is pending (G1f).
+> Hosted CI has failed at its validation step on every run so far, so no image
+> has been published to GHCR yet (tracker G2a, G15).
 
 # Stage 5: Payload Integration
 
@@ -20,14 +23,14 @@ images to GHCR on every change to `main`.
 | **New concept** | Helm chart structure, values templating, Kustomize base + overlays, GitHub Actions matrix builds, GHCR image registry, GitOps-ready packaging |
 | **Workloads changed** | None at the workload level — Stage 5 is a packaging layer. All 10 workloads are unchanged from Stage 4. |
 | **Workloads unchanged** | Probes, Guaranteed QoS, graceful SIGTERM, PDBs, 13 SAs, 3 PG + 1 Redis StatefulSets, seed jobs |
-| **Code changes** | None (snapshot of `stages/stage4/code/`) |
-| **Verify target** | **153 Helm checks / 142 Kustomize checks / 74 Argo CD checks** |
+| **Code changes** | Same application behavior as Stage 4, on newer pinned base images and dependencies; images run as non-root UID 10001 (frontend: NGINX UID 101) |
+| **Verify target** | **174 Helm checks / 163 Kustomize checks / 74 Argo CD checks** |
 
-**Verified 2026-08-22 on a fresh three-node kind v1.35.0 cluster:** Helm/dev
-174/174, Kustomize/dev 163/163, and Argo CD v3.5.1 74/74 (including real
-self-heal). Each path completed a full purge with no namespace, PVC, or related
-CRD residue. The active root GitHub Actions workflow is statically validated;
-its hosted run and first GHCR release publish occur on the next push/tag.
+First verified 2026-08-22 on kind v1.35.0; latest runs are listed in the
+verification status above. Each path completed a full purge with no namespace,
+PVC, or related CRD residue. The root GitHub Actions workflow passes locally
+(`bash test/ci.sh`), but every hosted run so far has failed at its validation
+step, so no image or release tag has been published (tracker G2a, G15).
 
 ---
 
@@ -192,7 +195,7 @@ bash scripts/apply.sh
 # Use the env-specific values file
 bash scripts/apply.sh --env dev       # values-dev.yaml — 1 replica, :latest tag
 bash scripts/apply.sh --env staging   # values-staging.yaml — 2 replicas, :latest
-bash scripts/apply.sh --env prod      # values-prod.yaml — 3 replicas, :v1.0.0, GHCR
+bash scripts/apply.sh --env prod      # values-prod.yaml — 3 replicas, :v1.0.0, GHCR (not published yet; see tracker G15)
 
 # Override the tag the env file pins
 bash scripts/apply.sh --env prod --tag v1.2.3
@@ -384,5 +387,9 @@ Images now use `ghcr.io/darshan-raul/apollo11/stageN/SERVICE:TAG`, where N match
 this stage. Production Helm values and Kustomize names follow that layout.
 Do not substitute a Stage 5 image for Stage 6 telemetry or Stage 7 caching.
 Run `bash test/ci.sh` from the repository root for local validation; install
-Python/PyYAML, Go, Helm, kubectl and shellcheck first. The hosted run and first
-publication require a separately authorized push and remain unverified locally.
+Python/PyYAML, Go, Helm 4, kubectl and shellcheck first. CI pins Helm v4.3.1,
+kubectl v1.37.1 and Trivy v0.75.0 to match the local verification runs; the
+script prints the versions it used and refuses Helm 3, whose rendering
+whitespace differs from the committed `generated.yaml` files. Hosted runs have failed
+at the validation step so far, so GHCR holds no Apollo11 images yet, and the
+`v1.0.0` tag that `values-prod.yaml` pins does not exist (tracker G2a, G15).

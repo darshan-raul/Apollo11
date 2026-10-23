@@ -1,0 +1,10 @@
+## Break: stop flight-db
+ Container launchpad-flight-db-1 Stopped 
+flight /healthz=200 flight /readyz=503 search /readyz=503 booking /readyz=503
+## Recover: start flight-db
+ Container launchpad-flight-db-1 Started 
+flight /readyz after recovery=200
+search /readyz=200 booking /readyz=200
+## Persistence
+users before=2
+users after container replacement=2

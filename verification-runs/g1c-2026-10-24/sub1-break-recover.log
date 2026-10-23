@@ -1,0 +1,6 @@
+before: endpoints=[10.244.2.22 10.244.1.16 ] fqdn http=200
+service/identity patched
+command terminated with exit code 7
+broken selector: endpoints=[] fqdn http=000
+service/identity patched
+restored: endpoints=[10.244.2.22 10.244.1.16 ] fqdn http=200

@@ -1,0 +1,7 @@
+Refusing context --context; Stage 2 only owns kind-apollo11 or kind-apollo11-dev.
+=== Tearing down Stage 2 resources ===
+Deleting namespace apollo-airlines-apps...
+namespace "apollo-airlines-apps" deleted
+Deleting namespace apollo-airlines-ui...
+namespace "apollo-airlines-ui" deleted
+Stage 2 teardown complete; cluster apollo11 was retained.

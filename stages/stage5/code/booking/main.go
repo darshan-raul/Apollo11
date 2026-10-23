@@ -206,12 +206,17 @@ func main() {
 	r.GET("/metrics", func(c *gin.Context) {
 		var activeConns int
 		db.QueryRow("SELECT count(*) FROM pg_stat_activity WHERE datname = 'booking'").Scan(&activeConns)
-		c.JSON(http.StatusOK, gin.H{
-			"service":                  "booking",
-			"http_requests_total":      0,
-			"http_request_duration_ms": 0,
-			"db_connections_active":    activeConns,
-		})
+		metrics := fmt.Sprintf(`# HELP http_requests_total Total HTTP requests observed by the service.
+# TYPE http_requests_total counter
+http_requests_total{service="booking"} 0
+# HELP http_request_duration_ms Most recently observed request duration in milliseconds.
+# TYPE http_request_duration_ms gauge
+http_request_duration_ms{service="booking"} 0
+# HELP db_connections_active Active database connections owned by the service.
+# TYPE db_connections_active gauge
+db_connections_active{service="booking"} %d
+`, activeConns)
+		c.Data(http.StatusOK, "text/plain; version=0.0.4; charset=utf-8", []byte(metrics))
 	})
 
 	r.POST("/api/bookings", authRequired(), func(c *gin.Context) {

@@ -12,12 +12,17 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /search-service
 FROM alpine:3.24.2
 
 # Pick up Alpine security fixes published after this image was built.
-RUN apk upgrade --no-cache && apk --no-cache add ca-certificates
+RUN apk upgrade --no-cache && apk --no-cache add ca-certificates \
+    && addgroup -S -g 10001 apollo \
+    && adduser -S -D -H -u 10001 -G apollo apollo
 
 WORKDIR /app
 
-COPY --from=builder /search-service /app/search-service
+COPY --from=builder --chown=10001:10001 /search-service /app/search-service
 
 EXPOSE 8083
+
+# Numeric UID so Kubernetes runAsNonRoot can verify it (Stage 8).
+USER 10001:10001
 
 CMD ["/app/search-service"]

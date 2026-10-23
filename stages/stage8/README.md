@@ -9,7 +9,7 @@ description: "Status and learner-first implementation boundary for the future cl
 
 The approved target and migration boundary are defined in [`ROADMAP.md`](../../ROADMAP.md) and [`AGENTS.md`](../../AGENTS.md).
 
-Stage 8 starts from the trusted **Stage 7 baseline** (the hardened 10-component Apollo Airlines stack with Envoy Gateway, StatefulSets, monitoring, and scaling). It receives no trust inheritance from legacy security manifests and will be authored cleanly under the learner-first contract (**Build → Inspect → Break → Recover → Explain**).
+Stage 8 starts from the trusted **Stage 7 baseline** (the 10-component Apollo Airlines stack with Envoy Gateway, StatefulSets, monitoring, and scaling). That baseline's images run as numeric non-root users only from tracker G17 on, and it must pass a fresh lifecycle on those images (G1f) before Stage 8 work starts. It receives no trust inheritance from legacy security manifests and will be authored cleanly under the learner-first contract (**Build → Inspect → Break → Recover → Explain**).
 
 ## Planned curriculum & sequence
 

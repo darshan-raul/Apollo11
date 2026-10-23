@@ -1,0 +1,8 @@
+owned volumes: identity-db-data flight-db-data booking-db-data 
+remaining launchpad_ volumes:
+launchpad_auth-postgres-data
+launchpad_catalog-postgres-data
+launchpad_circulation-postgres-data
+launchpad_fines-data
+remaining containers:
+0

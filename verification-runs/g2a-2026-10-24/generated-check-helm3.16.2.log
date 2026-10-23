@@ -1,0 +1,2 @@
+stages/stage6/overlays/base/generated.yaml is stale; run python3 test/generated.py
+PATH=$H:$PATH python3 test/generated.py --check  0.61s user 0.06s system 81% cpu 0.821 total

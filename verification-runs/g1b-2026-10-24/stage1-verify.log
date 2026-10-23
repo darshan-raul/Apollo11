@@ -1,0 +1,169 @@
+PASS: kubectl is installed
+PASS: curl is installed
+PASS: jq is installed
+PASS: cluster API is reachable
+PASS: apollo-airlines namespace exists
+PASS: application ConfigMap exists
+PASS: application Secret exists
+PASS: ServiceAccount identity-db exists
+PASS: ServiceAccount identity-db disables token automount
+PASS: ServiceAccount identity-db cannot read Pods
+PASS: ServiceAccount flight-db exists
+PASS: ServiceAccount flight-db disables token automount
+PASS: ServiceAccount flight-db cannot read Pods
+PASS: ServiceAccount booking-db exists
+PASS: ServiceAccount booking-db disables token automount
+PASS: ServiceAccount booking-db cannot read Pods
+PASS: ServiceAccount redis exists
+PASS: ServiceAccount redis disables token automount
+PASS: ServiceAccount redis cannot read Pods
+PASS: ServiceAccount identity exists
+PASS: ServiceAccount identity disables token automount
+PASS: ServiceAccount identity cannot read Pods
+PASS: ServiceAccount flight exists
+PASS: ServiceAccount flight disables token automount
+PASS: ServiceAccount flight cannot read Pods
+PASS: ServiceAccount booking exists
+PASS: ServiceAccount booking disables token automount
+PASS: ServiceAccount booking cannot read Pods
+PASS: ServiceAccount search exists
+PASS: ServiceAccount search disables token automount
+PASS: ServiceAccount search cannot read Pods
+PASS: ServiceAccount notification exists
+PASS: ServiceAccount notification disables token automount
+PASS: ServiceAccount notification cannot read Pods
+PASS: ServiceAccount frontend exists
+PASS: ServiceAccount frontend disables token automount
+PASS: ServiceAccount frontend cannot read Pods
+PASS: ServiceAccount init-identity-db exists
+PASS: ServiceAccount init-identity-db disables token automount
+PASS: ServiceAccount init-identity-db cannot read Pods
+PASS: ServiceAccount init-flight-db exists
+PASS: ServiceAccount init-flight-db disables token automount
+PASS: ServiceAccount init-flight-db cannot read Pods
+PASS: ServiceAccount init-booking-db exists
+PASS: ServiceAccount init-booking-db disables token automount
+PASS: ServiceAccount init-booking-db cannot read Pods
+PASS: Deployment identity-db exists
+PASS: Deployment identity-db desired replicas
+PASS: Deployment identity-db available replicas
+PASS: Deployment identity-db uses its own identity
+PASS: Pod identity-db-5fdbbcb947-4jf7h has no API token file
+PASS: Deployment flight-db exists
+PASS: Deployment flight-db desired replicas
+PASS: Deployment flight-db available replicas
+PASS: Deployment flight-db uses its own identity
+PASS: Pod flight-db-687d49f59f-njgq6 has no API token file
+PASS: Deployment booking-db exists
+PASS: Deployment booking-db desired replicas
+PASS: Deployment booking-db available replicas
+PASS: Deployment booking-db uses its own identity
+PASS: Pod booking-db-75f656446c-c66r4 has no API token file
+PASS: Deployment redis exists
+PASS: Deployment redis desired replicas
+PASS: Deployment redis available replicas
+PASS: Deployment redis uses its own identity
+PASS: Pod redis-7699cc8b9d-kttt6 has no API token file
+PASS: Deployment identity exists
+PASS: Deployment identity desired replicas
+PASS: Deployment identity available replicas
+PASS: Deployment identity uses its own identity
+PASS: Pod identity-7b8c6d56b5-6pkgw has no API token file
+PASS: Deployment flight exists
+PASS: Deployment flight desired replicas
+PASS: Deployment flight available replicas
+PASS: Deployment flight uses its own identity
+PASS: Pod flight-7785d9f494-9gbqd has no API token file
+PASS: Deployment booking exists
+PASS: Deployment booking desired replicas
+PASS: Deployment booking available replicas
+PASS: Deployment booking uses its own identity
+PASS: Pod booking-794f5f87f4-85gjr has no API token file
+PASS: Deployment search exists
+PASS: Deployment search desired replicas
+PASS: Deployment search available replicas
+PASS: Deployment search uses its own identity
+PASS: Pod search-657bc5cd7b-gtl7c has no API token file
+PASS: Deployment notification exists
+PASS: Deployment notification desired replicas
+PASS: Deployment notification available replicas
+PASS: Deployment notification uses its own identity
+PASS: Pod notification-659c7d887c-6gfc4 has no API token file
+PASS: Deployment frontend exists
+PASS: Deployment frontend desired replicas
+PASS: Deployment frontend available replicas
+PASS: Deployment frontend uses its own identity
+PASS: Pod frontend-5f585f6f6f-8qbrz has no API token file
+PASS: Service identity-db exposes port 5432
+PASS: Service identity-db selects app=identity-db
+PASS: Service identity-db has a ready endpoint
+PASS: Service flight-db exposes port 5432
+PASS: Service flight-db selects app=flight-db
+PASS: Service flight-db has a ready endpoint
+PASS: Service booking-db exposes port 5432
+PASS: Service booking-db selects app=booking-db
+PASS: Service booking-db has a ready endpoint
+PASS: Service redis exposes port 6379
+PASS: Service redis selects app=redis
+PASS: Service redis has a ready endpoint
+PASS: Service identity exposes port 8080
+PASS: Service identity selects app=identity
+PASS: Service identity has a ready endpoint
+PASS: Service flight exposes port 8081
+PASS: Service flight selects app=flight
+PASS: Service flight has a ready endpoint
+PASS: Service booking exposes port 8082
+PASS: Service booking selects app=booking
+PASS: Service booking has a ready endpoint
+PASS: Service search exposes port 8083
+PASS: Service search selects app=search
+PASS: Service search has a ready endpoint
+PASS: Service notification exposes port 8084
+PASS: Service notification selects app=notification
+PASS: Service notification has a ready endpoint
+PASS: Service frontend exposes port 3000
+PASS: Service frontend selects app=frontend
+PASS: Service frontend has a ready endpoint
+PASS: Job init-identity-db completed
+PASS: Job init-identity-db uses its own identity
+PASS: Job init-flight-db completed
+PASS: Job init-flight-db uses its own identity
+PASS: Job init-booking-db completed
+PASS: Job init-booking-db uses its own identity
+PASS: identity Job seeds two users
+PASS: flight Job seeds six routes across 31 days
+PASS: booking Job creates the bookings table
+PASS: identity health endpoint returns 200
+PASS: identity readiness endpoint returns 200
+PASS: identity exposes Prometheus metrics
+PASS: flight health endpoint returns 200
+PASS: flight readiness endpoint returns 200
+PASS: flight exposes Prometheus metrics
+PASS: booking health endpoint returns 200
+PASS: booking readiness endpoint returns 200
+PASS: booking exposes Prometheus metrics
+PASS: search health endpoint returns 200
+PASS: search readiness endpoint returns 200
+PASS: search exposes Prometheus metrics
+PASS: frontend health endpoint returns 200
+PASS: frontend readiness endpoint returns 200
+PASS: frontend exposes Prometheus metrics
+PASS: seeded passenger can log in
+PASS: seeded flight inventory is queryable
+PASS: flagship workflow creates a confirmed booking
+PASS: verification booking is cancelled
+PASS: booking logs carry the flagship request ID
+PASS: flight logs carry the flagship request ID
+PASS: notification logs carry the flagship request ID
+PASS: booking Deployment returns to two available replicas
+PASS: ReplicaSet replaces the deleted booking Pod
+PASS: booking stays behaviorally ready after Pod replacement
+PASS: successful search rollout completes
+PASS: successful rollout creates ReplicaSet history
+PASS: bad image produces an observable pull failure
+PASS: rolling update keeps an old search replica available
+PASS: rollback completes
+PASS: rollback restores the working image
+PASS: search recovers behavior after rollback
+
+Stage 1 verification: 167 passed, 0 failed

@@ -1,0 +1,4 @@
+frontend uid: 101
+/healthz/live -> 200
+/healthz/ready -> 200
+/ -> 200

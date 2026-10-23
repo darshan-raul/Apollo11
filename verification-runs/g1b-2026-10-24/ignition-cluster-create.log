@@ -1,0 +1,30 @@
+Deleting cluster "apollo11" ...
+Deleted nodes: ["apollo11-worker2" "apollo11-control-plane" "apollo11-worker"]
+Creating cluster "apollo11" ...
+ • Ensuring node image (kindest/node:v1.37.0) 🖼️  ...
+ ✓ Ensuring node image (kindest/node:v1.37.0) 🖼️
+ • Preparing nodes 📦 📦 📦   ...
+ ✓ Preparing nodes 📦 📦 📦 
+ • Writing configuration 📜  ...
+ ✓ Writing configuration 📜
+ • Starting control-plane 🕹️  ...
+ ✓ Starting control-plane 🕹️
+ • Installing CNI 🔌  ...
+ ✓ Installing CNI 🔌
+ • Installing StorageClass 💾  ...
+ ✓ Installing StorageClass 💾
+ • Joining worker nodes 🚜  ...
+ ✓ Joining worker nodes 🚜
+Set kubectl context to "kind-apollo11"
+You can now use your cluster with:
+
+kubectl cluster-info --context kind-apollo11
+
+Thanks for using kind! 😊
+NAME                     STATUS     ROLES           AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE                       KERNEL-VERSION              CONTAINER-RUNTIME
+apollo11-control-plane   NotReady   control-plane   11s   v1.37.0   172.18.0.3    <none>        Debian GNU/Linux 13 (trixie)   6.18.44-1-MANJARO (amd64)   containerd://2.3.4
+apollo11-worker          NotReady   <none>          1s    v1.37.0   172.18.0.2    <none>        Debian GNU/Linux 13 (trixie)   6.18.44-1-MANJARO (amd64)   containerd://2.3.4
+apollo11-worker2         NotReady   <none>          1s    v1.37.0   172.18.0.4    <none>        Debian GNU/Linux 13 (trixie)   6.18.44-1-MANJARO (amd64)   containerd://2.3.4
+node/apollo11-control-plane condition met
+node/apollo11-worker condition met
+node/apollo11-worker2 condition met

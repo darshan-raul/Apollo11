@@ -1,0 +1,517 @@
+=== Building Apollo Airlines service images (Stage 2) ===
+Building identity...
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 430B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/python:3.12-slim
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 118B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 transferring context: 14.08kB done
+#4 DONE 0.0s
+
+#5 [1/6] FROM docker.io/library/python:3.12-slim@sha256:090ba77e2958f6af52a5341f788b50b032dd4ca28377d2893dcf1ecbdfdfe203
+#5 resolve docker.io/library/python:3.12-slim@sha256:090ba77e2958f6af52a5341f788b50b032dd4ca28377d2893dcf1ecbdfdfe203 0.0s done
+#5 DONE 0.1s
+
+#6 [2/6] WORKDIR /app
+#6 CACHED
+
+#7 [4/6] RUN pip install --no-cache-dir -r requirements.txt
+#7 CACHED
+
+#8 [3/6] COPY requirements.txt .
+#8 CACHED
+
+#9 [5/6] RUN addgroup --system apollo     && adduser --system --ingroup apollo --no-create-home apollo
+#9 CACHED
+
+#10 [6/6] COPY --chown=apollo:apollo . .
+#10 CACHED
+
+#11 exporting to image
+#11 exporting layers done
+#11 exporting manifest sha256:cd2f80f1a70b221bdae6577822166bc996ca31a02c492cae30909f61e921c883 done
+#11 exporting config sha256:f80f1a5231591553ac76e6699d53eeb1e4d19dc63c9afcee6534130cfe8cb32a done
+#11 exporting attestation manifest sha256:1aaa2c61c2b2cc85616a5e35c4ef16790917f2a586649347e986f1700183391e
+#11 exporting attestation manifest sha256:1aaa2c61c2b2cc85616a5e35c4ef16790917f2a586649347e986f1700183391e 0.0s done
+#11 exporting manifest list sha256:e77c074b85c5aa49e248ba7b328d6ad76e9d95bcfb23de51449a9275f0c94c9c 0.0s done
+#11 naming to docker.io/apollo11/identity:latest done
+#11 unpacking to docker.io/apollo11/identity:latest 0.0s done
+#11 DONE 0.2s
+Building flight...
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 DONE 0.0s
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 541B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/golang:1.22-alpine
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/alpine:3.19
+#3 DONE 0.1s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 88B done
+#4 DONE 0.0s
+
+#5 [builder 1/6] FROM docker.io/library/golang:1.22-alpine@sha256:1699c10032ca2582ec89a24a1312d986a3f094aed3d5c1147b19880afe40e052
+#5 resolve docker.io/library/golang:1.22-alpine@sha256:1699c10032ca2582ec89a24a1312d986a3f094aed3d5c1147b19880afe40e052 0.0s done
+#5 DONE 0.1s
+
+#6 [stage-1 1/4] FROM docker.io/library/alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a3145eb11ca1
+#6 resolve docker.io/library/alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a3145eb11ca1 0.0s done
+#6 DONE 0.1s
+
+#7 [internal] load build context
+#7 transferring context: 30.74kB done
+#7 DONE 0.0s
+
+#8 [builder 5/6] COPY . .
+#8 CACHED
+
+#9 [stage-1 2/4] RUN apk --no-cache add ca-certificates     && addgroup -S apollo     && adduser -S -G apollo apollo
+#9 CACHED
+
+#10 [builder 3/6] COPY go.mod go.sum ./
+#10 CACHED
+
+#11 [builder 4/6] RUN go mod download
+#11 CACHED
+
+#12 [builder 6/6] RUN CGO_ENABLED=0 GOOS=linux go build -o /flight-service
+#12 CACHED
+
+#13 [stage-1 3/4] WORKDIR /app
+#13 CACHED
+
+#14 [builder 2/6] WORKDIR /app
+#14 CACHED
+
+#15 [stage-1 4/4] COPY --from=builder --chown=apollo:apollo /flight-service /app/flight-service
+#15 CACHED
+
+#16 exporting to image
+#16 exporting layers done
+#16 exporting manifest sha256:bd57aad815ce8e464690981a06c52153ec64286227eee7447dd76b5ba826473d done
+#16 exporting config sha256:32ebc41bda15cfb014ada2f7df6e7d5057a44c58ef31e46d7c4cf132c3a03bd1 done
+#16 exporting attestation manifest sha256:10563a5b64e577bc11cef4999a283ee88086aa32a31ea23c4f815588c3aceecb 0.0s done
+#16 exporting manifest list sha256:55e055f12c40a561a969d06eed8cc2fe659013c16a436bba9fdf7fabaac2e9c8 0.0s done
+#16 naming to docker.io/apollo11/flight:latest done
+#16 unpacking to docker.io/apollo11/flight:latest 0.0s done
+#16 DONE 0.2s
+Building booking...
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 547B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/golang:1.22-alpine
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/alpine:3.19
+#3 DONE 0.1s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 88B done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 DONE 0.0s
+
+#6 [builder 1/6] FROM docker.io/library/golang:1.22-alpine@sha256:1699c10032ca2582ec89a24a1312d986a3f094aed3d5c1147b19880afe40e052
+#6 resolve docker.io/library/golang:1.22-alpine@sha256:1699c10032ca2582ec89a24a1312d986a3f094aed3d5c1147b19880afe40e052
+#6 resolve docker.io/library/golang:1.22-alpine@sha256:1699c10032ca2582ec89a24a1312d986a3f094aed3d5c1147b19880afe40e052 0.1s done
+#6 DONE 0.1s
+
+#7 [stage-1 1/4] FROM docker.io/library/alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a3145eb11ca1
+#7 resolve docker.io/library/alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a3145eb11ca1 0.1s done
+#7 DONE 0.1s
+
+#5 [internal] load build context
+#5 transferring context: 29.52kB done
+#5 DONE 0.0s
+
+#8 [builder 3/6] COPY go.mod go.sum ./
+#8 CACHED
+
+#9 [builder 4/6] RUN go mod download
+#9 CACHED
+
+#10 [builder 6/6] RUN CGO_ENABLED=0 GOOS=linux go build -o /booking-service
+#10 CACHED
+
+#11 [stage-1 2/4] RUN apk --no-cache add ca-certificates     && addgroup -S apollo     && adduser -S -G apollo apollo
+#11 CACHED
+
+#12 [stage-1 3/4] WORKDIR /app
+#12 CACHED
+
+#13 [builder 2/6] WORKDIR /app
+#13 CACHED
+
+#14 [builder 5/6] COPY . .
+#14 CACHED
+
+#15 [stage-1 4/4] COPY --from=builder --chown=apollo:apollo /booking-service /app/booking-service
+#15 CACHED
+
+#16 exporting to image
+#16 exporting layers done
+#16 exporting manifest sha256:156d050f013c10874cb211151dbcc803f01668bce2176d75735a69251939d6f0 done
+#16 exporting config sha256:77ac633a26c6858e7b3998169572ec5ff3392b66a6455337909adb3e2fe99b5b done
+#16 exporting attestation manifest sha256:f65943a3eac8a4038a65ef78dcdbc959af229b842f9f31dda4f1595c5c666ad2 0.0s done
+#16 exporting manifest list sha256:6257c568f0c768983803378c9ebb32771a4c5925b0d1da96d1dd5003ee1ecd17 0.0s done
+#16 naming to docker.io/apollo11/booking:latest done
+#16 unpacking to docker.io/apollo11/booking:latest done
+#16 DONE 0.1s
+Building search...
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 470B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/golang:1.22-alpine
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/alpine:3.19
+#3 DONE 0.1s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 88B done
+#4 DONE 0.0s
+
+#5 [builder 1/6] FROM docker.io/library/golang:1.22-alpine@sha256:1699c10032ca2582ec89a24a1312d986a3f094aed3d5c1147b19880afe40e052
+#5 resolve docker.io/library/golang:1.22-alpine@sha256:1699c10032ca2582ec89a24a1312d986a3f094aed3d5c1147b19880afe40e052 0.0s done
+#5 DONE 0.1s
+
+#6 [stage-1 1/4] FROM docker.io/library/alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a3145eb11ca1
+#6 resolve docker.io/library/alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a3145eb11ca1 0.0s done
+#6 DONE 0.1s
+
+#7 [internal] load build context
+#7 transferring context: 15.51kB done
+#7 DONE 0.0s
+
+#8 [stage-1 3/4] WORKDIR /app
+#8 CACHED
+
+#9 [builder 3/6] COPY go.mod go.sum ./
+#9 CACHED
+
+#10 [builder 6/6] RUN CGO_ENABLED=0 GOOS=linux go build -o /search-service
+#10 CACHED
+
+#11 [stage-1 2/4] RUN apk --no-cache add ca-certificates     && addgroup -S apollo     && adduser -S -G apollo apollo
+#11 CACHED
+
+#12 [builder 2/6] WORKDIR /app
+#12 CACHED
+
+#13 [builder 4/6] RUN go mod download
+#13 CACHED
+
+#14 [builder 5/6] COPY . .
+#14 CACHED
+
+#15 [stage-1 4/4] COPY --from=builder --chown=apollo:apollo /search-service /app/search-service
+#15 CACHED
+
+#16 exporting to image
+#16 exporting layers done
+#16 exporting manifest sha256:834cb6b257baf553581e586a1f9cc69af52f82edaea31cc4d49fe7fb5a4abb4f done
+#16 exporting config sha256:ec70d71176abdd5d6a30eb766f7978edd44777f01066a9b30d5211b73c4b6283 done
+#16 exporting attestation manifest sha256:7fe8f598949ace10b2cadb56b50568b9241cb82fc6dba4c9a55dc416954e87d9 0.0s done
+#16 exporting manifest list sha256:d2e4f5b02737cc2a6bc8d6104daa7b3900d088968004e82a723d936ba03b5fe4 0.0s done
+#16 naming to docker.io/apollo11/search:latest done
+#16 unpacking to docker.io/apollo11/search:latest done
+#16 DONE 0.1s
+Building notification...
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 494B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/golang:1.22-alpine
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/alpine:3.19
+#3 DONE 0.1s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 88B done
+#4 DONE 0.0s
+
+#5 [builder 1/6] FROM docker.io/library/golang:1.22-alpine@sha256:1699c10032ca2582ec89a24a1312d986a3f094aed3d5c1147b19880afe40e052
+#5 resolve docker.io/library/golang:1.22-alpine@sha256:1699c10032ca2582ec89a24a1312d986a3f094aed3d5c1147b19880afe40e052 0.1s done
+#5 DONE 0.1s
+
+#6 [stage-1 1/4] FROM docker.io/library/alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a3145eb11ca1
+#6 resolve docker.io/library/alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a3145eb11ca1 0.1s done
+#6 DONE 0.1s
+
+#7 [internal] load build context
+#7 transferring context: 15.35kB done
+#7 DONE 0.0s
+
+#8 [builder 2/6] WORKDIR /app
+#8 CACHED
+
+#9 [builder 3/6] COPY go.mod go.sum ./
+#9 CACHED
+
+#10 [builder 6/6] RUN CGO_ENABLED=0 GOOS=linux go build -o /notification-service
+#10 CACHED
+
+#11 [stage-1 2/4] RUN apk --no-cache add ca-certificates     && addgroup -S apollo     && adduser -S -G apollo apollo
+#11 CACHED
+
+#12 [stage-1 3/4] WORKDIR /app
+#12 CACHED
+
+#13 [builder 4/6] RUN go mod download
+#13 CACHED
+
+#14 [builder 5/6] COPY . .
+#14 CACHED
+
+#15 [stage-1 4/4] COPY --from=builder --chown=apollo:apollo /notification-service /app/notification-service
+#15 CACHED
+
+#16 exporting to image
+#16 exporting layers done
+#16 exporting manifest sha256:a5fee77d83df9c042422ca7b967722bd1afa556483db2f45fdea9de0cb7fafcc done
+#16 exporting config sha256:6d09b3917a0419934cb863ec6fcf2f79e252e7660ead7a3f52b8ebdc2b54e9a2 done
+#16 exporting attestation manifest sha256:c86f885691018dbec6a08a8b689e8e0ddcc397d799d07f78a7e1d3ff43cbac34 0.0s done
+#16 exporting manifest list sha256:8376edefbf303192829ecb819cd1f417aa411547e30e0cfa5eb4c5266fd69bde 0.0s done
+#16 naming to docker.io/apollo11/notification:latest done
+#16 unpacking to docker.io/apollo11/notification:latest 0.0s done
+#16 DONE 0.1s
+Building frontend...
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 684B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:20-alpine
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/nginx:alpine
+#3 DONE 0.1s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 141B done
+#4 DONE 0.0s
+
+#5 [builder 1/7] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+#5 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.1s done
+#5 DONE 0.1s
+
+#6 [stage-1 1/4] FROM docker.io/library/nginx:alpine@sha256:8b1e78743a03dbb2c95171cc58639fef29abc8816598e27fb910ed2e621e589a
+#6 resolve docker.io/library/nginx:alpine@sha256:8b1e78743a03dbb2c95171cc58639fef29abc8816598e27fb910ed2e621e589a 0.1s done
+#6 DONE 0.1s
+
+#7 [internal] load build context
+#7 transferring context: 159.22kB done
+#7 DONE 0.0s
+
+#8 [builder 2/7] WORKDIR /app
+#8 CACHED
+
+#9 [builder 3/7] COPY package.json ./
+#9 CACHED
+
+#10 [builder 4/7] COPY package-lock.json ./
+#10 CACHED
+
+#11 [builder 5/7] RUN npm ci
+#11 3.926 
+#11 3.926 added 131 packages, and audited 132 packages in 4s
+#11 3.926 
+#11 3.926 34 packages are looking for funding
+#11 3.926   run `npm fund` for details
+#11 3.978 
+#11 3.978 6 vulnerabilities (3 moderate, 3 high)
+#11 3.978 
+#11 3.978 To address issues that do not require attention, run:
+#11 3.978   npm audit fix
+#11 3.978 
+#11 3.978 To address all issues (including breaking changes), run:
+#11 3.978   npm audit fix --force
+#11 3.978 
+#11 3.978 Run `npm audit` for details.
+#11 3.980 npm notice
+#11 3.980 npm notice New major version of npm available! 10.8.2 -> 12.2.1
+#11 3.980 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+#11 3.980 npm notice To update run: npm install -g npm@12.2.1
+#11 3.980 npm notice
+#11 DONE 4.3s
+
+#12 [builder 6/7] COPY . .
+#12 DONE 0.1s
+
+#13 [builder 7/7] RUN npm run build
+#13 0.454 
+#13 0.454 > apollo-airlines-frontend@1.0.0 build
+#13 0.454 > vite build
+#13 0.454 
+#13 0.738 vite v8.2.2 building client environment for production...
+#13 0.752 transforming...
+#13 1.709 ✓ 101 modules transformed.
+#13 1.760 rendering chunks...
+#13 1.934 computing gzip size...
+#13 1.942 dist/index.html                   0.39 kB │ gzip:  0.27 kB
+#13 1.942 dist/assets/index-9ZLt8Aoa.css   28.12 kB │ gzip:  5.47 kB
+#13 1.942 dist/assets/index-CA_5_Ehp.js   296.04 kB │ gzip: 93.22 kB
+#13 1.942 
+#13 1.942 ✓ built in 1.20s
+#13 DONE 2.0s
+
+#6 [stage-1 1/4] FROM docker.io/library/nginx:alpine@sha256:8b1e78743a03dbb2c95171cc58639fef29abc8816598e27fb910ed2e621e589a
+#6 CACHED
+
+#14 [stage-1 2/4] COPY --from=builder /app/dist /usr/share/nginx/html
+#14 DONE 0.3s
+
+#15 [stage-1 3/4] COPY nginx.conf /etc/nginx/nginx.conf
+#15 DONE 0.1s
+
+#16 [stage-1 4/4] RUN chown -R nginx:nginx /usr/share/nginx/html
+#16 DONE 0.2s
+
+#17 exporting to image
+#17 exporting layers
+#17 exporting layers 0.3s done
+#17 exporting manifest sha256:29b66b95fa38697c1d8199f76366c4366345f3ad395c6426a679eacf1f729329 0.0s done
+#17 exporting config sha256:e59e0616a75a0ea0e243b70b5701955eb35430ba714320018f659093285fe4de 0.0s done
+#17 exporting attestation manifest sha256:e76455a25e628ff09c3e27ab9fe640f9594dc4138376cb8344bcb8b7c346cab8 0.0s done
+#17 exporting manifest list sha256:51cdc23a40522071cd0e94174a4eeb2dfc846b6e82fd26e71d86df8bbfdbf30f
+#17 exporting manifest list sha256:51cdc23a40522071cd0e94174a4eeb2dfc846b6e82fd26e71d86df8bbfdbf30f 0.0s done
+#17 naming to docker.io/apollo11/frontend:latest done
+#17 unpacking to docker.io/apollo11/frontend:latest 0.1s done
+#17 DONE 0.5s
+
+=== Loading images into kind cluster 'apollo11' ===
+Loading apollo11/identity:latest...
+Image: "apollo11/identity:latest" with ID "sha256:e77c074b85c5aa49e248ba7b328d6ad76e9d95bcfb23de51449a9275f0c94c9c" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/identity:latest" with ID "sha256:e77c074b85c5aa49e248ba7b328d6ad76e9d95bcfb23de51449a9275f0c94c9c" not yet present on node "apollo11-worker", loading...
+Image: "apollo11/identity:latest" with ID "sha256:e77c074b85c5aa49e248ba7b328d6ad76e9d95bcfb23de51449a9275f0c94c9c" not yet present on node "apollo11-worker2", loading...
+Loading apollo11/flight:latest...
+Image: "apollo11/flight:latest" with ID "sha256:55e055f12c40a561a969d06eed8cc2fe659013c16a436bba9fdf7fabaac2e9c8" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/flight:latest" with ID "sha256:55e055f12c40a561a969d06eed8cc2fe659013c16a436bba9fdf7fabaac2e9c8" not yet present on node "apollo11-worker", loading...
+Image: "apollo11/flight:latest" with ID "sha256:55e055f12c40a561a969d06eed8cc2fe659013c16a436bba9fdf7fabaac2e9c8" not yet present on node "apollo11-worker2", loading...
+Loading apollo11/booking:latest...
+Image: "apollo11/booking:latest" with ID "sha256:6257c568f0c768983803378c9ebb32771a4c5925b0d1da96d1dd5003ee1ecd17" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/booking:latest" with ID "sha256:6257c568f0c768983803378c9ebb32771a4c5925b0d1da96d1dd5003ee1ecd17" not yet present on node "apollo11-worker", loading...
+Image: "apollo11/booking:latest" with ID "sha256:6257c568f0c768983803378c9ebb32771a4c5925b0d1da96d1dd5003ee1ecd17" not yet present on node "apollo11-worker2", loading...
+Loading apollo11/search:latest...
+Image: "apollo11/search:latest" with ID "sha256:d2e4f5b02737cc2a6bc8d6104daa7b3900d088968004e82a723d936ba03b5fe4" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/search:latest" with ID "sha256:d2e4f5b02737cc2a6bc8d6104daa7b3900d088968004e82a723d936ba03b5fe4" not yet present on node "apollo11-worker", loading...
+Image: "apollo11/search:latest" with ID "sha256:d2e4f5b02737cc2a6bc8d6104daa7b3900d088968004e82a723d936ba03b5fe4" not yet present on node "apollo11-worker2", loading...
+Loading apollo11/notification:latest...
+Image: "apollo11/notification:latest" with ID "sha256:8376edefbf303192829ecb819cd1f417aa411547e30e0cfa5eb4c5266fd69bde" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/notification:latest" with ID "sha256:8376edefbf303192829ecb819cd1f417aa411547e30e0cfa5eb4c5266fd69bde" not yet present on node "apollo11-worker", loading...
+Image: "apollo11/notification:latest" with ID "sha256:8376edefbf303192829ecb819cd1f417aa411547e30e0cfa5eb4c5266fd69bde" not yet present on node "apollo11-worker2", loading...
+Loading apollo11/frontend:latest...
+Image: "apollo11/frontend:latest" with ID "sha256:51cdc23a40522071cd0e94174a4eeb2dfc846b6e82fd26e71d86df8bbfdbf30f" not yet present on node "apollo11-control-plane", loading...
+Image: "apollo11/frontend:latest" with ID "sha256:51cdc23a40522071cd0e94174a4eeb2dfc846b6e82fd26e71d86df8bbfdbf30f" not yet present on node "apollo11-worker", loading...
+Image: "apollo11/frontend:latest" with ID "sha256:51cdc23a40522071cd0e94174a4eeb2dfc846b6e82fd26e71d86df8bbfdbf30f" not yet present on node "apollo11-worker2", loading...
+
+Done. All images loaded into kind cluster 'apollo11'.
+
+[1/5] Applying namespaces, configuration, secrets, and ServiceAccounts
+namespace/apollo-airlines-apps created
+namespace/apollo-airlines-ui created
+configmap/apollo-airlines-config created
+configmap/apollo-airlines-config created
+secret/apollo-airlines-secrets created
+secret/apollo-airlines-secrets created
+serviceaccount/identity-db created
+serviceaccount/flight-db created
+serviceaccount/booking-db created
+serviceaccount/redis created
+serviceaccount/identity created
+serviceaccount/flight created
+serviceaccount/booking created
+serviceaccount/search created
+serviceaccount/notification created
+serviceaccount/init-identity-db created
+serviceaccount/init-flight-db created
+serviceaccount/init-booking-db created
+serviceaccount/frontend created
+
+[2/5] Applying database and Redis infrastructure
+deployment.apps/identity-db created
+service/identity-db created
+deployment.apps/flight-db created
+service/flight-db created
+deployment.apps/booking-db created
+service/booking-db created
+deployment.apps/redis created
+service/redis created
+Waiting for infrastructure rollouts...
+Waiting for deployment "identity-db" rollout to finish: 0 of 1 updated replicas are available...
+deployment "identity-db" successfully rolled out
+deployment "flight-db" successfully rolled out
+deployment "booking-db" successfully rolled out
+deployment "redis" successfully rolled out
+
+[3/5] Applying database initialization Jobs
+configmap/identity-init-script created
+configmap/flight-init-script created
+configmap/booking-init-script created
+job.batch/init-identity-db created
+job.batch/init-flight-db created
+job.batch/init-booking-db created
+job.batch/init-identity-db condition met
+job.batch/init-flight-db condition met
+job.batch/init-booking-db condition met
+
+[4/5] Applying core application services
+deployment.apps/identity created
+service/identity created
+deployment.apps/flight created
+service/flight created
+deployment.apps/booking created
+service/booking created
+deployment.apps/search created
+service/search created
+deployment.apps/notification created
+service/notification created
+deployment.apps/frontend created
+service/frontend created
+Waiting for deployment "identity" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "identity" rollout to finish: 1 of 2 updated replicas are available...
+deployment "identity" successfully rolled out
+Waiting for deployment "flight" rollout to finish: 1 of 2 updated replicas are available...
+deployment "flight" successfully rolled out
+Waiting for deployment "booking" rollout to finish: 0 of 2 updated replicas are available...
+Waiting for deployment "booking" rollout to finish: 1 of 2 updated replicas are available...
+deployment "booking" successfully rolled out
+deployment "search" successfully rolled out
+deployment "notification" successfully rolled out
+deployment "frontend" successfully rolled out
+
+[5/5] Configuring networking substage 1
+Applying Substage 1: Internal DNS and discovery
+pod/curl-client created
+pod/curl-client condition met
+
+Stage 2 (Substage 1) applied successfully.
+bash stages/stage2/scripts/apply.sh --substage 1 --context kind-apollo11  6.13s user 2.78s system 16% cpu 55.583 total
+apply rc=0

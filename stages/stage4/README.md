@@ -3,9 +3,9 @@ title: "Stage 4: Flight Control — Reliability, Lifecycle, Governance, and Plac
 description: "Startup/liveness/readiness probes, Guaranteed QoS resource governance, lifecycle preStop hooks, PriorityClasses, topology spread constraints, and PodDisruptionBudgets. Built on Stage 3 StatefulSets and the Envoy Gateway + MetalLB access stack."
 ---
 
-> **Current verification status:** the context, TLS, and contract fixes in this
-> working tree require a fresh runtime lifecycle. Counts below record earlier
-> revisions; use the current verifier's summary rather than expecting those totals.
+> **Verification status:** a fresh lifecycle passed **149/149** on 2026-10-19,
+> including the PDB eviction proof and the HTTPS certificate break and recovery
+> (`verification-runs/s1-2026-10-19/`). Gaps: tracker G20, G21.
 
 # Stage 4: Flight Control
 

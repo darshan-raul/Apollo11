@@ -1,0 +1,10 @@
+booking healthy
+booking-db healthy
+flight healthy
+flight-db healthy
+frontend healthy
+identity healthy
+identity-db healthy
+notification healthy
+redis healthy
+search healthy

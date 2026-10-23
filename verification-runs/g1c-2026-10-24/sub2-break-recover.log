@@ -1,0 +1,5 @@
+before: identity :30083 http=200
+service/identity patched
+targetPort 9999: http=000
+service/identity patched
+restored 8080: http=200

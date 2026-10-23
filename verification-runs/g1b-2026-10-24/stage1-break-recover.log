@@ -1,0 +1,14 @@
+## Break: missing image tag
+deployment.apps/search image updated
+error: timed out waiting for the condition
+NAME                      STATUS         READY
+search-5b69d4bc9b-2pjn4   ErrImagePull   false
+search-cc9bbc655-bd8rd    <none>         true
+search-cc9bbc655-xw2z5    <none>         true
+search /readyz during failed rollout: 200
+## Recover: rollout undo
+Warning: resource deployments/search was previously managed with 'kubectl apply'. Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation, which may cause unexpected behavior on future 'kubectl apply' operations. Consider using 'kubectl apply' with your previous configuration file instead.
+deployment.apps/search rolled back
+deployment "search" successfully rolled out
+image: apollo11/search:latest
+search /readyz after rollback: 200

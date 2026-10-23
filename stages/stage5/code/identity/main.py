@@ -8,21 +8,20 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from typing import Optional
 
+import bcrypt
 import psycopg2
 import psycopg2.errors
 from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, HTTPException, Header, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from passlib.context import CryptContext
 from jose import jwt, JWTError
 
 JWT_SECRET = os.getenv("JWT_SECRET", "apollo-airlines-dev-secret")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 DB_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@identity-db:5432/identity")
 
@@ -159,12 +158,18 @@ async def metrics():
         active = 1
     except:
         active = 0
-    return JSONResponse({
-        "service": "identity",
-        "http_requests_total": 0,
-        "http_request_duration_ms": 0,
-        "db_connections_active": active
-    })
+    return PlainTextResponse(
+        "# HELP http_requests_total Total HTTP requests observed by the service.\n"
+        "# TYPE http_requests_total counter\n"
+        'http_requests_total{service="identity"} 0\n'
+        "# HELP http_request_duration_ms Most recently observed request duration in milliseconds.\n"
+        "# TYPE http_request_duration_ms gauge\n"
+        'http_request_duration_ms{service="identity"} 0\n'
+        "# HELP db_connections_active Active database connections owned by the service.\n"
+        "# TYPE db_connections_active gauge\n"
+        f'db_connections_active{{service="identity"}} {active}\n',
+        media_type="text/plain; version=0.0.4",
+    )
 
 
 def verify_jwt(authorization: str) -> dict:
@@ -197,7 +202,7 @@ async def register(body: RegisterRequest, request: Request):
             cur.close()
             conn.close()
             raise HTTPException(status_code=409, detail="Email already registered")
-        password_hash = pwd_context.hash(body.password)
+        password_hash = bcrypt.hashpw(body.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
         cur.execute(
             """INSERT INTO users (email, password_hash)
                VALUES (%s, %s)
@@ -236,7 +241,7 @@ async def login(body: LoginRequest, request: Request):
     conn.close()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    if not pwd_context.verify(body.password, user["password_hash"]):
+    if not bcrypt.checkpw(body.password.encode("utf-8"), user["password_hash"].encode("utf-8")):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not user["is_active"]:
         raise HTTPException(status_code=403, detail="Account is inactive")

@@ -1,0 +1,80 @@
+
+[1/5] Applying namespaces, configuration, secrets, and ServiceAccounts
+namespace/apollo-airlines-apps unchanged
+namespace/apollo-airlines-ui unchanged
+configmap/apollo-airlines-config unchanged
+configmap/apollo-airlines-config unchanged
+secret/apollo-airlines-secrets configured
+secret/apollo-airlines-secrets configured
+serviceaccount/identity-db unchanged
+serviceaccount/flight-db unchanged
+serviceaccount/booking-db unchanged
+serviceaccount/redis unchanged
+serviceaccount/identity unchanged
+serviceaccount/flight unchanged
+serviceaccount/booking unchanged
+serviceaccount/search unchanged
+serviceaccount/notification unchanged
+serviceaccount/init-identity-db unchanged
+serviceaccount/init-flight-db unchanged
+serviceaccount/init-booking-db unchanged
+serviceaccount/frontend unchanged
+
+[2/5] Applying database and Redis infrastructure
+deployment.apps/identity-db unchanged
+service/identity-db unchanged
+deployment.apps/flight-db unchanged
+service/flight-db unchanged
+deployment.apps/booking-db unchanged
+service/booking-db unchanged
+deployment.apps/redis unchanged
+service/redis unchanged
+Waiting for infrastructure rollouts...
+deployment "identity-db" successfully rolled out
+deployment "flight-db" successfully rolled out
+deployment "booking-db" successfully rolled out
+deployment "redis" successfully rolled out
+
+[3/5] Applying database initialization Jobs
+configmap/identity-init-script unchanged
+configmap/flight-init-script unchanged
+configmap/booking-init-script unchanged
+job.batch "init-identity-db" deleted from apollo-airlines-apps namespace
+job.batch "init-flight-db" deleted from apollo-airlines-apps namespace
+job.batch "init-booking-db" deleted from apollo-airlines-apps namespace
+job.batch/init-identity-db created
+job.batch/init-flight-db created
+job.batch/init-booking-db created
+job.batch/init-identity-db condition met
+job.batch/init-flight-db condition met
+job.batch/init-booking-db condition met
+
+[4/5] Applying core application services
+deployment.apps/identity unchanged
+service/identity unchanged
+deployment.apps/flight unchanged
+service/flight unchanged
+deployment.apps/booking unchanged
+service/booking unchanged
+deployment.apps/search unchanged
+service/search unchanged
+deployment.apps/notification unchanged
+service/notification unchanged
+deployment.apps/frontend unchanged
+service/frontend unchanged
+deployment "identity" successfully rolled out
+deployment "flight" successfully rolled out
+deployment "booking" successfully rolled out
+deployment "search" successfully rolled out
+deployment "notification" successfully rolled out
+deployment "frontend" successfully rolled out
+
+[5/5] Configuring networking substage 2
+Applying Substage 2: NodePort direct access
+service/frontend configured
+service/flight configured
+service/booking configured
+service/identity configured
+service/search configured
+
+Stage 2 (Substage 2) applied successfully.

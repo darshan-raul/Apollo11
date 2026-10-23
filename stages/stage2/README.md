@@ -3,9 +3,10 @@ title: "Stage 2: Guidance — Networking & Edge Access"
 description: "Progressive networking ladder from internal ClusterIP and cross-namespace DNS to Envoy Gateway API on MetalLB."
 ---
 
-> **Current verification status:** the context, TLS, and contract fixes in this
-> working tree require a fresh runtime lifecycle. Counts below record earlier
-> revisions; use the current verifier's summary rather than expecting those totals.
+> **Verification status:** substages 3, 4 and 5 passed fresh lifecycles on
+> 2026-10-19 (49, 46 and 61 checks; `verification-runs/s1-2026-10-19/`), and
+> substages 1 and 2 on 2026-10-24 (46 and 48 checks; `verification-runs/g1c-2026-10-24/`).
+> Known gaps: tracker G18.
 
 # Stage 2: Guidance — Networking & Edge Access
 
@@ -59,7 +60,7 @@ stages/stage2/
 └── scripts/
     ├── build-images.sh          # Builds all 6 application images and loads into kind
     ├── apply.sh                 # Progressive deployment orchestrator (--substage 1-5)
-    ├── verify.sh                # Comprehensive 30+ check verification suite
+    ├── verify.sh                # 46–61 checks, depending on the active substage
     └── teardown.sh              # Clean resource teardown and residue verification
 ```
 

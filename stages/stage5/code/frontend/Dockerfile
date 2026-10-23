@@ -13,8 +13,8 @@ ENV VITE_SEARCH_URL=$VITE_SEARCH_URL
 
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 
 COPY . .
 RUN npm run build
@@ -25,12 +25,15 @@ FROM nginx:1.30.6-alpine3.24
 # Pick up Alpine security fixes published after this image was built.
 RUN apk upgrade --no-cache
 
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder --chown=101:101 /app/dist /usr/share/nginx/html
 
-# Stage 4: external NGINX config with /healthz/{startup,live,ready} probe
-# endpoints baked in. See nginx.conf.
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Full nginx.conf: non-root pid and temp paths under /tmp, plus the
+# /healthz/{startup,live,ready} probe endpoints. See nginx.conf.
+COPY nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 3000
+
+# Run as the image's numeric nginx user (UID 101), not root.
+USER 101:101
 
 CMD ["nginx", "-g", "daemon off;"]
