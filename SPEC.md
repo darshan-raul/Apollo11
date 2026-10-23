@@ -64,7 +64,7 @@ Infrastructure (auto-provisioned via Docker Compose init or k8s StatefulSets):
 | Stage 5 (Payload Integration) | K8s: Helm, Kustomize, GitHub Actions | Packaging + CI/CD |
 | Stage 6 (Mission Ops) | K8s: Prometheus, Grafana, OTEL | Code adds `/metrics`, OTEL SDK |
 | Stage 7 (Orbital Maneuvering) | K8s: HPA, VPA, Redis cache | Search gets Redis caching |
-| Stage 8 (Command Module) | K8s: RBAC, SecurityContext, Calico, Vault/ESO, Kyverno, Trivy/Cosign | Code: non-root, service accounts |
+| Stage 8 (Command Module) | K8s: RBAC, SecurityContext, Calico, Vault/ESO, Reloader, Kyverno, Trivy/Cosign | Code: non-root, service accounts |
 | Stage 9 (Lunar Orbit) | Cloud: Terraform for AWS/EKS; GKE portability analysis | Cloud provisioning |
 | Stage 10 (Mission Extensions) | K8s: Linkerd, Argo Rollouts, Chaos Mesh | Service mesh + progressive delivery |
 | Stage 11 (Towards Mars) | K8s: CRDs, Operators, k3s, KEDA | Custom operator, event-driven scaling |

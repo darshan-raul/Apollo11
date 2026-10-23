@@ -66,7 +66,7 @@ claims are updated. See `verification-runs/GAP_CLOSURE.md` for current evidence.
 | Stage 5 | Payload Integration | Helm chart (full access stack), Kustomize overlays (dev/staging/prod), GitHub Actions CI, **ArgoCD GitOps module** (AppProject + 3 Applications) |
 | Stage 6 | Mission Ops | Prometheus, Grafana, OpenTelemetry |
 | Stage 7 | Orbital Maneuvering | HPA, VPA, Redis cache, PriorityClass, reversible taint/toleration + affinity + topology-spread lab |
-| Stage 8 | Command Module — **clean rebuild planned** | Stage 7 baseline → RBAC/PSA/hardening → Calico NetworkPolicy → Vault/ESO → Kyverno + Trivy/Cosign |
+| Stage 8 | Command Module — **clean rebuild planned** | Stage 7 baseline → RBAC/PSA/hardening → Calico NetworkPolicy → Vault/ESO + Reloader → Kyverno + Trivy/Cosign |
 | Stage EKS | Cloud Target — EKS — **prototype** | Structurally reviewed AWS prototype; not yet trusted by a real-account apply/verify/destroy lifecycle |
 | Stage 9 | Lunar Orbit — **planned** | Terraform + AWS/EKS lifecycle, DNS/TLS, node scaling/failure, upgrades, Velero restore, cost and teardown; required GKE portability analysis |
 | Stage 10 | Mission Extensions — **planned optional missions** | Linkerd, Argo Rollouts, debugging, Kubeshark, Chaos Mesh, and advanced DR as independent labs |
@@ -753,7 +753,10 @@ then rebuild from the trusted Stage 7 Helm snapshot. The ordered substages are:
    images, seccomp, dropped capabilities, and read-only filesystems;
 2. Calico plus enforced NetworkPolicy allow/deny experiments;
 3. Vault plus External Secrets Operator bootstrap, rotation, failure, and
-   recovery; and
+   recovery, with Stakater Reloader (pinned v1.4.22, opt-in per workload)
+   rolling env-consuming Deployments after an out-of-Git rotation; Git-origin
+   config uses `checksum/*` annotations instead (see the rollout policy in
+   `ROADMAP.md`); and
 4. Kyverno audit/enforce policy, Trivy CI gates, Cosign signatures, and
    admission rejection of unsigned images.
 

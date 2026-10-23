@@ -165,9 +165,50 @@ legacy or experimental Stage 8 files are not a trusted implementation source.
 2. **Enforced networking:** replace kindnet with Calico; apply default-deny and
    least-privilege NetworkPolicies; prove allowed and denied flows
 3. **External secrets:** Vault plus External Secrets Operator; demonstrate
-   bootstrap, reconciliation, rotation, failure, and recovery
+   bootstrap, reconciliation, rotation, failure, and recovery. **Stakater
+   Reloader** turns a rotated Secret into a workload rollout, because Pods that
+   read it through `env`/`secretKeyRef` keep the old value until they restart
 4. **Admission and supply chain:** Kyverno audit/enforce modes, Trivy CI gates,
    Cosign signing, and rejection of unsigned images
+
+#### Configuration-change rollout policy (Stage 8 substage 3)
+
+Kubernetes delivers changed ConfigMap/Secret data but never restarts a Pod for
+it. Stage 8 teaches one rule for who triggers the rollout:
+
+| Change originates in | Trigger | Why |
+|---|---|---|
+| Git (Helm values, chart ConfigMaps) | `checksum/<name>` Pod-template annotation | The commit is the event; Helm/Argo CD roll the Pods with no extra controller |
+| Outside Git (ESO sync from Vault, cert-manager, operators) | Reloader | No commit exists, so something must watch the Secret |
+
+Implementation requirements:
+
+- Pin **Reloader v1.4.22** (latest GA, 2026-09-09) as an offline bundle. v2
+  (Operator SDK rebuild) is `v2.0.0-beta.1` / chart `3.0.0-beta.4`; move to it
+  only after a GA release passes the same lifecycle. The workload annotations
+  are unchanged between v1 and v2, so the move replaces only the bundle.
+- **Opt-in only.** Run with `--auto-reload-all=false`; annotate each workload
+  explicitly. Prefer named `secret.reloader.stakater.com/reload: "<secret>"`
+  over `reloader.stakater.com/auto` so the trigger is visible in the manifest.
+- **Do not opt in the Postgres StatefulSets.** `POSTGRES_PASSWORD` is applied
+  only at `initdb`; restarting a database with a rotated value changes nothing
+  in the database and breaks clients. Database credential rotation needs a
+  database-side step and is a separate exercise.
+- **Bound the blast radius.** `apollo-airlines-secrets` is read by all five
+  backends, so one rotation rolls five Deployments. Use the Stage 4 PDBs and
+  `deployment.reloader.stakater.com/pause-period` to avoid a restart storm, and
+  show the rollout count in the lab.
+- **Demonstrate with `JWT_SECRET`.** Rotating it in Vault → ESO sync → Reloader
+  rollout gives observable evidence: tokens minted before the rotation are
+  rejected after it, and a fresh login succeeds. Identity signs and Booking,
+  Flight and Identity verify with this key, so the lab must also show the
+  mixed-key window while old and new Pods overlap, and explain why production
+  rotation uses overlapping keys.
+- **Lab evidence:** Build (annotation + Reloader), Inspect (Secret
+  `resourceVersion`, Reloader logs, new ReplicaSet), Break (rotate with the
+  annotation removed and show the stale env value inside the old Pod),
+  Recover (restore the annotation and watch the rollout), Explain
+  (checksum vs Reloader).
 
 ### Stage 9 — Lunar Orbit: AWS cloud lifecycle and capstone
 

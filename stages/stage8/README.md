@@ -24,6 +24,7 @@ Stage 8 starts from the trusted **Stage 7 baseline** (the hardened 10-component 
    - Reversible break/recover isolation experiments: default-deny ingress/egress, explicit pod-to-pod and pod-to-db allowlists.
 4. **Secret Management with External Secrets Operator (ESO)**:
    - Moving sensitive database credentials and JWT signing keys out of plain Kubernetes Secrets into HashiCorp Vault / External Secrets.
+   - **Stakater Reloader** (pinned v1.4.22, opt-in per workload) rolls the Deployments that read a rotated Secret through `env`, since Kubernetes never restarts a Pod for a changed Secret. Git-origin config uses `checksum/*` Pod-template annotations instead. Postgres StatefulSets are not opted in: their password applies only at `initdb`. See the rollout policy in [`ROADMAP.md`](../../ROADMAP.md).
 5. **Admission Control & Supply Chain Security**:
    - Kyverno policy enforcement for image signatures and required labels.
    - Trivy vulnerability scanning and Cosign signature verification in CI.
