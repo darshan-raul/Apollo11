@@ -1,0 +1,15 @@
+== stage4 start 2026-10-24T00:58:13+05:30 load: 3.56 4.69 4.70
+== stage4 done 2026-10-24T01:02:04+05:30: apply exit=0 verify exit=0   Total Passed: 149   Total Failed: 0 teardown exit=0 
+== stage5-helm-dev start 2026-10-24T01:02:04+05:30 load: 2.39 3.77 4.35
+== stage5-helm-dev done 2026-10-24T01:05:59+05:30: apply exit=0 verify exit=0   [0;32mPASS: 174[0m  /  [0;31mFAIL: 0[0m  /  TOTAL: 174 teardown exit=0 
+== stage5-kustomize-dev start 2026-10-24T01:05:59+05:30 load: 5.19 5.16 4.84
+== stage5-kustomize-dev done 2026-10-24T01:08:27+05:30: apply exit=0 verify exit=0   [0;32mPASS: 163[0m  /  [0;31mFAIL: 0[0m  /  TOTAL: 163 teardown exit=0 
+== stage6-helm-dev start 2026-10-24T01:08:27+05:30 load: 5.48 5.29 4.94
+== stage6-helm-dev done 2026-10-24T01:18:43+05:30: apply exit=0 verify exit=0   [0;32mPASS: 212[0m  /  [0;31mFAIL: 0[0m  /  TOTAL: 212 trace-test.sh exit=0 observability-lab.sh exit=0 teardown exit=0 
+== stage6-kustomize-dev start 2026-10-24T01:18:43+05:30 load: 5.90 6.36 5.84
+== stage6-kustomize-dev done 2026-10-24T01:24:09+05:30: apply exit=0 verify exit=0   [0;32mPASS: 201[0m  /  [0;31mFAIL: 0[0m  /  TOTAL: 201 teardown exit=0 
+== stage7-helm-dev start 2026-10-24T01:24:09+05:30 load: 8.18 8.10 6.82
+== stage7-helm-dev done 2026-10-24T01:35:47+05:30: apply exit=0 verify exit=0   [0;32mPASS: 227[0m  /  [0;31mFAIL: 0[0m  /  TOTAL: 227 trace-test.sh exit=0 observability-lab.sh exit=0 scaling-lab.sh exit=0 teardown exit=0 
+== stage7-kustomize-dev start 2026-10-24T01:35:47+05:30 load: 4.36 7.06 8.12
+== stage7-kustomize-dev done 2026-10-24T01:40:20+05:30: apply exit=0 verify exit=0   [0;32mPASS: 216[0m  /  [0;31mFAIL: 0[0m  /  TOTAL: 216 teardown exit=0 
+ALL DONE 2026-10-24T01:40:20+05:30

@@ -1,0 +1,166 @@
+[0;36m▶ 0/9 Checking cluster[0m
+[0;32m✓ cluster reachable[0m
+[0;36m▶ 1/8 Skipping build (--skip-build)[0m
+[0;36m▶ 2/8 Installing Envoy Gateway + MetalLB controller bundles[0m
+job.batch/eg-gateway-helm-certgen serverside-applied
+mutatingwebhookconfiguration.admissionregistration.k8s.io/envoy-gateway-topology-injector.envoy-gateway-system serverside-applied
+[0;32m✓ Envoy Gateway bundle applied[0m
+daemonset.apps/speaker serverside-applied
+validatingwebhookconfiguration.admissionregistration.k8s.io/metallb-webhook-configuration serverside-applied
+[0;32m✓ MetalLB bundle applied[0m
+[0;32m✓ platform CRDs registered[0m
+[0;32m✓ MetalLB webhook endpoint ready (10.244.2.175)[0m
+[0;32m✓ Prometheus Operator v0.93.0 ready[0m
+[0;32m✓ metrics-server ready[0m
+[0;36m▶ 3/8 Ensuring workload namespaces exist[0m
+namespace/apollo-airlines-apps created
+namespace/apollo-airlines-ui created
+[0;32m✓ namespaces ready[0m
+secret/apollo-edge-tls created
+secret/apollo-edge-tls created
+[0;36m▶ 4/8 Kustomize build (dev overlay)[0m
+  Building kustomize overlay at /home/darshan/projects/Apollo11/stages/stage7/overlays/dev...
+[0;32m✓ kustomize build OK (3945 lines)[0m
+[0;36m▶ 5/8 Applying complete plain-manifest overlay[0m
+serviceaccount/booking created
+serviceaccount/booking-db created
+serviceaccount/flight created
+serviceaccount/flight-db created
+serviceaccount/identity created
+serviceaccount/identity-db created
+serviceaccount/init-booking-db created
+serviceaccount/init-flight-db created
+serviceaccount/init-identity-db created
+serviceaccount/notification created
+serviceaccount/redis created
+serviceaccount/search created
+serviceaccount/frontend created
+serviceaccount/observability-stack created
+clusterrole.rbac.authorization.k8s.io/apollo-observability created
+clusterrolebinding.rbac.authorization.k8s.io/apollo-observability created
+configmap/apollo-airlines-config created
+configmap/booking-db-init-script created
+configmap/booking-db-seed created
+configmap/flight-db-init-script created
+configmap/flight-db-seed created
+configmap/identity-db-init-script created
+configmap/identity-db-seed created
+configmap/apollo-airlines-config created
+configmap/alert-receiver-code created
+configmap/alertmanager-config created
+configmap/alloy-config created
+configmap/blackbox-config created
+configmap/grafana-dashboard-booking created
+configmap/grafana-dashboard-errors created
+configmap/grafana-dashboard-overview created
+configmap/grafana-dashboard-provider created
+configmap/grafana-dashboard-saturation created
+configmap/grafana-dashboard-trace-viewer created
+configmap/grafana-datasources created
+configmap/loki-config created
+configmap/otel-collector-config created
+configmap/tempo-config created
+secret/apollo-airlines-secrets created
+secret/apollo-airlines-secrets created
+secret/grafana-admin created
+service/booking created
+service/booking-db created
+service/booking-db-headless created
+service/flight created
+service/flight-db created
+service/flight-db-headless created
+service/identity created
+service/identity-db created
+service/identity-db-headless created
+service/notification created
+service/redis created
+service/redis-headless created
+service/search created
+service/frontend created
+service/alert-receiver created
+service/alertmanager created
+service/blackbox created
+service/grafana created
+service/loki created
+service/otel-collector created
+service/prometheus created
+service/tempo created
+priorityclass.scheduling.k8s.io/apollo-airlines-app-critical created
+priorityclass.scheduling.k8s.io/apollo-airlines-app-low created
+persistentvolumeclaim/grafana-data created
+persistentvolumeclaim/loki-data created
+persistentvolumeclaim/tempo-data created
+deployment.apps/booking created
+deployment.apps/flight created
+deployment.apps/identity created
+deployment.apps/notification created
+deployment.apps/search created
+deployment.apps/frontend created
+deployment.apps/alert-receiver created
+deployment.apps/alertmanager created
+deployment.apps/blackbox created
+deployment.apps/grafana created
+deployment.apps/loki created
+deployment.apps/tempo created
+statefulset.apps/booking-db created
+statefulset.apps/flight-db created
+statefulset.apps/identity-db created
+statefulset.apps/redis created
+daemonset.apps/alloy created
+daemonset.apps/otel-collector created
+horizontalpodautoscaler.autoscaling/search-hpa created
+job.batch/seed-booking-db created
+job.batch/seed-flight-db created
+job.batch/seed-identity-db created
+gateway.gateway.networking.k8s.io/apollo-gateway created
+gatewayclass.gateway.networking.k8s.io/eg created
+httproute.gateway.networking.k8s.io/booking created
+httproute.gateway.networking.k8s.io/flight created
+httproute.gateway.networking.k8s.io/identity created
+httproute.gateway.networking.k8s.io/notification created
+httproute.gateway.networking.k8s.io/search created
+httproute.gateway.networking.k8s.io/frontend created
+httproute.gateway.networking.k8s.io/grafana created
+referencegrant.gateway.networking.k8s.io/apollo-gateway-grant created
+ipaddresspool.metallb.io/apollo-pool created
+l2advertisement.metallb.io/apollo-l2 created
+probe.monitoring.coreos.com/blackbox-internal created
+prometheus.monitoring.coreos.com/apollo created
+prometheusrule.monitoring.coreos.com/apollo-services created
+servicemonitor.monitoring.coreos.com/booking created
+servicemonitor.monitoring.coreos.com/flight created
+servicemonitor.monitoring.coreos.com/identity created
+servicemonitor.monitoring.coreos.com/notification created
+servicemonitor.monitoring.coreos.com/search created
+[0;32m✓ kustomize overlay applied[0m
+[0;36m▶ 6/8 Waiting for StatefulSets + seed Jobs[0m
+[0;32m✓ statefulset/identity-db ready[0m
+[0;32m✓ statefulset/flight-db ready[0m
+[0;32m✓ statefulset/booking-db ready[0m
+[0;32m✓ statefulset/redis ready[0m
+[0;32m✓ job/seed-identity-db Complete[0m
+[0;32m✓ job/seed-flight-db Complete[0m
+[0;32m✓ job/seed-booking-db Complete[0m
+[0;36m▶ 7/8 Waiting for application Deployments[0m
+[0;32m✓ deployment/identity ready[0m
+[0;32m✓ deployment/flight ready[0m
+[0;32m✓ deployment/booking ready[0m
+[0;32m✓ deployment/search ready[0m
+[0;32m✓ deployment/notification ready[0m
+[0;32m✓ deployment/frontend ready[0m
+[0;36m▶ 8/8 Waiting for Envoy data-plane[0m
+[0;32m✓ Envoy Gateway ready[0m
+[0;36m▶ Waiting for Stage 7 autoscaling resources[0m
+[0;32m✓ metrics.k8s.io returns node data[0m
+[0;32m✓ search HPA reports current CPU utilization[0m
+[0;36m▶ Waiting for Stage 6 observability workloads[0m
+[0;32m✓ deployment/grafana ready[0m
+[0;32m✓ deployment/loki ready[0m
+[0;32m✓ deployment/tempo ready[0m
+[0;32m✓ daemonset/otel-collector ready[0m
+[0;32m✓ daemonset/alloy ready[0m
+[0;32m✓ statefulset/prometheus-apollo ready[0m
+[0;32m✓ Apollo Airlines Stage 7 installed via kustomize (dev)[0m
+  Run 'bash scripts/verify.sh --mode kustomize' to run the verify suite
+  Run 'bash scripts/scaling-lab.sh' for the practical HPA + scheduling lab
+  Run 'bash scripts/teardown.sh --mode kustomize' to remove

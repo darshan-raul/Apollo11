@@ -1,0 +1,7 @@
+apply exit=0
+verify exit=0
+  [0;32mPASS: 227[0m  /  [0;31mFAIL: 0[0m  /  TOTAL: 227
+trace-test.sh exit=0
+observability-lab.sh exit=0
+scaling-lab.sh exit=0
+teardown exit=0

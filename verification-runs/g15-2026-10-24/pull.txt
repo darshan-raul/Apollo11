@@ -1,0 +1,3 @@
+ghcr.io/darshan-raul/apollo11/stage7/booking:sha-6bc371b
+uid=10001
+User=10001:10001

@@ -1,0 +1,260 @@
+[0;36m▶ Stage 6 namespaces, operator, and custom resources[0m
+[0;32m[PASS][0m ns/apollo-observability
+[0;32m[PASS][0m prometheus-operator ready
+[0;32m[PASS][0m crd/prometheuses.monitoring.coreos.com
+[0;32m[PASS][0m crd/servicemonitors.monitoring.coreos.com
+[0;32m[PASS][0m crd/prometheusrules.monitoring.coreos.com
+[0;32m[PASS][0m prometheus/apollo
+[0;32m[PASS][0m prometheus-apollo ready
+[0;32m[PASS][0m 5 ServiceMonitors
+[0;32m[PASS][0m prometheusrule/apollo-services
+[0;36m▶ Stage 6 telemetry endpoints and collector DNS[0m
+[0;32m[PASS][0m identity OTLP endpoint uses cross-namespace FQDN
+[0;32m[PASS][0m identity exposes real request counters
+[0;32m[PASS][0m identity exposes latency histogram
+[0;32m[PASS][0m flight OTLP endpoint uses cross-namespace FQDN
+[0;32m[PASS][0m flight exposes real request counters
+[0;32m[PASS][0m flight exposes latency histogram
+[0;32m[PASS][0m booking OTLP endpoint uses cross-namespace FQDN
+[0;32m[PASS][0m booking exposes real request counters
+[0;32m[PASS][0m booking exposes latency histogram
+[0;32m[PASS][0m search OTLP endpoint uses cross-namespace FQDN
+[0;32m[PASS][0m search exposes real request counters
+[0;32m[PASS][0m search exposes latency histogram
+[0;32m[PASS][0m notification OTLP endpoint uses cross-namespace FQDN
+[0;32m[PASS][0m notification exposes real request counters
+[0;32m[PASS][0m notification exposes latency histogram
+[0;36m▶ Stage 6 observability workloads[0m
+[0;32m[PASS][0m grafana ready
+[0;32m[PASS][0m loki ready
+[0;32m[PASS][0m tempo ready
+[0;32m[PASS][0m otel-collector DaemonSet 2/2 ready
+[0;32m[PASS][0m alloy DaemonSet 2/2 ready
+[0;36m▶ Prometheus discovery, rules, Grafana, Tempo, and Loki APIs[0m
+[0;32m[PASS][0m Prometheus has at least 5 healthy backend targets
+[0;32m[PASS][0m Prometheus loaded Apollo rules
+[0;32m[PASS][0m Grafana API healthy
+[0;32m[PASS][0m 5 Grafana dashboards provisioned
+[0;32m[PASS][0m Tempo API ready
+[0;32m[PASS][0m Loki API ready
+[0;32m[PASS][0m Envoy -> Grafana /api/health -> 200
+[0;32m[PASS][0m cross-service booking trace reached Tempo
+[0;36m▶ Alloy log delivery and trace/log correlation[0m
+[0;32m[PASS][0m Loki query API returned Kubernetes logs
+[0;36m▶ Namespaces (2 expected: apollo-airlines-apps, apollo-airlines-ui)[0m
+[0;32m[PASS][0m ns/apollo-airlines-apps
+[0;32m[PASS][0m ns/apollo-airlines-ui
+[0;36m▶ ServiceAccounts (13 expected: 6 apps + 4 data + 3 init)[0m
+[0;32m[PASS][0m sa apollo-airlines-apps/identity
+[0;32m[PASS][0m sa apollo-airlines-apps/flight
+[0;32m[PASS][0m sa apollo-airlines-apps/booking
+[0;32m[PASS][0m sa apollo-airlines-apps/search
+[0;32m[PASS][0m sa apollo-airlines-apps/notification
+[0;32m[PASS][0m sa apollo-airlines-ui/frontend
+[0;32m[PASS][0m sa apollo-airlines-apps/identity-db
+[0;32m[PASS][0m sa apollo-airlines-apps/flight-db
+[0;32m[PASS][0m sa apollo-airlines-apps/booking-db
+[0;32m[PASS][0m sa apollo-airlines-apps/redis
+[0;32m[PASS][0m sa apollo-airlines-apps/init-identity-db
+[0;32m[PASS][0m sa apollo-airlines-apps/init-flight-db
+[0;32m[PASS][0m sa apollo-airlines-apps/init-booking-db
+[0;36m▶ ConfigMap + Secret[0m
+[0;32m[PASS][0m cm/apollo-airlines-config in apollo-airlines-apps
+[0;32m[PASS][0m cm/apollo-airlines-config in apollo-airlines-ui
+[0;32m[PASS][0m secret/apollo-airlines-secrets in apollo-airlines-apps
+[0;36m▶ StatefulSets (4 expected: 3 PG + 1 Redis, all 1/1 Ready)[0m
+[0;32m[PASS][0m statefulset/identity-db ready=1
+[0;32m[PASS][0m statefulset/flight-db ready=1
+[0;32m[PASS][0m statefulset/booking-db ready=1
+[0;32m[PASS][0m statefulset/redis ready=1
+[0;36m▶ StatefulSet pods (4 expected, all Ready)[0m
+[0;32m[PASS][0m pod/identity-db-0 Ready
+[0;32m[PASS][0m pod/flight-db-0 Ready
+[0;32m[PASS][0m pod/booking-db-0 Ready
+[0;32m[PASS][0m pod/redis-0 Ready
+[0;36m▶ PVCs (4 expected, all Bound)[0m
+[0;32m[PASS][0m pvc apollo-airlines-apps/pg-data-identity-db-0 Bound
+[0;32m[PASS][0m pvc apollo-airlines-apps/pg-data-flight-db-0 Bound
+[0;32m[PASS][0m pvc apollo-airlines-apps/pg-data-booking-db-0 Bound
+[0;32m[PASS][0m pvc apollo-airlines-apps/redis-data-redis-0 Bound
+[0;36m▶ Headless Services (4 expected)[0m
+[0;32m[PASS][0m svc/identity-db-headless headless
+[0;32m[PASS][0m svc/flight-db-headless headless
+[0;32m[PASS][0m svc/booking-db-headless headless
+[0;32m[PASS][0m svc/redis-headless headless
+[0;36m▶ App Deployments (5 expected, all >=1 Ready)[0m
+[0;32m[PASS][0m deployment/identity ready=1
+[0;32m[PASS][0m deployment/flight ready=1
+[0;32m[PASS][0m deployment/booking ready=1
+[0;32m[PASS][0m deployment/search ready=1
+[0;32m[PASS][0m deployment/notification ready=1
+[0;32m[PASS][0m deployment/frontend startupProbe path=/healthz/startup
+[0;32m[PASS][0m deployment/frontend livenessProbe path=/healthz/live
+[0;32m[PASS][0m deployment/frontend readinessProbe path=/healthz/ready
+[0;36m▶ StatefulSet probes (liveness + readiness, no startup probe)[0m
+[0;32m[PASS][0m statefulset/identity-db livenessProbe command=pg_isready
+[0;32m[PASS][0m statefulset/identity-db readinessProbe command=pg_isready
+[0;32m[PASS][0m statefulset/identity-db has no startupProbe
+[0;32m[PASS][0m statefulset/flight-db livenessProbe command=pg_isready
+[0;32m[PASS][0m statefulset/flight-db readinessProbe command=pg_isready
+[0;32m[PASS][0m statefulset/flight-db has no startupProbe
+[0;32m[PASS][0m statefulset/booking-db livenessProbe command=pg_isready
+[0;32m[PASS][0m statefulset/booking-db readinessProbe command=pg_isready
+[0;32m[PASS][0m statefulset/booking-db has no startupProbe
+[0;32m[PASS][0m statefulset/redis livenessProbe command=redis-cli
+[0;32m[PASS][0m statefulset/redis readinessProbe command=redis-cli
+[0;32m[PASS][0m statefulset/redis has no startupProbe
+[0;36m▶ Frontend Deployment (1 expected)[0m
+[0;32m[PASS][0m deployment/frontend ready=1
+[0;36m▶ Probes on 6 app Deployments (startup/live/ready, all 3 distinct)[0m
+[0;32m[PASS][0m deployment/identity startupProbe path=/healthz/startup
+[0;32m[PASS][0m deployment/identity livenessProbe path=/healthz/live
+[0;32m[PASS][0m deployment/identity readinessProbe path=/healthz/ready
+[0;32m[PASS][0m deployment/flight startupProbe path=/healthz/startup
+[0;32m[PASS][0m deployment/flight livenessProbe path=/healthz/live
+[0;32m[PASS][0m deployment/flight readinessProbe path=/healthz/ready
+[0;32m[PASS][0m deployment/booking startupProbe path=/healthz/startup
+[0;32m[PASS][0m deployment/booking livenessProbe path=/healthz/live
+[0;32m[PASS][0m deployment/booking readinessProbe path=/healthz/ready
+[0;32m[PASS][0m deployment/search startupProbe path=/healthz/startup
+[0;32m[PASS][0m deployment/search livenessProbe path=/healthz/live
+[0;32m[PASS][0m deployment/search readinessProbe path=/healthz/ready
+[0;32m[PASS][0m deployment/notification startupProbe path=/healthz/startup
+[0;32m[PASS][0m deployment/notification livenessProbe path=/healthz/live
+[0;32m[PASS][0m deployment/notification readinessProbe path=/healthz/ready
+[0;36m▶ Resources: CPU and memory requests == limits on all 10 workloads[0m
+[0;32m[PASS][0m deployment/identity Guaranteed resources cpu=200m memory=256Mi
+[0;32m[PASS][0m deployment/flight Guaranteed resources cpu=100m memory=128Mi
+[0;32m[PASS][0m deployment/booking Guaranteed resources cpu=200m memory=256Mi
+[0;32m[PASS][0m deployment/search Guaranteed resources cpu=100m memory=128Mi
+[0;32m[PASS][0m deployment/notification Guaranteed resources cpu=50m memory=64Mi
+[0;32m[PASS][0m deployment/frontend Guaranteed resources cpu=50m memory=64Mi
+[0;32m[PASS][0m statefulset/identity-db Guaranteed resources cpu=200m memory=256Mi
+[0;32m[PASS][0m statefulset/flight-db Guaranteed resources cpu=200m memory=256Mi
+[0;32m[PASS][0m statefulset/booking-db Guaranteed resources cpu=200m memory=256Mi
+[0;32m[PASS][0m statefulset/redis Guaranteed resources cpu=100m memory=128Mi
+[0;36m▶ terminationGracePeriodSeconds (30s apps, 60s data workloads)[0m
+[0;32m[PASS][0m deployment/identity terminationGracePeriodSeconds=30
+[0;32m[PASS][0m deployment/flight terminationGracePeriodSeconds=30
+[0;32m[PASS][0m deployment/booking terminationGracePeriodSeconds=30
+[0;32m[PASS][0m deployment/search terminationGracePeriodSeconds=30
+[0;32m[PASS][0m deployment/notification terminationGracePeriodSeconds=30
+[0;32m[PASS][0m deployment/frontend terminationGracePeriodSeconds=30
+[0;32m[PASS][0m statefulset/identity-db terminationGracePeriodSeconds=60
+[0;32m[PASS][0m statefulset/flight-db terminationGracePeriodSeconds=60
+[0;32m[PASS][0m statefulset/booking-db terminationGracePeriodSeconds=60
+[0;32m[PASS][0m statefulset/redis terminationGracePeriodSeconds=60
+[0;36m▶ Stage 4 Contract Verification (lifecycle.preStop and topologySpreadConstraints)[0m
+[0;32m[PASS][0m deployment/identity lifecycle.preStop configured
+[0;32m[PASS][0m deployment/identity topologySpreadConstraints configured
+[0;32m[PASS][0m deployment/flight lifecycle.preStop configured
+[0;32m[PASS][0m deployment/flight topologySpreadConstraints configured
+[0;32m[PASS][0m deployment/booking lifecycle.preStop configured
+[0;32m[PASS][0m deployment/booking topologySpreadConstraints configured
+[0;32m[PASS][0m deployment/search lifecycle.preStop configured
+[0;32m[PASS][0m deployment/search topologySpreadConstraints configured
+[0;32m[PASS][0m deployment/notification lifecycle.preStop configured
+[0;32m[PASS][0m deployment/notification topologySpreadConstraints configured
+[0;32m[PASS][0m deployment/frontend lifecycle.preStop configured
+[0;32m[PASS][0m deployment/frontend topologySpreadConstraints configured
+[0;36m▶ PodDisruptionBudgets match the selected environment[0m
+[0;32m[PASS][0m pdb/booking-pdb disabled in dev
+[0;32m[PASS][0m pdb/frontend-pdb disabled in dev
+[0;36m▶ Seed Jobs (3 expected: identity, flight, booking — all Complete)[0m
+[0;32m[PASS][0m job/seed-identity-db Complete
+[0;32m[PASS][0m job/seed-flight-db Complete
+[0;32m[PASS][0m job/seed-booking-db Complete
+[0;36m▶ Database URLs expanded from Secret-backed environment variables[0m
+[0;32m[PASS][0m deployment/identity DATABASE_URL contains no unexpanded variable
+[0;32m[PASS][0m deployment/flight DATABASE_URL contains no unexpanded variable
+[0;32m[PASS][0m deployment/booking DATABASE_URL contains no unexpanded variable
+[0;36m▶ Live probe endpoints respond inside all 6 application pods[0m
+[0;32m[PASS][0m identity /healthz/startup responds
+[0;32m[PASS][0m identity /healthz/live responds
+[0;32m[PASS][0m identity /healthz/ready responds
+[0;32m[PASS][0m flight /healthz/startup responds
+[0;32m[PASS][0m flight /healthz/live responds
+[0;32m[PASS][0m flight /healthz/ready responds
+[0;32m[PASS][0m booking /healthz/startup responds
+[0;32m[PASS][0m booking /healthz/live responds
+[0;32m[PASS][0m booking /healthz/ready responds
+[0;32m[PASS][0m search /healthz/startup responds
+[0;32m[PASS][0m search /healthz/live responds
+[0;32m[PASS][0m search /healthz/ready responds
+[0;32m[PASS][0m notification /healthz/startup responds
+[0;32m[PASS][0m notification /healthz/live responds
+[0;32m[PASS][0m notification /healthz/ready responds
+[0;32m[PASS][0m frontend /healthz/startup responds
+[0;32m[PASS][0m frontend /healthz/live responds
+[0;32m[PASS][0m frontend /healthz/ready responds
+[0;36m▶ Seed data is present[0m
+[0;32m[PASS][0m identity seed has 2 users
+[0;32m[PASS][0m flight seed has 6 airports
+[0;32m[PASS][0m flight seed has 186 flights
+[0;36m▶ Frontend bundle contains routed API hosts and no localhost API URLs[0m
+[0;32m[PASS][0m frontend bundle has all four routed API hosts
+[0;36m▶ Envoy Gateway access stack[0m
+[0;32m[PASS][0m ns/envoy-gateway-system
+[0;32m[PASS][0m ns/metallb-system
+[0;32m[PASS][0m gatewayclass/eg
+[0;32m[PASS][0m gateway/apollo-gateway Programmed
+[0;36m▶ HTTPRoutes (6 expected: identity, flight, booking, search, notification, frontend)[0m
+[0;32m[PASS][0m httproute/identity
+[0;32m[PASS][0m httproute/flight
+[0;32m[PASS][0m httproute/booking
+[0;32m[PASS][0m httproute/search
+[0;32m[PASS][0m httproute/notification
+[0;32m[PASS][0m httproute/frontend (cross-namespace)
+[0;36m▶ ReferenceGrant (cross-namespace)[0m
+[0;32m[PASS][0m referencegrant/apollo-gateway-grant
+[0;36m▶ MetalLB IP pool + L2 advertisement[0m
+[0;32m[PASS][0m ipaddresspool/apollo-pool
+[0;32m[PASS][0m l2advertisement/apollo-l2
+[0;36m▶ HTTPRoutes are attached and live through the MetalLB address[0m
+[0;32m[PASS][0m Envoy LoadBalancer address=172.18.0.50
+[0;32m[PASS][0m all 6 HTTPRoutes report an Envoy parent
+[0;32m[PASS][0m Envoy -> identity /healthz -> 200
+[0;32m[PASS][0m Envoy -> flight /healthz -> 200
+[0;32m[PASS][0m Envoy -> booking /healthz -> 200
+[0;32m[PASS][0m Envoy -> search /healthz -> 200
+[0;32m[PASS][0m Envoy -> notification /healthz -> 200
+[0;32m[PASS][0m Envoy -> frontend / -> 200
+[0;32m[PASS][0m login flow through Envoy returned a token
+[0;32m[PASS][0m Envoy HTTPS -> identity.apollo.local /healthz -> 200
+[0;32m[PASS][0m Envoy HTTPS -> booking.apollo.local /healthz -> 200
+[0;32m[PASS][0m Envoy HTTPS -> frontend.apollo.local /healthz -> 200
+[0;36m▶ Stage 7 metrics-server and HorizontalPodAutoscaler[0m
+[0;32m[PASS][0m metrics-server ready
+[0;32m[PASS][0m metrics.k8s.io returns node data
+[0;32m[PASS][0m hpa/search-hpa exists
+[0;32m[PASS][0m search HPA bounds=1/3
+[0;32m[PASS][0m search HPA CPU target=70%
+[0;32m[PASS][0m search HPA scale-down stabilization=300s
+[0;36m▶ Stage 7 VerticalPodAutoscaler recommendation mode[0m
+[0;32m[PASS][0m VPA intentionally disabled in dev
+[0;36m▶ Stage 7 PriorityClasses and scheduling policy[0m
+[0;32m[PASS][0m critical PriorityClass value=1000000
+[0;32m[PASS][0m low PriorityClass value=-100000
+[0;32m[PASS][0m deployment/booking priorityClassName=apollo-airlines-app-critical
+[0;32m[PASS][0m deployment/search priorityClassName=apollo-airlines-app-critical
+[0;32m[PASS][0m deployment/notification priorityClassName=apollo-airlines-app-low
+[0;32m[PASS][0m search tolerates workload=search
+[0;32m[PASS][0m search prefers apollo11.io/search-pool=dedicated
+[0;32m[PASS][0m search topology spread is hostname/maxSkew=1/DoNotSchedule/nodeTaintsPolicy=Honor
+[0;36m▶ Stage 7 Redis cache behavior and metrics[0m
+[0;32m[PASS][0m first search response X-Cache=MISS
+[0;32m[PASS][0m second search response X-Cache=HIT
+[0;32m[PASS][0m Redis cache TTL=300 seconds
+[0;32m[PASS][0m cache_hits_total exposed
+[0;32m[PASS][0m cache_misses_total exposed
+Trusted HTTPS health: identity
+Trusted HTTPS health: flight
+Trusted HTTPS health: booking
+Trusted HTTPS health: search
+Trusted HTTPS login, populated search, booking, cancellation, and hostname rejection passed.
+[0;32m[PASS][0m trusted HTTPS API workflow and hostname rejection
+
+============================================
+  [0;32mPASS: 216[0m  /  [0;31mFAIL: 0[0m  /  TOTAL: 216
+============================================
+[0;32mAll Stage 7 checks passed.[0m

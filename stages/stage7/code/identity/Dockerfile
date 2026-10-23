@@ -18,4 +18,5 @@ EXPOSE 8080
 # Numeric UID so Kubernetes runAsNonRoot can verify it (Stage 8).
 USER 10001:10001
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# main.py runs uvicorn with a 30 s graceful-shutdown timeout and logs SIGTERM.
+CMD ["python", "main.py"]

@@ -1,0 +1,6 @@
+apollo-airlines-apps/booking uid=10001
+apollo-airlines-apps/flight uid=10001
+apollo-airlines-apps/identity uid=10001
+apollo-airlines-apps/notification uid=10001
+apollo-airlines-apps/search uid=10001
+apollo-airlines-ui/frontend uid=101

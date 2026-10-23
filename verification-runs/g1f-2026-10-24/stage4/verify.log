@@ -1,0 +1,196 @@
+
+=== 1. Core Namespaces ===
+  [0;32m[PASS][0m Namespace apollo-airlines-apps exists
+  [0;32m[PASS][0m Namespace apollo-airlines-ui exists
+  [0;32m[PASS][0m Namespace envoy-gateway-system exists
+  [0;32m[PASS][0m Namespace metallb-system exists
+
+=== 2. ServiceAccount Token Automount Security ===
+  [0;32m[PASS][0m SA apollo-airlines-apps/identity-db exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/flight-db exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/booking-db exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/redis exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/identity exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/flight exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/booking exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/search exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/notification exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/init-identity-db exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/init-flight-db exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-apps/init-booking-db exists (automount=false)
+  [0;32m[PASS][0m SA apollo-airlines-ui/frontend exists (automount=false)
+
+=== 3. StatefulSets & Workload Identity ===
+  [0;32m[PASS][0m StatefulSet apollo-airlines-apps/identity-db ready (replicas=1)
+  [0;32m[PASS][0m StatefulSet apollo-airlines-apps/flight-db ready (replicas=1)
+  [0;32m[PASS][0m StatefulSet apollo-airlines-apps/booking-db ready (replicas=1)
+  [0;32m[PASS][0m StatefulSet apollo-airlines-apps/redis ready (replicas=1)
+  [0;32m[PASS][0m StatefulSet Pod apollo-airlines-apps/identity-db-0 is Ready
+  [0;32m[PASS][0m StatefulSet Pod apollo-airlines-apps/flight-db-0 is Ready
+  [0;32m[PASS][0m StatefulSet Pod apollo-airlines-apps/booking-db-0 is Ready
+  [0;32m[PASS][0m StatefulSet Pod apollo-airlines-apps/redis-0 is Ready
+
+=== 4. Persistent Storage (PVCs & PVs) ===
+  [0;32m[PASS][0m PVC pg-data-identity-db-0 is Bound (1Gi)
+  [0;32m[PASS][0m PVC pg-data-flight-db-0 is Bound (1Gi)
+  [0;32m[PASS][0m PVC pg-data-booking-db-0 is Bound (1Gi)
+  [0;32m[PASS][0m PVC redis-data-redis-0 is Bound (1Gi)
+
+=== 5. Headless Services & CoreDNS Resolution ===
+  [0;32m[PASS][0m Headless Service identity-db-headless has clusterIP=None
+  [0;32m[PASS][0m Headless Service flight-db-headless has clusterIP=None
+  [0;32m[PASS][0m Headless Service booking-db-headless has clusterIP=None
+  [0;32m[PASS][0m Headless Service redis-headless has clusterIP=None
+
+=== 6. Application Deployments & Seed Jobs ===
+  [0;32m[PASS][0m Deployment apollo-airlines-apps/identity ready (2 replicas)
+  [0;32m[PASS][0m Deployment apollo-airlines-apps/flight ready (2 replicas)
+  [0;32m[PASS][0m Deployment apollo-airlines-apps/booking ready (2 replicas)
+  [0;32m[PASS][0m Deployment apollo-airlines-apps/search ready (2 replicas)
+  [0;32m[PASS][0m Deployment apollo-airlines-apps/notification ready (2 replicas)
+  [0;32m[PASS][0m Deployment apollo-airlines-ui/frontend ready (2 replicas)
+  [0;32m[PASS][0m Database seed job apollo-airlines-apps/seed-identity-db completed
+  [0;32m[PASS][0m Database seed job apollo-airlines-apps/seed-flight-db completed
+  [0;32m[PASS][0m Database seed job apollo-airlines-apps/seed-booking-db completed
+
+=== 7. Database Seed Integrity ===
+  [0;32m[PASS][0m identity-db users table has 2 rows
+  [0;32m[PASS][0m flight-db airports table has 6 rows
+  [0;32m[PASS][0m flight-db flights table has 186 rows
+
+=== 8. Envoy Gateway & MetalLB Access Stack ===
+  [0;32m[PASS][0m Gateway apollo-gateway is Programmed
+  [0;32m[PASS][0m MetalLB assigned LoadBalancer IP: 172.18.0.50
+  [0;32m[PASS][0m Envoy Gateway HTTPRoute to identity.apollo.local returned HTTP 200
+  [0;32m[PASS][0m Envoy Gateway HTTPRoute to flight.apollo.local returned HTTP 200
+  [0;32m[PASS][0m Envoy Gateway HTTPRoute to booking.apollo.local returned HTTP 200
+  [0;32m[PASS][0m Envoy Gateway HTTPRoute to search.apollo.local returned HTTP 200
+  [0;32m[PASS][0m Envoy Gateway frontend HTTPRoute returned HTTP 200
+
+=== 9. Stage 4: Probes Configuration (Startup, Liveness, Readiness) ===
+  [0;32m[PASS][0m deploy/identity has startupProbe (/healthz/startup)
+  [0;32m[PASS][0m deploy/identity has livenessProbe (/healthz/live)
+  [0;32m[PASS][0m deploy/identity has readinessProbe (/healthz/ready)
+  [0;32m[PASS][0m deploy/flight has startupProbe (/healthz/startup)
+  [0;32m[PASS][0m deploy/flight has livenessProbe (/healthz/live)
+  [0;32m[PASS][0m deploy/flight has readinessProbe (/healthz/ready)
+  [0;32m[PASS][0m deploy/booking has startupProbe (/healthz/startup)
+  [0;32m[PASS][0m deploy/booking has livenessProbe (/healthz/live)
+  [0;32m[PASS][0m deploy/booking has readinessProbe (/healthz/ready)
+  [0;32m[PASS][0m deploy/search has startupProbe (/healthz/startup)
+  [0;32m[PASS][0m deploy/search has livenessProbe (/healthz/live)
+  [0;32m[PASS][0m deploy/search has readinessProbe (/healthz/ready)
+  [0;32m[PASS][0m deploy/notification has startupProbe (/healthz/startup)
+  [0;32m[PASS][0m deploy/notification has livenessProbe (/healthz/live)
+  [0;32m[PASS][0m deploy/notification has readinessProbe (/healthz/ready)
+  [0;32m[PASS][0m deploy/frontend has startupProbe (/healthz/startup)
+  [0;32m[PASS][0m deploy/frontend has livenessProbe (/healthz/live)
+  [0;32m[PASS][0m deploy/frontend has readinessProbe (/healthz/ready)
+  [0;32m[PASS][0m statefulset/identity-db has livenessProbe (pg_isready)
+  [0;32m[PASS][0m statefulset/identity-db has readinessProbe (pg_isready)
+  [0;32m[PASS][0m statefulset/identity-db has no startupProbe (implicit via initdb/redis init)
+  [0;32m[PASS][0m statefulset/flight-db has livenessProbe (pg_isready)
+  [0;32m[PASS][0m statefulset/flight-db has readinessProbe (pg_isready)
+  [0;32m[PASS][0m statefulset/flight-db has no startupProbe (implicit via initdb/redis init)
+  [0;32m[PASS][0m statefulset/booking-db has livenessProbe (pg_isready)
+  [0;32m[PASS][0m statefulset/booking-db has readinessProbe (pg_isready)
+  [0;32m[PASS][0m statefulset/booking-db has no startupProbe (implicit via initdb/redis init)
+  [0;32m[PASS][0m statefulset/redis has livenessProbe (redis-cli)
+  [0;32m[PASS][0m statefulset/redis has readinessProbe (redis-cli)
+  [0;32m[PASS][0m statefulset/redis has no startupProbe (implicit via initdb/redis init)
+
+=== 10. Stage 4: Live Probe Endpoints Execution ===
+  [0;32m[PASS][0m Pod identity live probe /healthz/startup responded: {"status":"starting"}
+  [0;32m[PASS][0m Pod identity live probe /healthz/live responded: {"status":"alive"}
+  [0;32m[PASS][0m Pod identity live probe /healthz/ready responded: {"status":"ready"}
+  [0;32m[PASS][0m Pod flight live probe /healthz/startup responded: {"status":"starting"}
+  [0;32m[PASS][0m Pod flight live probe /healthz/live responded: {"status":"alive"}
+  [0;32m[PASS][0m Pod flight live probe /healthz/ready responded: {"status":"ready"}
+  [0;32m[PASS][0m Pod booking live probe /healthz/startup responded: {"status":"starting"}
+  [0;32m[PASS][0m Pod booking live probe /healthz/live responded: {"status":"alive"}
+  [0;32m[PASS][0m Pod booking live probe /healthz/ready responded: {"status":"ready"}
+  [0;32m[PASS][0m Pod search live probe /healthz/startup responded: {"status":"starting"}
+  [0;32m[PASS][0m Pod search live probe /healthz/live responded: {"status":"alive"}
+  [0;32m[PASS][0m Pod search live probe /healthz/ready responded: {"status":"ready"}
+  [0;32m[PASS][0m Pod notification live probe /healthz/startup responded: {"status":"starting"}
+  [0;32m[PASS][0m Pod notification live probe /healthz/live responded: {"status":"alive"}
+  [0;32m[PASS][0m Pod notification live probe /healthz/ready responded: {"status":"ready"}
+  [0;32m[PASS][0m Pod frontend live probe /healthz/startup responded: starting
+  [0;32m[PASS][0m Pod frontend live probe /healthz/live responded: alive
+  [0;32m[PASS][0m Pod frontend live probe /healthz/ready responded: ready
+
+=== 11. Stage 4: Guaranteed QoS & Lifecycle PreStop Hooks ===
+  [0;32m[PASS][0m Pod identity QoS class is Guaranteed (requests == limits)
+  [0;32m[PASS][0m deploy/identity terminationGracePeriodSeconds is 30
+  [0;32m[PASS][0m deploy/identity has lifecycle preStop hook configured
+  [0;32m[PASS][0m Pod flight QoS class is Guaranteed (requests == limits)
+  [0;32m[PASS][0m deploy/flight terminationGracePeriodSeconds is 30
+  [0;32m[PASS][0m deploy/flight has lifecycle preStop hook configured
+  [0;32m[PASS][0m Pod booking QoS class is Guaranteed (requests == limits)
+  [0;32m[PASS][0m deploy/booking terminationGracePeriodSeconds is 30
+  [0;32m[PASS][0m deploy/booking has lifecycle preStop hook configured
+  [0;32m[PASS][0m Pod search QoS class is Guaranteed (requests == limits)
+  [0;32m[PASS][0m deploy/search terminationGracePeriodSeconds is 30
+  [0;32m[PASS][0m deploy/search has lifecycle preStop hook configured
+  [0;32m[PASS][0m Pod notification QoS class is Guaranteed (requests == limits)
+  [0;32m[PASS][0m deploy/notification terminationGracePeriodSeconds is 30
+  [0;32m[PASS][0m deploy/notification has lifecycle preStop hook configured
+  [0;32m[PASS][0m Pod frontend QoS class is Guaranteed
+  [0;32m[PASS][0m deploy/frontend has lifecycle preStop hook configured
+  [0;32m[PASS][0m StatefulSet pod identity-db-0 QoS class is Guaranteed
+  [0;32m[PASS][0m statefulset/identity-db terminationGracePeriodSeconds is 60
+  [0;32m[PASS][0m StatefulSet pod flight-db-0 QoS class is Guaranteed
+  [0;32m[PASS][0m statefulset/flight-db terminationGracePeriodSeconds is 60
+  [0;32m[PASS][0m StatefulSet pod booking-db-0 QoS class is Guaranteed
+  [0;32m[PASS][0m statefulset/booking-db terminationGracePeriodSeconds is 60
+  [0;32m[PASS][0m StatefulSet pod redis-0 QoS class is Guaranteed
+  [0;32m[PASS][0m statefulset/redis terminationGracePeriodSeconds is 60
+
+=== 12. Stage 4: PriorityClasses & Scheduling Placement ===
+  [0;32m[PASS][0m PriorityClass apollo-airlines-app-critical exists (value=1000000)
+  [0;32m[PASS][0m PriorityClass apollo-airlines-app-low exists (value=-100000)
+  [0;32m[PASS][0m deploy/booking assigned priorityClassName=apollo-airlines-app-critical
+  [0;32m[PASS][0m deploy/search assigned priorityClassName=apollo-airlines-app-critical
+  [0;32m[PASS][0m deploy/notification assigned priorityClassName=apollo-airlines-app-low
+  [0;32m[PASS][0m deploy/booking has topologySpreadConstraints (topologyKey=kubernetes.io/hostname)
+  [0;32m[PASS][0m deploy/flight has topologySpreadConstraints (topologyKey=kubernetes.io/hostname)
+  [0;32m[PASS][0m deploy/search has topologySpreadConstraints (topologyKey=kubernetes.io/hostname)
+  [0;32m[PASS][0m deploy/frontend has topologySpreadConstraints (topologyKey=kubernetes.io/hostname)
+
+=== 13. Stage 4: PodDisruptionBudgets (PDB) ===
+  [0;32m[PASS][0m PDB apollo-airlines-apps/booking-pdb active (minAvailable=1, currentHealthy=2)
+  [0;32m[PASS][0m PDB apollo-airlines-ui/frontend-pdb active (minAvailable=1, currentHealthy=2)
+
+=== 14. Flagship Booking Workflow & Graceful SIGTERM Shutdown Proof ===
+  [0;32m[PASS][0m Passenger login succeeded and returned JWT
+  [0;32m[PASS][0m Flight inventory query returned valid flight ID: c744ffc9-33ee-4c15-aebe-bb9ab2079f4f
+  [0;32m[PASS][0m Flagship booking workflow succeeded (bookingId: 27c08712-c529-4ce9-93f2-b5dc412014b4)
+  [0;36m[INFO][0m Executing reversible termination experiment: Testing graceful SIGTERM shutdown...
+  [0;32m[PASS][0m Booking pod logged graceful SIGTERM drain before container exit
+  [0;32m[PASS][0m Booking replacement pod is Ready after termination
+
+=== 15. Reversible Eviction API & PodDisruptionBudget Enforcement Proof ===
+  [0;36m[INFO][0m Testing PDB contract: verifying first eviction succeeds and second is blocked...
+  [0;32m[PASS][0m First pod eviction (booking-6b74d85dff-vw7wh) permitted by booking-pdb
+  [0;32m[PASS][0m PDB enforcement proven: second eviction (booking-6b74d85dff-xshlb) rejected by booking-pdb (budget exhausted)
+  [0;32m[PASS][0m Traffic survived eviction disruption (booking service returned HTTP 200)
+  [0;36m[INFO][0m Waiting for replacement pod to be Ready...
+  [0;32m[PASS][0m booking-pdb fully recovered: currentHealthy=2
+
+=== 16. Reversible Placement Lab (Topology Spread & Node Taints) ===
+  [0;32m[PASS][0m topologySpreadConstraints active: booking pods distributed across 2 nodes
+  [0;36m[INFO][0m Executing reversible taint/toleration experiment on apollo11-worker...
+  [0;32m[PASS][0m Reversible taint applied to apollo11-worker (NoSchedule)
+  [0;32m[PASS][0m Node apollo11-worker successfully restored (taint removed)
+Trusted HTTPS health: identity
+Trusted HTTPS health: flight
+Trusted HTTPS health: booking
+Trusted HTTPS health: search
+Trusted HTTPS login, populated search, booking, cancellation, and hostname rejection passed.
+  [0;32m[PASS][0m trusted HTTPS workflow and hostname rejection
+
+=== Verification Summary ===
+  Total Passed: 149
+  Total Failed: 0
+
+[0;32mStage 4 verification succeeded with 0 failures.[0m

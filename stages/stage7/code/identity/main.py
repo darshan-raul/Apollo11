@@ -1,7 +1,6 @@
 import os
 import re
 import json
-import signal
 import uuid
 import datetime
 import logging
@@ -443,20 +442,25 @@ async def get_all_users(authorization: str = Header(None), request: Request = No
     }
 
 
-def _log_sigterm(signum, frame):
-    log_json("INFO", "identity-service", "Received SIGTERM, shutting down gracefully", trace_id="")
-
-
-signal.signal(signal.SIGTERM, _log_sigterm)
-signal.signal(signal.SIGINT, _log_sigterm)
-
-
+# --- Graceful shutdown (Stage 4) ---
+# The image starts this file with `python main.py`, so the settings below
+# apply. uvicorn's own signal handler calls Server.handle_exit, which starts
+# the graceful drain. Subclassing keeps that behavior and adds one log line;
+# replacing the handler with signal.signal() would log but never exit.
+# timeout_graceful_shutdown gives in-flight requests up to 30 s, matching
+# terminationGracePeriodSeconds.
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
+
+    class LoggingServer(uvicorn.Server):
+        def handle_exit(self, sig, frame):
+            log_json("INFO", "identity-service", "Received SIGTERM, shutting down gracefully", trace_id="")
+            super().handle_exit(sig, frame)
+
+    LoggingServer(uvicorn.Config(
         app,
         host="0.0.0.0",
         port=8080,
         timeout_graceful_shutdown=30,
         access_log=False,
-    )
+    )).run()

@@ -1,0 +1,8 @@
+configmap/blackbox-trust created
+deployment.apps/blackbox restarted
+Waiting for deployment "blackbox" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "blackbox" rollout to finish: 1 old replicas are pending termination...
+deployment "blackbox" successfully rolled out
+probe.monitoring.coreos.com/blackbox-edge created
+Query probe_success{job="probe/apollo-observability/blackbox-edge"}; require 1.
+PASS: trusted edge probe failed/recovered; firing and resolved payloads delivered.

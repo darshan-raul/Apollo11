@@ -1,0 +1,4 @@
+ns: 
+pv: 
+crd: 
+clusterroles: clusterrole.rbac.authorization.k8s.io/system:monitoring clusterrolebinding.rbac.authorization.k8s.io/system:monitoring 

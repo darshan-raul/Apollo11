@@ -418,8 +418,14 @@ if [[ -n "$BOOKING_POD" ]]; then
     fi
     rm -f "$SIGTERM_LOG"
 
-    kubectl wait --for=condition=Ready pod -l app=booking -n apollo-airlines-apps --timeout=60s >/dev/null 2>&1
-    pass "Booking replacement pod is Ready after termination"
+    # Wait on the Deployment, not the label: the label also matches the old
+    # Pod while it terminates, and under `set -e` a timed-out wait would end
+    # the verifier without a summary.
+    if kubectl rollout status deployment/booking -n apollo-airlines-apps --timeout=120s >/dev/null 2>&1; then
+        pass "Booking replacement pod is Ready after termination"
+    else
+        fail "Booking did not return to full readiness within 120s after termination"
+    fi
 else
     fail "Could not locate booking pod to test graceful shutdown"
 fi

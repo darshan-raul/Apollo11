@@ -79,9 +79,9 @@ live run under `verification-runs/`; **[unverified]** no evidence.
 
 | Wave | Start when | Tasks (ready first) |
 |---|---|---|
-| 1 | Now | **G2a** (CI red; fix pushed, hosted result pending). Done 2026-10-24: G1b, G1c, G17, G10a, G24 |
-| 2 | Now, in parallel with wave 1 | G18, G19, G20a, G20b, G20c, G21, G23, G3b, G8b, G13, G6b, G28, G8a, G29, G30 |
-| 3 | After its dependencies in wave 1 | G15 (after G2a and push approval), G2b (after G2a), G1f (after G17, G21), G22 (after G17), G27 (after G17), G3a (after G17) |
+| 1 | Now | Done 2026-10-24: G2a, G1b, G1c, G17, G10a, G24 (and G15 from wave 3) |
+| 2 | Now, in parallel with wave 1 | G18, G19, G20a, G20b, G20c, G21, G23, G3b, G8b, G13, G6b, G28, G8a, G29, G30, G31 |
+| 3 | After its dependencies in wave 1 | Done 2026-10-24: G15, G1f (with G21). Ready: G2b, G22, G27, G3a |
 | 4 | After wave 3 | G1d, G1e (after G1f); G6a (after G1b, G1c); G25a (after G18, G19); G25b (after G20a–c, G21); G26 (after G20c); G25c (after G17, G22, G26, G27, G15); G5 (after G17, G21, G6a); G11 (after G1b, G1c, G1f, G10a). G5 and G25c run last in this wave because they depend on G6a and G26. |
 | 5 | After G17 and G1f | Stage 8: G7a → G7b → G7c → G7d (also needs G15) → G7e |
 | 6 | After G7d and AWS approval | Stage 9: G8c → G8d → G8e |
@@ -103,9 +103,9 @@ settings), G4/G10b/G12 (approval for deletions), G6c (policy decision).
 | G1c | Re-verify Stage 2 substages 1 and 2 | A | Stage 2 | P0 | done 2026-10-24 | — | 1 |
 | G1d | Argo CD live pass for Stages 5–7 | A | Stage 5–7 | P1 | open | G1f | 4 |
 | G1e | Helm/staging and live VPA for Stages 5–7 | A | Stage 5–7 | P2 | open | G1f | 4 |
-| G1f | Stage 5–7 Helm and Kustomize dev re-run after code fixes | A | Stage 5–7 | P1 | open | G17, G21 | 3 |
-| G2 | CI builds, tests and scans what it publishes (parent, reopened) | A | Stage 5 / CI | P0 | in-progress | G2a, G2b, G15 | — |
-| G2a | Make the hosted CI validation job pass | A | CI | P0 | in-progress | — | 1 |
+| G1f | Stage 5–7 Helm and Kustomize dev re-run after code fixes | A | Stage 5–7 | P1 | done 2026-10-24 | G17, G21 | 3 |
+| G2 | CI builds, tests and scans what it publishes (parent, reopened) | A | Stage 5 / CI | P0 | in-progress (G2b left) | G2a, G2b, G15 | — |
+| G2a | Make the hosted CI validation job pass | A | CI | P0 | done 2026-10-24 | — | 1 |
 | G2b | Run the promtool SLO fixture in CI | A | CI, Stage 6–7 | P2 | open | G2a | 3 |
 | G3 | Service tests (parent) | A | Stage 5–7 code | P2 | open | G3a–G3c | — |
 | G3a | Identity unit tests (JWT, hashing, roles) | A | Stage 7 code | P2 | open | G17 | 3 |
@@ -138,7 +138,7 @@ settings), G4/G10b/G12 (approval for deletions), G6c (policy decision).
 | G12 | Remove tracked editor and agent noise | A | Repo | P3 | open | — | Gated |
 | G13 | Pin tools; state minimum resources | A | Toolchain | P2 | open | — | 2 |
 | G14 | Docs repo aligned to `f6211e6` | D | All | P1 | done 2026-10-22 | — | — |
-| G15 | Hosted CI green and first GHCR publication | A | Stage 5 / CI | P0 | open | G2a | 3 |
+| G15 | Hosted CI green and first GHCR publication | A | Stage 5 / CI | P0 | done 2026-10-24 | G2a | 3 |
 | G16 | Stage 7 scaling-lab spread flake | A | Stage 7 | P1 | done 2026-10-19 | — | — |
 | G17 | Restore Stage 4 hardening in Stage 5–7 code | A | Stage 5–7 | P1 | done 2026-10-24 | — | 1 |
 | G18 | Fix Stage 2 lab instructions and frontend expectations | A | Stage 2 | P1 | open | — | 2 |
@@ -147,7 +147,7 @@ settings), G4/G10b/G12 (approval for deletions), G6c (policy decision).
 | G20a | Stage 4 probe and termination proofs | A | Stage 4 | P1 | open | — | 2 |
 | G20b | Stage 4 resources, QoS, throttling, OOM, FailedScheduling | A | Stage 4 | P1 | open | — | 2 |
 | G20c | Stage 4 placement and drain lab with outcome checks | A | Stage 4 | P1 | open | — | 2 |
-| G21 | Make identity's graceful shutdown real | A | Stage 4–7 | P2 | open | — | 2 |
+| G21 | Make identity's graceful shutdown real | A | Stage 4–7 | P2 | done 2026-10-24 | — | 2 |
 | G22 | Stage 5 Helm release, rollback, test and comparison labs | A | Stage 5 | P1 | open | G17 | 3 |
 | G23 | Smooth Launchpad → Ignition → Stage 1 transitions | A | Launchpad–Stage 1 | P2 | open | — | 2 |
 | G24 | Correct the docs status page | D | Status | P1 | done 2026-10-24 | — | 1 |
@@ -160,6 +160,8 @@ settings), G4/G10b/G12 (approval for deletions), G6c (policy decision).
 | G28 | Decide and prove single-node kind support | A | Ignition–Stage 7 | P2 | open | — | 2 |
 | G29 | Enable or remove the CodeQL workflow | A | CI | P3 | open | — | 2 |
 | G30 | Docs toolkit map lists tools the course never covers | D | Home, index | P2 | open | — | 2 |
+| G31 | Make stage script context flags consistent | A | Stage 1–7 scripts | P2 | open | — | 2 |
+| G32 | Stage 4 verifier aborts silently on a slow booking replacement | A | Stage 4 | P1 | done 2026-10-24 | — | — |
 
 Dependency check: every ID in **Depends on** exists in this table, and the
 graph has no cycles. Longest chain: G17 → G1f → G7a → G7b → G7c → G7d → G8c →
@@ -280,7 +282,9 @@ VPA date from 2026-08-25 (G1e). G17 and G21 will change Stage 5–7 code again (
   `updateMode: "Off"`; `teardown.sh --purge` clean.
 - **Evidence:** `verification-runs/g1e-<date>/`.
 
-### G1f — Stage 5–7 dev re-run after code fixes · A · P1 · open
+### G1f — Stage 5–7 dev re-run after code fixes · A · P1 · done 2026-10-24
+
+**Evidence (2026-10-24):** Stage 5 Helm/Kustomize 174/163, Stage 6 212/201 with trace-test and observability-lab, Stage 7 227/216 with trace-test, observability-lab and scaling-lab, plus Stage 4 149/149. Every app Pod ran non-root (10001; frontend 101; Stage 4 100), and every purge left only the built-in `system:monitoring` objects (`verification-runs/g1f-2026-10-24/README.md`). Found G32 along the way. Unblocks G1d, G1e and G7a.
 
 - **Finding:** G17 and G21 change Stage 5–7 images. The 2026-10-22 evidence
   will no longer describe the shipped code.
@@ -315,7 +319,9 @@ later push, fails at "Validate all maintained charts, overlays, scripts, and
 tests" (runs 39684523245, 39821233584, 39985772897) [hosted]. The configuration
 exists but has never passed where it runs. Closes when G2a, G2b and G15 are done.
 
-### G2a — Make the hosted CI validation job pass · A · P0 · in-progress
+### G2a — Make the hosted CI validation job pass · A · P0 · done 2026-10-24
+
+**Closed 2026-10-24:** hosted run 40009537140 on `6bc371b` passed the validation job (see G15).
 
 **Progress (2026-10-24):** root cause reproduced. The committed `generated.yaml` files are Helm 4 renders, and CI's Helm 3.16.2 adds no blank line between documents, so `test/generated.py --check` reports them stale in under a second, matching the 0 s hosted step. Fix: CI pins Helm v4.3.1, kubectl v1.37.1 and Trivy v0.75.0 (the locally verified versions), and `test/ci.sh` prints versions and refuses Helm 3. `bash test/ci.sh` passes locally (`verification-runs/g2a-2026-10-24/README.md`). Remaining: the hosted run must go green.
 
@@ -354,7 +360,9 @@ exists but has never passed where it runs. Closes when G2a, G2b and G15 are done
   it fail (log both).
 - **Depends on:** G2a.
 
-### G15 — Hosted CI green and first GHCR publication · A · P0 · open
+### G15 — Hosted CI green and first GHCR publication · A · P0 · done 2026-10-24
+
+**Evidence (2026-10-24):** run <https://github.com/darshan-raul/Apollo11/actions/runs/40009537140> on `6bc371b`: 37/37 jobs succeeded (validation, 18 builds with Trivy, 18 publishes). All 18 packages are public under `sha-6bc371b` and `latest` (anonymous manifest fetch 36/36); an anonymous pull of `stage7/booking` runs as UID 10001 (`verification-runs/g15-2026-10-24/README.md`). Release tag `v1.0.0` still does not exist; creating it is a separate decision.
 
 - **Why P0:** the Stage 5 learning path claims CI/GHCR delivery
   (ROADMAP Stage 5.3) and `values-prod.yaml:7-8` pins
@@ -857,7 +865,11 @@ charts and include them in G1f.
   replacement is Ready; `uncordon` and taint removal restore the node. Record
   which scheduling content stays in Stage 7 (feeds G26).
 
-### G21 — Make identity's graceful shutdown real · A · P2 · open
+### G21 — Make identity's graceful shutdown real · A · P2 · done 2026-10-24
+
+**Closed 2026-10-24:** the Stage 4 verifier passed 149/149, and the Stage 5–7 lifecycles passed on the fixed identity (G1f). `docs/stage-4.md:164` is now accurate; G25b only needs to describe the mechanism.
+
+**Progress (2026-10-24):** the defect was worse than recorded: the module-level handler replaced uvicorn's, so identity logged the SIGTERM line and never exited (SIGKILL after the grace period). Fixed in Stages 4–7 with a `uvicorn.Server` subclass and `CMD ["python", "main.py"]`. Image tests: clean exit in about 0.5 s; an in-flight request still answered, then the process exited 11.7 s after SIGTERM (`verification-runs/g21-2026-10-24/README.md`). Remaining: the Stage 4 verifier and the G1f lifecycles on the new images.
 
 - **Finding [code]:** Stage 4–7 identity Dockerfiles run
   `CMD ["uvicorn", "main:app", ...]`, so the `if __name__ == "__main__":
@@ -990,6 +1002,17 @@ docs checks.
 - **Acceptance:** it runs green on `main`, or it is removed with approval.
 - **Gates:** repository settings (user).
 
+### G32 — Stage 4 verifier aborts silently on a slow booking replacement · A · P1 · done 2026-10-24
+
+- **Finding (2026-10-24, G1f):** `stages/stage4/scripts/verify.sh` runs
+  `set -euo pipefail` and waited with `kubectl wait --for=condition=Ready pod -l app=booking`
+  after deleting a booking Pod with `--wait=false`. The label also matches the
+  terminating Pod, so the wait could time out and end the script with exit 1,
+  no FAIL line and no summary. It did on the first G1f attempt.
+- **Fix:** wait on `kubectl rollout status deployment/booking --timeout=120s` and
+  record a pass or fail.
+- **Evidence:** Stage 4 149/149 after the fix (`verification-runs/g1f-2026-10-24/README.md`).
+
 ### G30 — Docs toolkit map lists tools the course never covers · D · P2 · open
 
 - **Finding (2026-10-24) [code]:** `docs/index.md:44` introduces the toolkit as
@@ -1001,6 +1024,20 @@ docs checks.
 - **Acceptance:** every tool on the map belongs to a ROADMAP stage or mission, or
   the map is split and the extra tools are labelled "further reading, not
   taught"; the intro text matches; docs checks pass.
+
+### G31 — Make stage script context flags consistent · A · P2 · open
+
+- **Finding (2026-10-24, from G1c and G1f) [code]:** the scripts select the
+  cluster in different ways. Stage 1/2 `apply.sh` take `--context`; Stage 2/4
+  `teardown.sh` take the context only as a positional argument and refuse
+  `--context`; Stage 4 `apply.sh` takes `--cluster NAME` and otherwise uses the
+  current context; Stage 5–7 scripts read `KUBE_CONTEXT` or the current
+  context. All of them refuse foreign contexts, so this is safe, but a learner
+  moving between stages has to relearn the interface.
+- **Acceptance:** every `apply.sh`, `verify.sh` and `teardown.sh` in Stages 1–7
+  accepts `--context <ctx>` and `KUBE_CONTEXT`, keeps the existing allowlist, and
+  documents both in `--help`; `test/review/test_safety.py` covers the flag for
+  one script per stage.
 
 ## Reconciliation of the 2026-10-19 items (audit 2026-10-23)
 
@@ -1024,7 +1061,7 @@ docs checks.
 | G14 | Done; reconfirmed. No new general alignment task; specific defects are G24 and G25. |
 | G15 | Kept; P2 → P0; "never observed" corrected to "observed failing". |
 | G16 | Done; fix reconfirmed in the chart. |
-| New | G17–G29 (see the summary table); G30 added 2026-10-24. |
+| New | G17–G29 (see the summary table); G30, G31 and G32 added 2026-10-24. |
 
 ## Phase coverage (2026-10-23)
 

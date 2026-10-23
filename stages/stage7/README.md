@@ -4,12 +4,12 @@ description: "Add HPA, recommendation-only VPA, Redis cache-aside, PriorityClass
 ---
 
 > **Verification status:** Helm/dev **227/227** and Kustomize/dev **216/216** on
-> 2026-10-22, plus the capacity profile scaling 1→2→3 (`verification-runs/fix-2026-10-22/`).
-> Those runs predate the non-root image change (tracker G17); a re-run is pending
-> (G1f). Argo CD has not passed live (G1d); Helm/staging with live VPA dates from
+> 2026-10-24 on the non-root images, with the trace, observability and scaling
+> labs passing (`verification-runs/g1f-2026-10-24/`); the capacity profile last
+> ran on 2026-10-22. Argo CD has not passed live (G1d); Helm/staging with live VPA dates from
 > 2026-08-25 (G1e).
-> Hosted CI has failed at its validation step on every run so far, so no image
-> has been published to GHCR yet (tracker G2a, G15).
+> Hosted CI passed on 2026-10-24 and published all 18 images to GHCR as
+> `sha-<commit>` and `latest` (tracker G15). Release tag `v1.0.0` does not exist yet.
 
 # Stage 7: Orbital Maneuvering
 
@@ -468,9 +468,9 @@ Images now use `ghcr.io/darshan-raul/apollo11/stageN/SERVICE:TAG`, where N match
 this stage. Production Helm values and Kustomize names follow that layout.
 Do not substitute a Stage 5 image for Stage 6 telemetry or Stage 7 caching.
 Run `bash test/ci.sh` from the repository root for local validation; install
-Python/PyYAML, Go, Helm, kubectl and shellcheck first. Hosted runs have failed
-at the validation step so far, so GHCR holds no Apollo11 images yet (tracker
-G2a, G15).
+Python/PyYAML, Go, Helm 4, kubectl and shellcheck first. Every push to `main`
+publishes this stage's images to GHCR as `sha-<commit>` and `latest`
+(tracker G15).
 
 Follow [alert delivery, edge probes and correlation](OBSERVABILITY.md) for the new observability exercises.
 

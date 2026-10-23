@@ -4,11 +4,11 @@ description: "Package the Stage 4 (probes + QoS + graceful SIGTERM) workloads as
 ---
 
 > **Verification status:** Helm/dev **174/174** and Kustomize/dev **163/163** on
-> 2026-10-22 with clean purges (`verification-runs/fix-2026-10-22/`); Argo CD
-> **74/74** on 2026-10-19. Those runs predate the non-root image change
-> (tracker G17); a re-run is pending (G1f).
-> Hosted CI has failed at its validation step on every run so far, so no image
-> has been published to GHCR yet (tracker G2a, G15).
+> 2026-10-24 on the non-root images, with clean purges
+> (`verification-runs/g1f-2026-10-24/`); Argo CD **74/74** on 2026-10-19,
+> before the image changes (tracker G1d).
+> Hosted CI passed on 2026-10-24 and published all 18 images to GHCR as
+> `sha-<commit>` and `latest` (tracker G15). Release tag `v1.0.0` does not exist yet.
 
 # Stage 5: Payload Integration
 
@@ -29,8 +29,8 @@ images to GHCR on every change to `main`.
 First verified 2026-08-22 on kind v1.35.0; latest runs are listed in the
 verification status above. Each path completed a full purge with no namespace,
 PVC, or related CRD residue. The root GitHub Actions workflow passes locally
-(`bash test/ci.sh`), but every hosted run so far has failed at its validation
-step, so no image or release tag has been published (tracker G2a, G15).
+(`bash test/ci.sh`) and on GitHub: run 40009537140 (2026-10-24) published all 18
+Stage 5–7 images to GHCR. No release tag exists yet (tracker G15).
 
 ---
 
@@ -195,7 +195,7 @@ bash scripts/apply.sh
 # Use the env-specific values file
 bash scripts/apply.sh --env dev       # values-dev.yaml — 1 replica, :latest tag
 bash scripts/apply.sh --env staging   # values-staging.yaml — 2 replicas, :latest
-bash scripts/apply.sh --env prod      # values-prod.yaml — 3 replicas, :v1.0.0, GHCR (not published yet; see tracker G15)
+bash scripts/apply.sh --env prod      # values-prod.yaml — 3 replicas, :v1.0.0, GHCR (needs a v1.0.0 release tag; see tracker G15)
 
 # Override the tag the env file pins
 bash scripts/apply.sh --env prod --tag v1.2.3
@@ -390,6 +390,7 @@ Run `bash test/ci.sh` from the repository root for local validation; install
 Python/PyYAML, Go, Helm 4, kubectl and shellcheck first. CI pins Helm v4.3.1,
 kubectl v1.37.1 and Trivy v0.75.0 to match the local verification runs; the
 script prints the versions it used and refuses Helm 3, whose rendering
-whitespace differs from the committed `generated.yaml` files. Hosted runs have failed
-at the validation step so far, so GHCR holds no Apollo11 images yet, and the
-`v1.0.0` tag that `values-prod.yaml` pins does not exist (tracker G2a, G15).
+whitespace differs from the committed `generated.yaml` files. Every push to `main`
+publishes `sha-<commit>` and `latest` tags; the `v1.0.0` tag that
+`values-prod.yaml` pins does not exist until a `v1.0.0` Git tag is pushed
+(tracker G15).

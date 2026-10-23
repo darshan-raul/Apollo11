@@ -4,12 +4,11 @@ description: "Instrument Apollo Airlines with Prometheus metrics, OpenTelemetry 
 ---
 
 > **Verification status:** Helm/dev **212/212** and Kustomize/dev **201/201** on
-> 2026-10-22, with trace and log correlation and the observability lab passing
-> (`verification-runs/fix-2026-10-22/`). Those runs predate the non-root image
-> change (tracker G17); a re-run is pending (G1f). Argo CD has not passed live
+> 2026-10-24 on the non-root images, with trace and log correlation and the
+> observability lab passing (`verification-runs/g1f-2026-10-24/`). Argo CD has not passed live
 > (G1d), and the ordered signal path has not been run live (G27).
-> Hosted CI has failed at its validation step on every run so far, so no image
-> has been published to GHCR yet (tracker G2a, G15).
+> Hosted CI passed on 2026-10-24 and published all 18 images to GHCR as
+> `sha-<commit>` and `latest` (tracker G15). Release tag `v1.0.0` does not exist yet.
 
 # Stage 6: Mission Ops
 
@@ -240,8 +239,8 @@ Images now use `ghcr.io/darshan-raul/apollo11/stageN/SERVICE:TAG`, where N match
 this stage. Production Helm values and Kustomize names follow that layout.
 Do not substitute a Stage 5 image for Stage 6 telemetry or Stage 7 caching.
 Run `bash test/ci.sh` from the repository root for local validation; install
-Python/PyYAML, Go, Helm, kubectl and shellcheck first. Hosted runs have failed
-at the validation step so far, so GHCR holds no Apollo11 images yet (tracker
-G2a, G15).
+Python/PyYAML, Go, Helm 4, kubectl and shellcheck first. Every push to `main`
+publishes this stage's images to GHCR as `sha-<commit>` and `latest`
+(tracker G15).
 
 Follow [alert delivery, edge probes and correlation](OBSERVABILITY.md) for the new observability exercises.
