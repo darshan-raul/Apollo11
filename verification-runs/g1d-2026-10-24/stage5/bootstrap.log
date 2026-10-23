@@ -1,0 +1,40 @@
+[0;36m▶ 0/6 Checking cluster + ArgoCD[0m
+[0;32m✓ ArgoCD is installed[0m
+[0;36m▶ 1/6 Installing shared Gateway/LoadBalancer platform[0m
+[0;32m✓ shared platform and isolated namespaces ready[0m
+secret/apollo-edge-tls created
+secret/apollo-edge-tls created
+secret/apollo-edge-tls created
+secret/apollo-edge-tls created
+secret/apollo-edge-tls created
+secret/apollo-edge-tls created
+[0;36m▶ 2/6 Registering AppProject[0m
+appproject.argoproj.io/apollo-airlines created
+[0;32m✓ AppProject apollo-airlines[0m
+[0;36m▶ 3/6 Registering Applications[0m
+application.argoproj.io/apollo11-dev created
+[0;32m✓ Application dev[0m
+application.argoproj.io/apollo11-prod created
+[0;32m✓ Application prod[0m
+application.argoproj.io/apollo11-staging created
+[0;32m✓ Application staging[0m
+[0;36m▶ 4/6 Waiting for ArgoCD to pick up the new Applications[0m
+[0;32m✓ apollo11-dev reconciled at 2026-10-23T21:48:24Z[0m
+[0;32m✓ apollo11-staging reconciled at 2026-10-23T21:48:25Z[0m
+[0;32m✓ apollo11-prod reconciled at 2026-10-23T21:48:25Z[0m
+[0;36m▶ 5/6 Force-syncing dev + staging[0m
+[0;32m✓ hard refresh requested[0m
+[0;36m▶ 6/6 Summary[0m
+
+  Applications registered in namespace 'argocd':
+    apollo11-dev
+    apollo11-prod
+    apollo11-staging
+
+  Next steps:
+    1. Watch:        kubectl get applications -n argocd -w
+    2. Open the UI:  kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+                     open http://localhost:8080
+    3. Verify:       bash scripts/verify.sh
+
+[0;32m✓ Bootstrap complete[0m

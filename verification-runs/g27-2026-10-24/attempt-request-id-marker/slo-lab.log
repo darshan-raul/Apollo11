@@ -1,0 +1,5 @@
+Generating 502 booking attempts for 150 seconds; inspect the pending/firing burn alert.
+Recovery proved by a successful booking and cancellation. Waiting for the next scrape/rule evaluation.
+[{'metric': {'__name__': 'apollo:booking_error_ratio:5m'}, 'value': [1792788734.939, '0.9903667798661544']}]
+[{'metric': {'__name__': 'apollo:booking_error_budget_remaining:28d'}, 'value': [1792788735.06, '-197.0733559732309']}]
+The error ratio falls as failures leave the short window; cumulative budget spending remains in the longer window.

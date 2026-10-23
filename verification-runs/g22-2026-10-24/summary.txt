@@ -1,0 +1,6 @@
+apply exit=0
+release-lab exit=0
+verify-after-lab exit=1
+  [0;32mPASS: 173[0m  /  [0;31mFAIL: 1[0m  /  TOTAL: 174
+teardown exit=0
+0

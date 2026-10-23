@@ -1,0 +1,5 @@
+[0;36m▶ Starting an in-cluster HTTP client[0m
+[0;36m▶ Authenticating and selecting a seeded flight[0m
+[0;36m▶ Creating a booking with trace_id=2369f9419cba1cf82f960e6f3c54f93e[0m
+[0;36m▶ Waiting for Tempo to contain the cross-service span graph[0m
+[0;31m✗ trace 2369f9419cba1cf82f960e6f3c54f93e is missing service booking[0m

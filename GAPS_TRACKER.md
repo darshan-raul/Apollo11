@@ -80,8 +80,8 @@ live run under `verification-runs/`; **[unverified]** no evidence.
 | Wave | Start when | Tasks (ready first) |
 |---|---|---|
 | 1 | Now | Done 2026-10-24: G2a, G1b, G1c, G17, G10a, G24 (and G15 from wave 3) |
-| 2 | Now, in parallel with wave 1 | G18, G19, G20a, G20b, G20c, G21, G23, G3b, G8b, G13, G6b, G28, G8a, G29, G30, G31 |
-| 3 | After its dependencies in wave 1 | Done 2026-10-24: G15, G1f (with G21). Ready: G2b, G22, G27, G3a |
+| 2 | Now, in parallel with wave 1 | G18, G19, G20a, G20b, G20c, G21, G23, G3b, G8b, G13, G6b, G28, G8a, G29, G30, G31, G33, G34, G36, G37 |
+| 3 | After its dependencies in wave 1 | Done 2026-10-24: G15, G1f (with G21). Ready: G2b, G3a. Done 2026-10-24: G22, G27 |
 | 4 | After wave 3 | G1d, G1e (after G1f); G6a (after G1b, G1c); G25a (after G18, G19); G25b (after G20a–c, G21); G26 (after G20c); G25c (after G17, G22, G26, G27, G15); G5 (after G17, G21, G6a); G11 (after G1b, G1c, G1f, G10a). G5 and G25c run last in this wave because they depend on G6a and G26. |
 | 5 | After G17 and G1f | Stage 8: G7a → G7b → G7c → G7d (also needs G15) → G7e |
 | 6 | After G7d and AWS approval | Stage 9: G8c → G8d → G8e |
@@ -101,7 +101,7 @@ settings), G4/G10b/G12 (approval for deletions), G6c (policy decision).
 | G1a | promtool rule test and k6 cache off/on summaries | A | Stage 6–7 | P0 | done 2026-10-19 | — | — |
 | G1b | Re-verify Launchpad, Ignition and Stage 1 on current code | A | Launchpad, Ignition, Stage 1 | P0 | done 2026-10-24 | — | 1 |
 | G1c | Re-verify Stage 2 substages 1 and 2 | A | Stage 2 | P0 | done 2026-10-24 | — | 1 |
-| G1d | Argo CD live pass for Stages 5–7 | A | Stage 5–7 | P1 | open | G1f | 4 |
+| G1d | Argo CD live pass for Stages 5–7 | A | Stage 5–7 | P1 | in-progress | G1f, G37 | 4 |
 | G1e | Helm/staging and live VPA for Stages 5–7 | A | Stage 5–7 | P2 | open | G1f | 4 |
 | G1f | Stage 5–7 Helm and Kustomize dev re-run after code fixes | A | Stage 5–7 | P1 | done 2026-10-24 | G17, G21 | 3 |
 | G2 | CI builds, tests and scans what it publishes (parent, reopened) | A | Stage 5 / CI | P0 | in-progress (G2b left) | G2a, G2b, G15 | — |
@@ -148,7 +148,8 @@ settings), G4/G10b/G12 (approval for deletions), G6c (policy decision).
 | G20b | Stage 4 resources, QoS, throttling, OOM, FailedScheduling | A | Stage 4 | P1 | open | — | 2 |
 | G20c | Stage 4 placement and drain lab with outcome checks | A | Stage 4 | P1 | open | — | 2 |
 | G21 | Make identity's graceful shutdown real | A | Stage 4–7 | P2 | done 2026-10-24 | — | 2 |
-| G22 | Stage 5 Helm release, rollback, test and comparison labs | A | Stage 5 | P1 | open | G17 | 3 |
+| G22 | Stage 5 Helm release, rollback, test and comparison labs | A | Stage 5 | P1 | done 2026-10-24 | G17 | 3 |
+| G22b | Stage 5 promotion lab across dev and staging | A | Stage 5 | P1 | open | G1d | 4 |
 | G23 | Smooth Launchpad → Ignition → Stage 1 transitions | A | Launchpad–Stage 1 | P2 | open | — | 2 |
 | G24 | Correct the docs status page | D | Status | P1 | done 2026-10-24 | — | 1 |
 | G25 | Docs follow-ups to lab changes (parent) | D | Stage 2–7 | P2 | open | G25a–G25c | — |
@@ -156,12 +157,17 @@ settings), G4/G10b/G12 (approval for deletions), G6c (policy decision).
 | G25b | Docs for Stage 4 changes | D | Stage 4 | P2 | open | G20a, G20b, G20c, G21 | 4 |
 | G25c | Docs for Stage 5–7 changes and re-pin | D | Stage 5–7 | P2 | open | G17, G22, G26, G27, G15 | 4 (last) |
 | G26 | Reorder Stage 7 README; drop duplicate "new" claims | A | Stage 7 | P2 | open | G20c | 4 |
-| G27 | Live-verify Stage 6's ordered signal path | A | Stage 6 | P1 | open | G17 | 3 |
+| G27 | Live-verify Stage 6's ordered signal path | A | Stage 6 | P1 | done 2026-10-24 | G17 | 3 |
 | G28 | Decide and prove single-node kind support | A | Ignition–Stage 7 | P2 | open | — | 2 |
 | G29 | Enable or remove the CodeQL workflow | A | CI | P3 | open | — | 2 |
 | G30 | Docs toolkit map lists tools the course never covers | D | Home, index | P2 | open | — | 2 |
 | G31 | Make stage script context flags consistent | A | Stage 1–7 scripts | P2 | open | — | 2 |
 | G32 | Stage 4 verifier aborts silently on a slow booking replacement | A | Stage 4 | P1 | done 2026-10-24 | — | — |
+| G33 | OBSERVABILITY.md restores the HTTPRoute from a live-object dump | A | Stage 6–7 | P2 | open | — | 2 |
+| G34 | Stage 6–7 logs no longer carry the X-Request-ID | A | Stage 6–7 code | P1 | open | — | 2 |
+| G35 | Argo CD verifiers checked before GitOps converged | A | Stage 5–7 Argo | P1 | done 2026-10-24 | — | — |
+| G36 | Argo CD teardown strands the argocd namespace on pending finalizers | A | Stage 5–7 Argo | P1 | open | — | 2 |
+| G37 | Stage 6/7 Argo CD layout does not converge on a 6-core / 16 GB host | A | Stage 6–7 Argo | P1 | open | — | 2 |
 
 Dependency check: every ID in **Depends on** exists in this table, and the
 graph has no cycles. Longest chain: G17 → G1f → G7a → G7b → G7c → G7d → G8c →
@@ -253,7 +259,9 @@ VPA date from 2026-08-25 (G1e). G17 and G21 will change Stage 5–7 code again (
 - **Evidence:** `verification-runs/g1c-<date>/`.
 - **Gates:** local kind. Uncertainty: none.
 
-### G1d — Argo CD live pass for Stages 5–7 · A · P1 · open
+### G1d — Argo CD live pass for Stages 5–7 · A · P1 · in-progress
+
+**Progress (2026-10-24):** run against GitHub `main` (`90b5120`) and the published GHCR images. **Stage 5 74/74 passes** with self-heal and a clean purge. Stage 6 (84/88) and Stage 7 (83/88) did not converge within 900 s; load average peaked at 91 on 6 cores (G37). Found G35 (verifier didn't wait; fixed) and G36 (teardown strands the namespace; open) (`verification-runs/g1d-2026-10-24/README.md`). Remaining: Stage 6/7 pass after G37.
 
 - **Finding:** Stage 6 79/88 and Stage 7 80/88 on 2026-10-19 with identity
   startup-probe failures (`verification-runs/s2-2026-10-19/argocd/summary.txt`).
@@ -882,7 +890,9 @@ charts and include them in G1f.
   shutdown sequence; a slow in-flight request completes (live); the Stage 4
   verifier and G1f pass.
 
-### G22 — Stage 5 Helm release, rollback, test and comparison labs · A · P1 · open
+### G22 — Stage 5 Helm release, rollback, test and comparison labs · A · P1 · done 2026-10-24
+
+**Evidence (2026-10-24):** a `helm test` smoke hook, `scripts/release-lab.sh` (bad upgrade → failed release → rollback → `helm test`; 8/8 live) and `scripts/compare-lab.sh` (same change in Helm and Kustomize; render-only, now in `test/ci.sh`) were added, with a README lab section. `verify.sh` was 174/174 after the lab once the edge settled. Envoy returned 502 for search for a short window right after the rollback; the README now says so (`verification-runs/g22-2026-10-24/README.md`). Promotion (ROADMAP 5.5) is split out as G22b. Not done: `verify.sh` itself does not run the rollback; the lab script does.
 
 - **Finding [code]:** ROADMAP 5.1, 5.2 and 5.5 call for Helm releases, rollback,
   chart tests, a Kustomize comparison and promotion. The Stage 5 README has no
@@ -895,6 +905,19 @@ charts and include them in G1f.
   compared; dev → staging promotion shown; `verify.sh` asserts the rollback
   revision and the `helm test` result; live evidence recorded.
 - **Depends on:** G17.
+
+### G22b — Stage 5 promotion lab across dev and staging · A · P1 · open
+
+- **Finding:** ROADMAP 5.5 asks for promotion across isolated local dev and
+  staging namespaces. The Argo CD layout has dev and staging Applications that
+  track `HEAD`, but no exercise moves one change from dev to staging and proves
+  it there.
+- **Acceptance:** a lab that pins staging to an image tag (`sha-<commit>` from
+  GHCR, now published), changes dev first, shows staging unchanged, then
+  promotes by changing staging's pinned tag in Git and proves the new image and
+  behavior in the staging namespaces; it runs against a fork or a branch, so
+  `main` is never the playground.
+- **Depends on:** G1d (Argo CD live pass).
 
 ### G23 — Smooth Launchpad → Ignition → Stage 1 transitions · A · P2 · open
 
@@ -972,7 +995,9 @@ docs checks.
   the G20c decision.
 - **Depends on:** G20c.
 
-### G27 — Live-verify Stage 6's ordered signal path · A · P1 · open
+### G27 — Live-verify Stage 6's ordered signal path · A · P1 · done 2026-10-24
+
+**Evidence (2026-10-24):** from `--without-observability`, substages 1→6 were applied in order with every SIGNALS.md break and recovery checked through real responses: 34 passed, 1 failed. The failure was a first-trace warm-up race in substage 5; later traces were complete and the full `verify.sh` passed at substage 6 (`verification-runs/g27-2026-10-24/README.md`). Two guide defects were fixed: restores now re-run `signals-lab.sh apply` instead of reapplying a live dump, which broke the next substage; and the logs substage uses a query-string marker because request IDs are no longer logged (G34). The same restore pattern in OBSERVABILITY.md is G33. Kustomize repeat not done: the ordered path's Kustomize render uses the same selector, and the time went to the two reruns above.
 
 - **Finding:** `stages/stage6/SIGNALS.md:3-5` says the ordered path "requires a
   clean runtime lifecycle before it replaces that verified snapshot". The only
@@ -1012,6 +1037,73 @@ docs checks.
 - **Fix:** wait on `kubectl rollout status deployment/booking --timeout=120s` and
   record a pass or fail.
 - **Evidence:** Stage 4 149/149 after the fix (`verification-runs/g1f-2026-10-24/README.md`).
+
+### G33 — OBSERVABILITY.md restores the HTTPRoute from a live-object dump · A · P2 · open
+
+- **Finding (2026-10-24, from G27):** `stages/stage{6,7}/OBSERVABILITY.md:55-58`
+  saves the frontend HTTPRoute with `kubectl get -o yaml`, deletes it, and
+  restores it with `kubectl apply -f` of that dump. G27 showed this pattern
+  stores `resourceVersion`/`uid` in the last-applied annotation and makes the
+  next client-side `kubectl apply` of the same object fail with
+  "metadata.resourceVersion: Invalid value: 0". In Helm mode the next
+  `helm upgrade` is unaffected; the Kustomize path (`kubectl apply -k`) would be.
+- **Acceptance:** restore from the declared source (re-run the stage apply for the
+  chosen mode, or strip server fields before `kubectl create`); after the
+  break/restore, `kubectl apply -k overlays/dev` (Kustomize) and `helm upgrade`
+  (Helm) both succeed. SIGNALS.md was already fixed under G27.
+
+### G34 — Stage 6–7 logs no longer carry the X-Request-ID · A · P1 · open
+
+- **Finding (2026-10-24, from G27) [code + live]:** in Launchpad–Stage 5 the
+  services write the incoming `X-Request-ID` into the `trace_id` log field
+  (for example `stages/launchpad/code/notification/main.go:129`,
+  `traceID := requestID.(string)`). Stage 6 replaced that value with the
+  OpenTelemetry trace ID (`stages/stage6/code/notification/main.go:255`), and no
+  Stage 6/7 service logs the request ID in any other field. Request-ID
+  correlation, taught from Launchpad onward and in the original SIGNALS.md
+  logs substage, therefore stops working at Stage 6; a live G27 run found no
+  log line for a request sent with a unique `X-Request-ID`. The ID is still
+  propagated in headers.
+- **Interim:** SIGNALS.md now uses a unique query-string marker, which GIN's
+  access log records.
+- **Acceptance:** Stage 6/7 JSON log lines for per-request events carry both
+  `trace_id` (OTEL) and `request_id` (`X-Request-ID`); a request sent with a
+  unique ID is found in Loki by that ID and by its trace ID; `trace-test.sh` and
+  the G27 harness pass; SIGNALS.md goes back to request-ID evidence.
+
+### G35 — Argo CD verifiers checked before GitOps converged · A · P1 · done 2026-10-24
+
+- **Finding:** `stages/stage{5,6,7}/argocd/scripts/verify.sh` checked workload
+  readiness immediately after `bootstrap.sh --sync`, while images were still
+  pulling. First G1d Stage 5 attempt: 50/74, with every workload "not ready".
+- **Fix:** a bounded wait (`ARGO_CONVERGE_TIMEOUT`, default 900 s) for automated
+  Applications to reach `Synced/Healthy` before the checks.
+- **Evidence:** Stage 5 74/74 afterwards (`verification-runs/g1d-2026-10-24/`).
+
+### G36 — Argo CD teardown strands the argocd namespace on pending finalizers · A · P1 · open
+
+- **Finding (2026-10-24):** `stages/stage7/argocd/scripts/teardown.sh --purge`
+  deletes the `argocd` namespace and force-deletes its Pods while Applications
+  still carry `resources-finalizer.argocd.argoproj.io`. With the controller gone,
+  the finalizers never clear, the namespace hangs in Terminating, the script exits
+  1, and CRDs and ClusterRoles stay behind. Stages 5 and 6 share the script shape;
+  they passed here, but the race is the same.
+- **Acceptance:** teardown waits (bounded) until every Application is gone before
+  deleting the controller; if any remain, it reports them and stops without
+  force-deleting the controller (or clears finalizers only after confirming the
+  destination namespaces are gone); a loaded Stage 7 purge leaves zero residue.
+
+### G37 — Stage 6/7 Argo CD layout does not converge on a 6-core / 16 GB host · A · P1 · open
+
+- **Finding (2026-10-24, G1d):** dev and staging tenants (each a full stack) plus
+  the shared observability stack, with images pulled from GHCR, did not reach
+  `Synced/Healthy` in 900 s. Load average peaked at 91 on 6 cores and Pods sat in
+  `ContainerCreating`. Stage 5 (no observability) converged.
+- **Decision needed:** either document a larger minimum for the Stage 6/7 Argo
+  path (G13), or make the local default lighter (for example a single automated
+  tenant, with staging opt-in).
+- **Acceptance:** with the chosen layout and a documented host size, Stage 6 and
+  Stage 7 `argocd/scripts/verify.sh` pass 88/88 and purge clean.
 
 ### G30 — Docs toolkit map lists tools the course never covers · D · P2 · open
 
@@ -1061,7 +1153,7 @@ docs checks.
 | G14 | Done; reconfirmed. No new general alignment task; specific defects are G24 and G25. |
 | G15 | Kept; P2 → P0; "never observed" corrected to "observed failing". |
 | G16 | Done; fix reconfirmed in the chart. |
-| New | G17–G29 (see the summary table); G30, G31 and G32 added 2026-10-24. |
+| New | G17–G29 (see the summary table); G30–G37 added 2026-10-24. |
 
 ## Phase coverage (2026-10-23)
 

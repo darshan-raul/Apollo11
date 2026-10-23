@@ -1,0 +1,6 @@
+2026-10-24T04:19:51+05:30 manual cleanup after stage7 teardown failure
+no tenant namespaces left
+application.argoproj.io/apollo11-dev patched
+application.argoproj.io/apollo11-staging patched
+namespace/argocd condition met
+teardown retry exit=0

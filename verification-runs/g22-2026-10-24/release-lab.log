@@ -1,0 +1,51 @@
+
+== Inspect: the release and its history
+REVISION	UPDATED                 	STATUS  	CHART         	APP VERSION	DESCRIPTION     
+1       	Sat Oct 24 01:52:53 2026	deployed	apollo11-1.0.0	1.0.0      	Install complete
+Deployed revision: 1 (search image apollo11/search:latest)
+
+== Break: upgrade with an image tag that does not exist
+level=WARN msg="upgrade failed" name=apollo11 error="resource Deployment/apollo-airlines-apps/booking not ready. status: InProgress, message: Pending termination: 1\nresource Deployment/apollo-airlines-apps/flight not ready. status: InProgress, message: Pending termination: 1\nresource Deployment/apollo-airlines-apps/identity not ready. status: InProgress, message: Pending termination: 1\nresource Deployment/apollo-airlines-apps/notification not ready. status: InProgress, message: Pending termination: 1\nresource Deployment/apollo-airlines-apps/search not ready. status: InProgress, message: Pending termination: 1\nresource Deployment/apollo-airlines-ui/frontend not ready. status: InProgress, message: Pending termination: 1\ncontext deadline exceeded"
+Error: UPGRADE FAILED: resource Deployment/apollo-airlines-apps/booking not ready. status: InProgress, message: Pending termination: 1
+resource Deployment/apollo-airlines-apps/flight not ready. status: InProgress, message: Pending termination: 1
+resource Deployment/apollo-airlines-apps/identity not ready. status: InProgress, message: Pending termination: 1
+resource Deployment/apollo-airlines-apps/notification not ready. status: InProgress, message: Pending termination: 1
+resource Deployment/apollo-airlines-apps/search not ready. status: InProgress, message: Pending termination: 1
+resource Deployment/apollo-airlines-ui/frontend not ready. status: InProgress, message: Pending termination: 1
+context deadline exceeded
+PASS: helm upgrade --wait failed instead of reporting success
+PASS: release status is 'failed'
+search Pod waiting reasons: ImagePullBackOff  
+PASS: new search Pod shows an image pull error
+PASS: old search Pod still serves during the failed release
+
+== Recover: roll back to revision 1
+Rollback was a success! Happy Helming!
+REVISION	UPDATED                 	STATUS    	CHART         	APP VERSION	DESCRIPTION                                                                                                                               
+1       	Sat Oct 24 01:52:53 2026	superseded	apollo11-1.0.0	1.0.0      	Install complete                                                                                                                          
+2       	Sat Oct 24 01:53:26 2026	failed    	apollo11-1.0.0	1.0.0      	Upgrade "apollo11" failed: resource Deployment/apollo-airlines-apps/booking not ready. status: InProgress, message: Pending termination...
+3       	Sat Oct 24 01:55:02 2026	deployed  	apollo11-1.0.0	1.0.0      	Rollback to 1                                                                                                                             
+PASS: latest revision is 'Rollback to 1' and deployed
+PASS: search image restored to apollo11/search:latest
+PASS: search serves after rollback
+
+== Prove: helm test
+NAME: apollo11
+LAST DEPLOYED: Sat Oct 24 01:55:02 2026
+NAMESPACE: apollo-airlines-apps
+STATUS: deployed
+REVISION: 3
+DESCRIPTION: Rollback to 1
+TEST SUITE:     apollo11-smoke-test
+Last Started:   Sat Oct 24 01:55:06 2026
+Last Completed: Sat Oct 24 01:55:09 2026
+Phase:          Succeeded
+
+POD LOGS: apollo11-smoke-test (smoke)
+PASS identity /healthz/ready
+PASS flight /api/flights returns seeded flights
+PASS frontend serves the application
+
+PASS: helm test passed after rollback
+
+Release lab: 8 passed, 0 failed

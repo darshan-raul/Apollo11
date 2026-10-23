@@ -268,6 +268,78 @@ See `argocd/DEMO.md` for the 101 walkthrough.
 
 ---
 
+## Labs: break and recover a release
+
+Both labs start from a Helm install (`bash scripts/apply.sh --mode helm --env dev`).
+
+### Lab 1: a failed upgrade and `helm rollback`
+
+**Build and inspect.** Read the release's history and note the deployed
+revision:
+
+```bash
+helm history apollo11 -n apollo-airlines-apps
+```
+
+**Break.** Upgrade with an image tag that does not exist, the kind of typo a
+values file can carry:
+
+```bash
+helm upgrade apollo11 helm/apollo11 -n apollo-airlines-apps --reuse-values \
+  --set image.tag=missing-release-lab --wait --timeout 90s
+```
+
+The command fails after 90 seconds. Diagnose it with the evidence ladder:
+
+```bash
+helm status apollo11 -n apollo-airlines-apps          # STATUS: failed
+kubectl get pods -n apollo-airlines-apps -l app=search
+kubectl describe pod -n apollo-airlines-apps -l app=search | grep -A3 Events
+```
+
+The new Pods show `ErrImagePull` or `ImagePullBackOff`. The old Pods keep
+serving, because the rolling update never removes a ready Pod before its
+replacement is ready.
+
+**Recover.** Roll back to the revision you noted, then prove behavior:
+
+```bash
+helm rollback apollo11 <revision> -n apollo-airlines-apps --wait --timeout 5m
+helm history apollo11 -n apollo-airlines-apps          # newest: "Rollback to <revision>"
+helm test apollo11 -n apollo-airlines-apps --logs
+```
+
+A rollback creates a **new** revision whose content equals the old one; Helm
+never rewrites history. Calls through the Gateway can return 502 for a short
+time after the rollback while Envoy picks up the new endpoints, even though
+in-cluster calls already succeed; retry the edge check before deciding the
+rollback failed. `helm test` runs the chart's smoke-test Pod
+(`templates/tests/smoke-test.yaml`), which checks identity readiness, the flight
+inventory and the frontend from inside the cluster.
+
+`bash scripts/release-lab.sh` runs the same sequence and checks each step.
+
+### Lab 2: the same change in Helm and Kustomize
+
+```bash
+bash scripts/compare-lab.sh
+```
+
+It renders dev and prod with both tools, showing that each environment changes
+replicas, image source and PDBs. Then it makes one change, three `search`
+replicas in dev, once with `helm template --set apps.search.replicas=3` and once
+with a Kustomize overlay containing a `replicas:` patch, and checks that both
+renders agree. It needs no cluster; CI runs it.
+
+### Explain
+
+1. Why did traffic keep flowing while the release was `failed`?
+2. What does `helm rollback` create, and why is that better than editing history?
+3. What does `helm test` prove that `helm status: deployed` does not?
+4. Where does an environment difference live in Helm, and where in Kustomize?
+
+---
+
 ## Files
 
 ```

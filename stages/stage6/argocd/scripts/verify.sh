@@ -26,6 +26,25 @@ pass() { echo -e "${GREEN}[PASS]${NC} $1"; PASS=$((PASS+1)); }
 fail() { echo -e "${RED}[FAIL]${NC} $1"; FAIL=$((FAIL+1)); }
 step() { echo -e "${CYAN}▶ $1${NC}"; }
 
+# GitOps converges asynchronously: Applications pull images and roll out after
+# a sync is requested. Wait (bounded) for every automated Application to report
+# Synced and Healthy before checking workloads, so the checks describe a
+# converged system rather than a snapshot taken mid-rollout.
+CONVERGE_TIMEOUT="${ARGO_CONVERGE_TIMEOUT:-900}"
+if [[ "$SKIP_WORKLOADS" == false ]]; then
+    step "0/5 Waiting up to ${CONVERGE_TIMEOUT}s for automated Applications to converge"
+    deadline=$((SECONDS + CONVERGE_TIMEOUT))
+    while :; do
+        pending=$(kubectl get applications.argoproj.io -n "$ARGOCD_NS" \
+            -o jsonpath='{range .items[?(@.spec.syncPolicy.automated)]}{.metadata.name}={.status.sync.status}/{.status.health.status}{"\n"}{end}' 2>/dev/null \
+            | grep -v '=Synced/Healthy$' || true)
+        if [[ -z "$pending" ]]; then echo "  all automated Applications are Synced/Healthy"; break; fi
+        if (( SECONDS >= deadline )); then echo "  still converging after ${CONVERGE_TIMEOUT}s: $(tr '\n' ' ' <<<"$pending")"; break; fi
+        sleep 15
+    done
+fi
+
+
 step "1/5 Argo CD control plane"
 for component in argocd-server argocd-repo-server argocd-application-controller argocd-redis; do
     ready=$(kubectl get pods -n "$ARGOCD_NS" -l "app.kubernetes.io/name=$component" \

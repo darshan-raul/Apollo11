@@ -1,0 +1,20 @@
+customresourcedefinition.apiextensions.k8s.io/prometheuses.monitoring.coreos.com condition met
+Waiting for deployment "prometheus-operator" rollout to finish: 0 of 1 updated replicas are available...
+deployment "prometheus-operator" successfully rolled out
+serviceaccount/observability-stack created
+configmap/blackbox-config created
+clusterrole.rbac.authorization.k8s.io/apollo-observability unchanged
+clusterrolebinding.rbac.authorization.k8s.io/apollo-observability unchanged
+service/blackbox created
+service/prometheus created
+deployment.apps/blackbox created
+probe.monitoring.coreos.com/blackbox-internal created
+prometheus.monitoring.coreos.com/apollo created
+servicemonitor.monitoring.coreos.com/booking created
+servicemonitor.monitoring.coreos.com/flight created
+servicemonitor.monitoring.coreos.com/identity created
+servicemonitor.monitoring.coreos.com/notification created
+servicemonitor.monitoring.coreos.com/search created
+Waiting for 1 pods to be ready...
+statefulset rolling update complete 1 pods at revision prometheus-apollo-95bd87cd8...
+Signal substage 1 applied. Follow the inspect/break/recover steps in SIGNALS.md.

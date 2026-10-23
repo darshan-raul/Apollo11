@@ -1,0 +1,5 @@
+install exit=0
+bootstrap exit=0
+verify exit=1
+  [0;32mPASS: 83[0m  /  [0;31mFAIL: 5[0m  /  TOTAL: 88
+teardown exit=1

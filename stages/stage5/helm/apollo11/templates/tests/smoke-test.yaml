@@ -1,0 +1,50 @@
+{{- /*
+`helm test <release>` runs this Pod after an install or upgrade. It checks the
+release from inside the cluster: identity is ready, flight returns its seeded
+inventory, and the frontend serves. Helm deletes the Pod after it passes and
+replaces it on the next run, so a failed test leaves the Pod behind for
+`kubectl logs`. Argo CD ignores `helm.sh/hook: test` resources.
+*/}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Release.Name }}-smoke-test
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    app.kubernetes.io/name: apollo11-smoke-test
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: smoke
+      image: busybox:1.36.1
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: [ALL]
+      resources:
+        requests: {cpu: 10m, memory: 16Mi}
+        limits: {cpu: 100m, memory: 32Mi}
+      command:
+        - sh
+        - -c
+        - |
+          set -e
+          apps={{ .Values.namespaces.apps }}.svc.cluster.local
+          ui={{ .Values.namespaces.ui }}.svc.cluster.local
+          wget -qO- "http://identity.$apps:{{ .Values.apps.identity.port }}/healthz/ready" >/dev/null
+          echo "PASS identity /healthz/ready"
+          wget -qO- "http://flight.$apps:{{ .Values.apps.flight.port }}/api/flights" | grep -q flightNumber
+          echo "PASS flight /api/flights returns seeded flights"
+          wget -qO- "http://frontend.$ui:{{ .Values.frontend.port }}/" | grep -qi "<html"
+          echo "PASS frontend serves the application"

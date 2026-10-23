@@ -1,0 +1,8 @@
+GitHub main: 90b5120005a4
+== stage5 start 2026-10-24T03:17:00+05:30 load: 3.25 3.58 5.10
+== stage5 done 2026-10-24T03:21:21+05:30 load: 2.72 3.10 4.52: install exit=0 bootstrap exit=0 verify exit=0   [0;32mPASS: 74[0m  /  [0;31mFAIL: 0[0m  /  TOTAL: 74 teardown exit=0 
+== stage6 start 2026-10-24T03:21:21+05:30 load: 2.72 3.10 4.52
+== stage6 done 2026-10-24T03:41:35+05:30 load: 5.20 10.21 10.48: install exit=0 bootstrap exit=0 verify exit=1   [0;32mPASS: 84[0m  /  [0;31mFAIL: 4[0m  /  TOTAL: 88 teardown exit=0 
+== stage7 start 2026-10-24T03:41:35+05:30 load: 5.20 10.21 10.48
+== stage7 done 2026-10-24T04:18:45+05:30 load: 1.51 9.21 29.96: install exit=0 bootstrap exit=0 verify exit=1   [0;32mPASS: 83[0m  /  [0;31mFAIL: 5[0m  /  TOTAL: 88 teardown exit=1 
+ABORT: stage7 left namespaces behind; stopping.

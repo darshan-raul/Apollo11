@@ -1,0 +1,8 @@
+[0;36m▶ Starting an in-cluster HTTP client[0m
+[0;36m▶ Authenticating and selecting a seeded flight[0m
+[0;36m▶ Creating a booking with trace_id=a79c495305c4c411d444ac22ff405d47[0m
+[0;36m▶ Waiting for Tempo to contain the cross-service span graph[0m
+trace_id=a79c495305c4c411d444ac22ff405d47 services=booking,identity
+[0;36m▶ Cancelling the passenger booking and restoring its seat[0m
+[0;32m✓ passenger booking and cancellation succeeded; one trace contains booking → identity → flight → notification[0m
+[0;32m✓ Log/trace correlation proved for a79c495305c4c411d444ac22ff405d47; use Grafana's View trace and Logs links[0m

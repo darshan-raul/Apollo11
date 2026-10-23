@@ -1,0 +1,18 @@
+customresourcedefinition.apiextensions.k8s.io/prometheuses.monitoring.coreos.com condition met
+deployment "prometheus-operator" successfully rolled out
+serviceaccount/observability-stack unchanged
+configmap/blackbox-config unchanged
+clusterrole.rbac.authorization.k8s.io/apollo-observability unchanged
+clusterrolebinding.rbac.authorization.k8s.io/apollo-observability unchanged
+service/blackbox unchanged
+service/prometheus unchanged
+deployment.apps/blackbox unchanged
+probe.monitoring.coreos.com/blackbox-internal unchanged
+prometheus.monitoring.coreos.com/apollo unchanged
+servicemonitor.monitoring.coreos.com/booking unchanged
+servicemonitor.monitoring.coreos.com/flight unchanged
+servicemonitor.monitoring.coreos.com/identity unchanged
+servicemonitor.monitoring.coreos.com/notification unchanged
+servicemonitor.monitoring.coreos.com/search created
+statefulset rolling update complete 1 pods at revision prometheus-apollo-95bd87cd8...
+Signal substage 1 applied. Follow the inspect/break/recover steps in SIGNALS.md.

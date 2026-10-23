@@ -27,5 +27,7 @@ for stage in 5 6 7; do
     (cd "$dir/code/$service" && go test -race ./...)
   done
 done
+# Stage 5 Helm vs Kustomize comparison lab is render-only, so CI can run it.
+bash stages/stage5/scripts/compare-lab.sh >/dev/null
 # Every stage script is checked, including optional missions and legacy trees.
 find stages -type f -name '*.sh' -print0 | xargs -0 shellcheck -S warning

@@ -1,0 +1,51 @@
+customresourcedefinition.apiextensions.k8s.io/prometheuses.monitoring.coreos.com condition met
+deployment "prometheus-operator" successfully rolled out
+serviceaccount/observability-stack unchanged
+secret/grafana-admin configured
+configmap/alertmanager-config unchanged
+configmap/alert-receiver-code unchanged
+configmap/blackbox-config unchanged
+configmap/grafana-dashboard-booking unchanged
+configmap/grafana-dashboard-errors unchanged
+configmap/grafana-dashboard-overview unchanged
+configmap/grafana-dashboard-saturation unchanged
+configmap/grafana-dashboard-trace-viewer unchanged
+configmap/grafana-datasources unchanged
+configmap/grafana-dashboard-provider unchanged
+configmap/alloy-config created
+configmap/loki-config created
+persistentvolumeclaim/grafana-data unchanged
+persistentvolumeclaim/loki-data created
+clusterrole.rbac.authorization.k8s.io/apollo-observability unchanged
+clusterrolebinding.rbac.authorization.k8s.io/apollo-observability unchanged
+service/alertmanager unchanged
+service/alert-receiver unchanged
+service/blackbox unchanged
+service/grafana unchanged
+service/loki created
+service/prometheus unchanged
+daemonset.apps/alloy created
+deployment.apps/alertmanager unchanged
+deployment.apps/alert-receiver unchanged
+deployment.apps/blackbox unchanged
+deployment.apps/grafana configured
+deployment.apps/loki created
+httproute.gateway.networking.k8s.io/grafana configured
+probe.monitoring.coreos.com/blackbox-internal unchanged
+prometheus.monitoring.coreos.com/apollo unchanged
+prometheusrule.monitoring.coreos.com/apollo-services unchanged
+servicemonitor.monitoring.coreos.com/booking unchanged
+servicemonitor.monitoring.coreos.com/flight unchanged
+servicemonitor.monitoring.coreos.com/identity unchanged
+servicemonitor.monitoring.coreos.com/notification unchanged
+servicemonitor.monitoring.coreos.com/search unchanged
+statefulset rolling update complete 1 pods at revision prometheus-apollo-95bd87cd8...
+deployment "grafana" successfully rolled out
+deployment "alertmanager" successfully rolled out
+deployment "alert-receiver" successfully rolled out
+Waiting for deployment "loki" rollout to finish: 0 of 1 updated replicas are available...
+deployment "loki" successfully rolled out
+Waiting for daemon set "alloy" rollout to finish: 0 of 2 updated pods are available...
+Waiting for daemon set "alloy" rollout to finish: 1 of 2 updated pods are available...
+daemon set "alloy" successfully rolled out
+Signal substage 4 applied. Follow the inspect/break/recover steps in SIGNALS.md.

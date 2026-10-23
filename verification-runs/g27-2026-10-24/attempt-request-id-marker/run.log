@@ -1,0 +1,103 @@
+
+===== Baseline: apply.sh --without-observability (2026-10-24T02:13:19+05:30)
+PASS: baseline installed without observability
+PASS: baseline has no observability workloads
+PASS: in-cluster client ready
+PASS: baseline flight API answers
+
+===== Substage 1: signals-lab.sh apply 1 helm (2026-10-24T02:14:44+05:30)
+PASS: substage 1 applied
+  blackbox-7b6bffb685-58p4n 1/1 Running
+  prometheus-apollo-0 2/2 Running
+  prometheus-operator-6df45c56fd-wwv7m 1/1 Running
+PASS: Prometheus has 5 healthy Apollo targets (>= 5)
+  search ServiceMonitor: servicemonitor.monitoring.coreos.com/search
+PASS: BREAK: search target disappears after its ServiceMonitor is deleted
+PASS: restore by re-running signals-lab.sh apply 1
+PASS: RECOVER: search target is UP again
+
+===== Substage 2: signals-lab.sh apply 2 helm (2026-10-24T02:17:45+05:30)
+PASS: substage 2 applied
+  blackbox-7b6bffb685-58p4n 1/1 Running
+  grafana-cdf4497ff-lvj24 1/1 Running
+  prometheus-apollo-0 2/2 Running
+  prometheus-operator-6df45c56fd-wwv7m 1/1 Running
+PASS: Grafana /api/health 200
+command terminated with exit code 7
+PASS: BREAK: Grafana down while Prometheus stays ready
+PASS: RECOVER: Grafana health 200 again
+
+===== Substage 3: signals-lab.sh apply 3 helm (2026-10-24T02:18:13+05:30)
+PASS: substage 3 applied
+  alert-receiver-5c5dffb9f6-xhbtg 1/1 Running
+  alertmanager-7654597d4d-9lws9 1/1 Running
+  blackbox-7b6bffb685-58p4n 1/1 Running
+  grafana-cdf4497ff-sqcl2 1/1 Running
+  prometheus-apollo-0 2/2 Running
+  prometheus-operator-6df45c56fd-wwv7m 1/1 Running
+PASS: booking SLO recording rules loaded: apollo:booking_error_budget_remaining:28d apollo:booking_error_ratio:1h apollo:booking_error_ratio:28d apollo:booking_error_ratio:5m 
+PASS: BREAK/RECOVER: slo-lab.sh (Flight outage, budget burn, recovery booking)
+
+===== Substage 4: signals-lab.sh apply 4 helm (2026-10-24T02:22:15+05:30)
+PASS: substage 4 applied
+  alert-receiver-5c5dffb9f6-xhbtg 1/1 Running
+  alertmanager-7654597d4d-9lws9 1/1 Running
+  alloy-fhp8l 1/1 Running
+  alloy-n4pmd 1/1 Running
+  blackbox-7b6bffb685-58p4n 1/1 Running
+  grafana-cdf4497ff-sqcl2 1/1 Running
+  loki-f85c8cf47-56dvx 1/1 Running
+  prometheus-apollo-0 2/2 Running
+  prometheus-operator-6df45c56fd-wwv7m 1/1 Running
+FAIL: request ID not in Loki
+PASS: BREAK: new request ID g27-log-3156315038 does not reach Loki while Alloy is unscheduled
+FAIL: historical entry vanished
+FAIL: logs did not recover
+
+===== Substage 5: signals-lab.sh apply 5 helm (2026-10-24T02:31:00+05:30)
+PASS: substage 5 applied
+  alert-receiver-5c5dffb9f6-xhbtg 1/1 Running
+  alertmanager-7654597d4d-9lws9 1/1 Running
+  alloy-27929 1/1 Running
+  alloy-dqncx 1/1 Running
+  blackbox-7b6bffb685-58p4n 1/1 Running
+  grafana-cdf4497ff-sqcl2 1/1 Running
+  loki-f85c8cf47-56dvx 1/1 Running
+  otel-collector-b8qkr 1/1 Running
+  otel-collector-ggpv5 1/1 Running
+  prometheus-apollo-0 2/2 Running
+  prometheus-operator-6df45c56fd-wwv7m 1/1 Running
+  tempo-65f64cd4fd-lrfst 1/1 Running
+PASS: trace-test.sh: booking trace in Tempo
+PASS: BREAK: new booking trace does not reach Tempo while the exporter points at a dead port
+  (booking success line not found in break log; see trace-test-during-break.log)
+FAIL: logs stopped during trace break
+PASS: metrics still scraped during the trace export failure
+PASS: restore by re-running signals-lab.sh apply 5
+PASS: exporter endpoint restored to :4317
+PASS: RECOVER: a new booking trace reaches Tempo
+
+===== Substage 6: signals-lab.sh apply 6 helm (2026-10-24T02:39:27+05:30)
+PASS: substage 6 applied
+  alert-receiver-5c5dffb9f6-xhbtg 1/1 Running
+  alertmanager-7654597d4d-9lws9 1/1 Running
+  alloy-27929 1/1 Running
+  alloy-dqncx 1/1 Running
+  blackbox-7b6bffb685-58p4n 1/1 Running
+  grafana-cdf4497ff-sqcl2 1/1 Running
+  loki-f85c8cf47-56dvx 1/1 Running
+  otel-collector-fxmgw 1/1 Running
+  otel-collector-jhl9m 1/1 Running
+  prometheus-apollo-0 2/2 Running
+  prometheus-operator-6df45c56fd-wwv7m 1/1 Running
+  tempo-65f64cd4fd-lrfst 1/1 Running
+PASS: correlation: one booking's trace is in Tempo and its trace_id is in Loki
+PASS: observability-lab.sh (edge probe break/recover, alert delivery)
+PASS: full Stage 6 verify.sh passes on the cumulative install
+  [0;32mPASS: 212[0m  /  [0;31mFAIL: 0[0m  /  TOTAL: 212
+
+===== Teardown (2026-10-24T02:45:32+05:30)
+PASS: teardown --purge
+PASS: no Apollo, Envoy or MetalLB namespaces remain
+
+G27 ordered signal path: 31 passed, 4 failed

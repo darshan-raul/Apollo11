@@ -1,0 +1,1151 @@
+=== 2026-10-24T03:42:38+05:30 load 5.22 9.17 10.10
+=== 2026-10-24T03:44:39+05:30 load 44.84 19.25 13.43
+apollo11-dev Synced Degraded
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-observability OutOfSync Degraded
+    HTTPRoute apollo-observability grafana sync=OutOfSync health=None 
+   condition: OrphanedResourceWarning Application has 5 orphaned resources
+apollo11-prod OutOfSync Missing
+    ConfigMap apollo-airlines-prod-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    VerticalPodAutoscaler apollo-airlines-prod-apps search-vpa sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-prod-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-prod-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-prod-ui apollo-gateway-grant sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-apps booking-pdb sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-ui frontend-pdb sync=OutOfSync health=None 
+apollo11-staging Synced Degraded
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+    pod apollo-airlines-dev-apps flight-547b476c4c-k5fh5 ContainerCreating restarts=0
+    pod apollo-airlines-dev-ui frontend-7cccb47748-fm2mk ContainerCreating restarts=0
+    pod apollo-airlines-staging-apps flight-598584ff6f-gzh9b ContainerCreating restarts=0
+    pod apollo-airlines-staging-apps flight-598584ff6f-wg4gb ContainerCreating restarts=0
+    pod apollo-airlines-staging-apps identity-668749c685-h82lc ContainerCreating restarts=0
+    pod apollo-airlines-staging-apps notification-7c6fdbfc6d-m9lks ContainerCreating restarts=0
+    pod apollo-airlines-staging-apps search-65fd75b8f6-9dh8g ContainerCreating restarts=0
+    pod apollo-airlines-staging-ui frontend-7d95c5fcdb-f76fk ContainerCreating restarts=0
+    pod apollo-airlines-staging-ui frontend-7d95c5fcdb-r2wbs ContainerCreating restarts=0
+=== 2026-10-24T03:47:10+05:30 load 91.39 46.81 24.62
+apollo11-dev Synced Degraded
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-observability OutOfSync Degraded
+    HTTPRoute apollo-observability grafana sync=OutOfSync health=None 
+   condition: OrphanedResourceWarning Application has 5 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-prod OutOfSync Missing
+    ConfigMap apollo-airlines-prod-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    VerticalPodAutoscaler apollo-airlines-prod-apps search-vpa sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-prod-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-prod-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-prod-ui apollo-gateway-grant sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-apps booking-pdb sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-ui frontend-pdb sync=OutOfSync health=None 
+apollo11-staging Synced Degraded
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+=== 2026-10-24T03:49:35+05:30 load 65.93 54.71 31.06
+apollo11-dev Synced Degraded
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-observability OutOfSync Degraded
+    HTTPRoute apollo-observability grafana sync=OutOfSync health=None 
+   condition: OrphanedResourceWarning Application has 5 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-prod OutOfSync Missing
+    ConfigMap apollo-airlines-prod-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    VerticalPodAutoscaler apollo-airlines-prod-apps search-vpa sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-prod-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-prod-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-prod-ui apollo-gateway-grant sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-apps booking-pdb sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-ui frontend-pdb sync=OutOfSync health=None 
+apollo11-staging Synced Degraded
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+=== 2026-10-24T03:52:08+05:30 load 67.52 63.21 38.04
+apollo11-dev Synced Progressing
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-observability OutOfSync Degraded
+    HTTPRoute apollo-observability grafana sync=OutOfSync health=None 
+   condition: OrphanedResourceWarning Application has 5 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-prod OutOfSync Missing
+    ConfigMap apollo-airlines-prod-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    VerticalPodAutoscaler apollo-airlines-prod-apps search-vpa sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-prod-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-prod-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-prod-ui apollo-gateway-grant sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-apps booking-pdb sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-ui frontend-pdb sync=OutOfSync health=None 
+apollo11-staging Synced Degraded
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+    pod apollo-airlines-staging-apps identity-668749c685-45ww4 CrashLoopBackOff restarts=6
+=== 2026-10-24T03:54:31+05:30 load 72.50 61.10 40.64
+apollo11-dev Synced Degraded
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-observability OutOfSync Degraded
+    HTTPRoute apollo-observability grafana sync=OutOfSync health=None 
+   condition: OrphanedResourceWarning Application has 5 orphaned resources
+   operation: Running 
+apollo11-prod OutOfSync Missing
+    ConfigMap apollo-airlines-prod-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    VerticalPodAutoscaler apollo-airlines-prod-apps search-vpa sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-prod-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-prod-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-prod-ui apollo-gateway-grant sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-apps booking-pdb sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-ui frontend-pdb sync=OutOfSync health=None 
+apollo11-staging Synced Degraded
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+    pod apollo-airlines-staging-apps identity-668749c685-45ww4 CrashLoopBackOff restarts=6
+=== 2026-10-24T03:57:00+05:30 load 92.62 74.87 48.97
+apollo11-dev Synced Progressing
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-observability OutOfSync Degraded
+    HTTPRoute apollo-observability grafana sync=OutOfSync health=None 
+   condition: OrphanedResourceWarning Application has 5 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-prod OutOfSync Missing
+    ConfigMap apollo-airlines-prod-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    VerticalPodAutoscaler apollo-airlines-prod-apps search-vpa sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-prod-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-prod-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-prod-ui apollo-gateway-grant sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-apps booking-pdb sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-ui frontend-pdb sync=OutOfSync health=None 
+apollo11-staging Synced Degraded
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+    pod apollo-airlines-staging-apps identity-668749c685-45ww4 CrashLoopBackOff restarts=7
+=== 2026-10-24T04:00:35+05:30 load 80.83 81.18 57.19
+apollo11-dev OutOfSync Degraded
+    Deployment apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+   operation: Running 
+apollo11-observability OutOfSync Degraded
+    HTTPRoute apollo-observability grafana sync=OutOfSync health=None 
+   condition: OrphanedResourceWarning Application has 5 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-prod OutOfSync Missing
+    ConfigMap apollo-airlines-prod-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    VerticalPodAutoscaler apollo-airlines-prod-apps search-vpa sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-prod-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-prod-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-prod-ui apollo-gateway-grant sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-apps booking-pdb sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-ui frontend-pdb sync=OutOfSync health=None 
+apollo11-staging Synced Degraded
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+    pod apollo-airlines-staging-apps identity-668749c685-45ww4 CrashLoopBackOff restarts=7
+=== 2026-10-24T04:02:41+05:30 load 71.55 78.97 59.49
+apollo11-dev OutOfSync Progressing
+    ConfigMap apollo-airlines-dev-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-dev-apps search-hpa sync=OutOfSync health=None 
+    Gateway apollo-airlines-dev-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-dev-ui apollo-gateway-grant sync=OutOfSync health=None 
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-observability OutOfSync Degraded
+    HTTPRoute apollo-observability grafana sync=OutOfSync health=None 
+   condition: OrphanedResourceWarning Application has 5 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-prod OutOfSync Missing
+    ConfigMap apollo-airlines-prod-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    VerticalPodAutoscaler apollo-airlines-prod-apps search-vpa sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-prod-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-prod-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-prod-ui apollo-gateway-grant sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-apps booking-pdb sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-ui frontend-pdb sync=OutOfSync health=None 
+apollo11-staging Synced Degraded
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+=== 2026-10-24T04:04:48+05:30 load 75.91 73.13 59.44
+apollo11-dev OutOfSync Progressing
+    ConfigMap apollo-airlines-dev-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-dev-apps search-hpa sync=OutOfSync health=None 
+    Gateway apollo-airlines-dev-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-dev-ui apollo-gateway-grant sync=OutOfSync health=None 
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-observability OutOfSync Progressing
+    HTTPRoute apollo-observability grafana sync=OutOfSync health=None 
+   condition: OrphanedResourceWarning Application has 5 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-prod OutOfSync Missing
+    ConfigMap apollo-airlines-prod-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    VerticalPodAutoscaler apollo-airlines-prod-apps search-vpa sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-prod-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-prod-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-prod-ui apollo-gateway-grant sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-apps booking-pdb sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-ui frontend-pdb sync=OutOfSync health=None 
+apollo11-staging Synced Degraded
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+=== 2026-10-24T04:06:55+05:30 load 29.64 58.19 55.83
+apollo11-dev OutOfSync Progressing
+    ConfigMap apollo-airlines-dev-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-dev-apps search-hpa sync=OutOfSync health=None 
+    Gateway apollo-airlines-dev-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-dev-ui apollo-gateway-grant sync=OutOfSync health=None 
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-observability OutOfSync Progressing
+    HTTPRoute apollo-observability grafana sync=OutOfSync health=None 
+   condition: OrphanedResourceWarning Application has 5 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-prod OutOfSync Missing
+    ConfigMap apollo-airlines-prod-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-prod-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-prod-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    Deployment apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps flight-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-prod-apps redis sync=OutOfSync health=None 
+    VerticalPodAutoscaler apollo-airlines-prod-apps search-vpa sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-prod-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-prod-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-prod-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-prod-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-prod-ui apollo-gateway-grant sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-apps booking-pdb sync=OutOfSync health=None 
+    PodDisruptionBudget apollo-airlines-prod-ui frontend-pdb sync=OutOfSync health=None 
+apollo11-staging Synced Degraded
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+=== 2026-10-24T04:08:56+05:30 load 31.72 52.41 54.15
+apollo11-dev Unknown Unknown
+    ConfigMap apollo-airlines-dev-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-dev-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-dev-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-dev-ui apollo-gateway-grant sync=OutOfSync health=None 
+   condition: DeletionError error getting app project "apollo-airlines": appproject.argoproj.io "apollo-airlines" not found
+   condition: InvalidSpecError Application referencing project apollo-airlines which does not exist
+   condition: OrphanedResourceWarning Application has 3 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-staging Unknown Unknown
+   condition: DeletionError error getting app project "apollo-airlines": appproject.argoproj.io "apollo-airlines" not found
+   condition: InvalidSpecError Application referencing project apollo-airlines which does not exist
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+=== 2026-10-24T04:10:56+05:30 load 9.16 36.58 48.11
+apollo11-dev Unknown Unknown
+    ConfigMap apollo-airlines-dev-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-dev-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-dev-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-dev-ui apollo-gateway-grant sync=OutOfSync health=None 
+   condition: DeletionError error getting app project "apollo-airlines": appproject.argoproj.io "apollo-airlines" not found
+   condition: InvalidSpecError Application referencing project apollo-airlines which does not exist
+   condition: OrphanedResourceWarning Application has 3 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-staging Unknown Unknown
+   condition: DeletionError error getting app project "apollo-airlines": appproject.argoproj.io "apollo-airlines" not found
+   condition: InvalidSpecError Application referencing project apollo-airlines which does not exist
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+=== 2026-10-24T04:12:57+05:30 load 2.78 25.16 42.54
+apollo11-dev Unknown Unknown
+    ConfigMap apollo-airlines-dev-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-dev-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-dev-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-dev-ui apollo-gateway-grant sync=OutOfSync health=None 
+   condition: DeletionError error getting app project "apollo-airlines": appproject.argoproj.io "apollo-airlines" not found
+   condition: InvalidSpecError Application referencing project apollo-airlines which does not exist
+   condition: OrphanedResourceWarning Application has 3 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-staging Unknown Unknown
+   condition: DeletionError error getting app project "apollo-airlines": appproject.argoproj.io "apollo-airlines" not found
+   condition: InvalidSpecError Application referencing project apollo-airlines which does not exist
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+=== 2026-10-24T04:14:58+05:30 load 2.37 17.84 37.76
+apollo11-dev Unknown Unknown
+    ConfigMap apollo-airlines-dev-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-dev-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-dev-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-dev-ui apollo-gateway-grant sync=OutOfSync health=None 
+   condition: DeletionError error getting app project "apollo-airlines": appproject.argoproj.io "apollo-airlines" not found
+   condition: InvalidSpecError Application referencing project apollo-airlines which does not exist
+   condition: OrphanedResourceWarning Application has 3 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-staging Unknown Unknown
+   condition: DeletionError error getting app project "apollo-airlines": appproject.argoproj.io "apollo-airlines" not found
+   condition: InvalidSpecError Application referencing project apollo-airlines which does not exist
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+    pod envoy-gateway-system envoy-apollo-airlines-dev-apps-apollo-gateway-f9d5e900-bf6jxq5g Terminating restarts=2
+=== 2026-10-24T04:16:58+05:30 load 1.74 12.47 33.37
+apollo11-dev Unknown Unknown
+    ConfigMap apollo-airlines-dev-apps apollo-airlines-config sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps booking-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps flight-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-init-script sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-apps identity-db-seed sync=OutOfSync health=None 
+    ConfigMap apollo-airlines-dev-ui apollo-airlines-config sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-apps apollo-airlines-secrets sync=OutOfSync health=None 
+    Secret apollo-airlines-dev-ui apollo-airlines-secrets sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps booking-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps flight-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps identity-db-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps redis-headless sync=OutOfSync health=None 
+    Service apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    Service apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-booking-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-flight-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps init-identity-db sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    ServiceAccount apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps booking-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps identity-db sync=OutOfSync health=None 
+    StatefulSet apollo-airlines-dev-apps redis sync=OutOfSync health=None 
+    HorizontalPodAutoscaler apollo-airlines-dev-apps search-hpa sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-booking-db sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-flight-db sync=OutOfSync health=None 
+    Job apollo-airlines-dev-apps seed-identity-db sync=OutOfSync health=None 
+    Gateway apollo-airlines-dev-apps apollo-gateway sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps booking sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps flight sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps identity sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps notification sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-apps search sync=OutOfSync health=None 
+    HTTPRoute apollo-airlines-dev-ui frontend sync=OutOfSync health=None 
+    ReferenceGrant apollo-airlines-dev-ui apollo-gateway-grant sync=OutOfSync health=None 
+   condition: DeletionError error getting app project "apollo-airlines": appproject.argoproj.io "apollo-airlines" not found
+   condition: InvalidSpecError Application referencing project apollo-airlines which does not exist
+   condition: OrphanedResourceWarning Application has 3 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+apollo11-staging Unknown Unknown
+   condition: DeletionError error getting app project "apollo-airlines": appproject.argoproj.io "apollo-airlines" not found
+   condition: InvalidSpecError Application referencing project apollo-airlines which does not exist
+   condition: OrphanedResourceWarning Application has 1 orphaned resources
+   operation: Succeeded successfully synced (all tasks run)
+    pod envoy-gateway-system envoy-apollo-airlines-dev-apps-apollo-gateway-f9d5e900-bf6jxq5g Terminating restarts=2

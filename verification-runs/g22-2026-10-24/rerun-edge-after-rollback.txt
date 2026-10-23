@@ -1,0 +1,49 @@
+after rollback, HTTPS search.apollo.local/healthz/ready via 172.18.0.50:
+t+0s 000
+t+3s 000
+t+6s 000
+t+9s 000
+t+12s 000
+t+15s 000
+t+18s 000
+t+21s 000
+t+24s 000
+t+27s 000
+t+30s 000
+t+33s 000
+t+36s 000
+t+39s 000
+t+42s 000
+t+45s 000
+t+48s 000
+t+51s 000
+t+54s 000
+t+57s 000
+t+60s 000
+t+63s 000
+t+67s 000
+t+70s 000
+t+73s 000
+t+76s 000
+t+79s 000
+t+82s 000
+t+85s 000
+t+88s 000
+t+91s 000
+t+94s 000
+t+97s 000
+t+100s 000
+t+103s 000
+t+106s 000
+t+109s 000
+t+112s 000
+t+115s 000
+t+118s 000
+search endpoints: 10.244.2.213(true) 
+search pods:
+  search-cd8d7764-rkrd9 1/1 Running 4m18s
+~5 min after rollback, HTTPS via 172.18.0.50:
+  identity: 200
+  flight: 200
+  booking: 200
+  search: 200

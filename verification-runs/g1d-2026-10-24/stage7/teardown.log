@@ -1,0 +1,22 @@
+[0;36m▶ 0/3 Checking cluster[0m
+[0;32m✓ cluster reachable[0m
+[0;36m▶ 1/3 Deleting Applications (mode: purge)[0m
+  deleting application apollo11-dev (pruning managed resources)...
+  deleting application apollo11-observability (pruning managed resources)...
+  finalizer timed out; full teardown will remove tenant namespaces explicitly
+  deleting application apollo11-prod (pruning managed resources)...
+  deleting application apollo11-staging (pruning managed resources)...
+[0;32m✓ 4 application(s) deleted[0m
+[0;36m▶ 2/3 Deleting AppProject + isolated tenant platform[0m
+appproject.argoproj.io "apollo-airlines" deleted from argocd namespace
+[0;32m✓ appproject/apollo-airlines deleted[0m
+[0;32m✓ tenant namespaces and shared platform deleted[0m
+[0;36m▶ 3/3 Deleting ArgoCD system namespace[0m
+pod "argocd-application-controller-0" force deleted from argocd namespace
+pod "argocd-applicationset-controller-cc9f596b-kcmmv" force deleted from argocd namespace
+pod "argocd-dex-server-7665676cbc-zvfds" force deleted from argocd namespace
+pod "argocd-notifications-controller-66fb46b4f-djkvz" force deleted from argocd namespace
+pod "argocd-redis-6b477bb4b9-phr4h" force deleted from argocd namespace
+pod "argocd-repo-server-787db56bbd-s9d98" force deleted from argocd namespace
+pod "argocd-server-59ccc85b97-txx5z" force deleted from argocd namespace
+error: timed out waiting for the condition on namespaces/argocd

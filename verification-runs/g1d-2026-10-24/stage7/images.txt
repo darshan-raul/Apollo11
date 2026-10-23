@@ -1,0 +1,16 @@
+apollo-airlines-dev-apps ghcr.io/darshan-raul/apollo11/stage7/booking:latest
+apollo-airlines-dev-apps ghcr.io/darshan-raul/apollo11/stage7/flight:latest
+apollo-airlines-dev-apps ghcr.io/darshan-raul/apollo11/stage7/identity:latest
+apollo-airlines-dev-apps ghcr.io/darshan-raul/apollo11/stage7/notification:latest
+apollo-airlines-dev-apps ghcr.io/darshan-raul/apollo11/stage7/search:latest
+apollo-airlines-dev-apps postgres:15-alpine
+apollo-airlines-dev-apps redis:7-alpine
+apollo-airlines-dev-ui ghcr.io/darshan-raul/apollo11/stage7/frontend:latest
+apollo-airlines-staging-apps ghcr.io/darshan-raul/apollo11/stage7/booking:latest
+apollo-airlines-staging-apps ghcr.io/darshan-raul/apollo11/stage7/flight:latest
+apollo-airlines-staging-apps ghcr.io/darshan-raul/apollo11/stage7/identity:latest
+apollo-airlines-staging-apps ghcr.io/darshan-raul/apollo11/stage7/notification:latest
+apollo-airlines-staging-apps ghcr.io/darshan-raul/apollo11/stage7/search:latest
+apollo-airlines-staging-apps postgres:15-alpine
+apollo-airlines-staging-apps redis:7-alpine
+apollo-airlines-staging-ui ghcr.io/darshan-raul/apollo11/stage7/frontend:latest

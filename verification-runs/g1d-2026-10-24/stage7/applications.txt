@@ -1,0 +1,5 @@
+APP                      SYNC        HEALTH     REV
+apollo11-dev             OutOfSync   Degraded   90b5120005a44e6af31025309b59cdcbdbbb86ab
+apollo11-observability   OutOfSync   Degraded   90b5120005a44e6af31025309b59cdcbdbbb86ab
+apollo11-prod            OutOfSync   Missing    90b5120005a44e6af31025309b59cdcbdbbb86ab
+apollo11-staging         Synced      Degraded   90b5120005a44e6af31025309b59cdcbdbbb86ab

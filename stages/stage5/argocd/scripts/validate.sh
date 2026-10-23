@@ -17,7 +17,9 @@ for env in dev staging prod; do
     grep -q "value: $ui_ns" "$app_file"
 
     render=$(mktemp)
-    helm template "apollo11-$env" "$CHART_DIR" \
+    # --skip-tests: the chart's `helm test` Pod is a hook that Argo CD does not
+    # apply, so it is not part of what each tenant Application deploys.
+    helm template "apollo11-$env" "$CHART_DIR" --skip-tests \
         -f "$CHART_DIR/values-$env.yaml" \
         --set image.repository=ghcr.io/darshan-raul/apollo11/stage5 \
         --set namespaces.apps="$apps_ns" \
