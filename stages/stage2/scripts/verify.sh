@@ -2,7 +2,47 @@
 
 set -euo pipefail
 
-CONTEXT="${1:-${KUBE_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}}"
+usage() {
+  printf 'Usage: %s [--context kind-apollo11|kind-apollo11-dev] [kind-apollo11|kind-apollo11-dev]\n' "$0"
+  printf '  --context CTX  Kubernetes context (or set KUBE_CONTEXT)\n'
+}
+
+CONTEXT="${KUBE_CONTEXT:-}"
+CONTEXT_SET=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --context)
+      [[ $# -ge 2 ]] || { printf 'Missing value for --context\n' >&2; usage >&2; exit 2; }
+      CONTEXT="$2"
+      CONTEXT_SET=true
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    -*)
+      printf 'Unknown option: %s\n' "$1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      if [[ "${CONTEXT_SET}" == false ]]; then
+        CONTEXT="$1"
+        CONTEXT_SET=true
+        shift
+      else
+        printf 'Unexpected argument: %s\n' "$1" >&2
+        usage >&2
+        exit 2
+      fi
+      ;;
+  esac
+done
+
+if [[ "${CONTEXT_SET}" == false && -z "${CONTEXT}" ]]; then
+  CONTEXT="$(kubectl config current-context 2>/dev/null || true)"
+fi
 
 case "${CONTEXT}" in
   kind-apollo11|kind-apollo11-dev) ;;
@@ -119,6 +159,8 @@ fi
 step "7. Networking Edge Access & Route Verification"
 
 DETECTED_STACK="clusterip"
+lb_ip=""
+eg_ip=""
 
 if kube get gateway apollo-gateway -n apollo-airlines-apps >/dev/null 2>&1; then
   DETECTED_STACK="envoy-gateway"
@@ -162,7 +204,7 @@ case "$DETECTED_STACK" in
     ;;
 
   nodeport)
-    for port_info in "30080:frontend:frontend" "30081:flight:healthz" "30082:booking:healthz" "30083:identity:healthz" "30084:search:healthz"; do
+    for port_info in "30080:frontend:healthz" "30081:flight:healthz" "30082:booking:healthz" "30083:identity:healthz" "30084:search:healthz"; do
       IFS=":" read -r port name path <<< "$port_info"
       code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 "http://localhost:${port}/${path}" 2>/dev/null || echo "000")
       if [[ "$code" == "200" ]]; then
@@ -236,7 +278,7 @@ case "$DETECTED_STACK" in
 
     for route in identity flight booking search notification; do
       route_acc=$(kube get httproute "$route" -n apollo-airlines-apps -o jsonpath='{.status.parents[*].conditions[?(@.type=="Accepted")].status}' 2>/dev/null || echo "False")
-      if [[ "$route_acc" =~ "True" ]]; then
+      if [[ "$route_acc" == *"True"* && "$route_acc" != *"False"* ]]; then
         pass "HTTPRoute apollo-airlines-apps/$route accepted"
       else
         fail "HTTPRoute apollo-airlines-apps/$route not accepted"
@@ -244,7 +286,7 @@ case "$DETECTED_STACK" in
     done
 
     frontend_route_acc=$(kube get httproute frontend -n apollo-airlines-ui -o jsonpath='{.status.parents[*].conditions[?(@.type=="Accepted")].status}' 2>/dev/null || echo "False")
-    if [[ "$frontend_route_acc" =~ "True" ]]; then
+    if [[ "$frontend_route_acc" == *"True"* && "$frontend_route_acc" != *"False"* ]]; then
       pass "HTTPRoute apollo-airlines-ui/frontend accepted"
     else
       fail "HTTPRoute apollo-airlines-ui/frontend not accepted"
@@ -295,8 +337,18 @@ esac
 
 step "8. End-to-End Application & Auth Verification"
 TOKEN=""
-if [[ "$DETECTED_STACK" == "envoy-gateway" && -n "${eg_ip:-}" ]]; then
+if [[ "$DETECTED_STACK" == "envoy-gateway" && -n "${eg_ip}" ]]; then
   login_resp=$(curl -s -X POST "http://${eg_ip}/api/users/login" \
+    -H "Host: identity.apollo.local" \
+    -H "Content-Type: application/json" \
+    -d '{"email":"passenger@apolloairlines.com","password":"pass123"}' 2>/dev/null || echo "")
+elif [[ "$DETECTED_STACK" == "traefik-metallb" && -n "${lb_ip}" ]]; then
+  login_resp=$(curl -s -X POST "http://${lb_ip}/api/users/login" \
+    -H "Host: identity.apollo.local" \
+    -H "Content-Type: application/json" \
+    -d '{"email":"passenger@apolloairlines.com","password":"pass123"}' 2>/dev/null || echo "")
+elif [[ "$DETECTED_STACK" == "traefik-ingress" ]]; then
+  login_resp=$(curl -s -X POST "http://localhost:30080/api/users/login" \
     -H "Host: identity.apollo.local" \
     -H "Content-Type: application/json" \
     -d '{"email":"passenger@apolloairlines.com","password":"pass123"}' 2>/dev/null || echo "")
@@ -318,8 +370,12 @@ else
 fi
 
 if [[ -n "$TOKEN" ]]; then
-  if [[ "$DETECTED_STACK" == "envoy-gateway" && -n "${eg_ip:-}" ]]; then
+  if [[ "$DETECTED_STACK" == "envoy-gateway" && -n "${eg_ip}" ]]; then
     flights_resp=$(curl -s -H "Host: flight.apollo.local" "http://${eg_ip}/api/flights" 2>/dev/null || echo "")
+  elif [[ "$DETECTED_STACK" == "traefik-metallb" && -n "${lb_ip}" ]]; then
+    flights_resp=$(curl -s -H "Host: flight.apollo.local" "http://${lb_ip}/api/flights" 2>/dev/null || echo "")
+  elif [[ "$DETECTED_STACK" == "traefik-ingress" ]]; then
+    flights_resp=$(curl -s -H "Host: flight.apollo.local" "http://localhost:30080/api/flights" 2>/dev/null || echo "")
   elif [[ "$DETECTED_STACK" == "nodeport" ]]; then
     flights_resp=$(curl -s "http://localhost:30081/api/flights" 2>/dev/null || echo "")
   else
@@ -334,7 +390,7 @@ if [[ -n "$TOKEN" ]]; then
 fi
 
 if [[ "$DETECTED_STACK" == envoy-gateway ]]; then
-if KUBE_CONTEXT="${CONTEXT:-${CURRENT_CTX:-}}" bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then
+if KUBE_CONTEXT="${CONTEXT}" bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then
   pass "trusted HTTPS workflow and hostname rejection"
 else
   fail "trusted HTTPS workflow or hostname rejection failed"

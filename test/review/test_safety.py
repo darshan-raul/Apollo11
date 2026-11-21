@@ -209,6 +209,79 @@ if [[ "$*" == *"delete-volume"* ]]; then exit 43; else echo vol-test; fi
         self.assertEqual(result.returncode, 43)
         self.assertNotIn('Deleted vol-test', result.stdout)
 
+    def test_stage1_to_3_scripts_support_help_context_and_reject_foreign_context(self):
+        self.tool('kubectl', 'echo "$*" >> "$CALL_LOG"\n')
+        for stage in (1, 2, 3):
+            for script in ('apply.sh', 'verify.sh', 'teardown.sh'):
+                path = f'stages/stage{stage}/scripts/{script}'
+                with self.subTest(path=path, mode='help'):
+                    self.log.unlink(missing_ok=True)
+                    res = self.run_script(path, '--help')
+                    self.assertEqual(res.returncode, 0, res.stderr)
+                    self.assertEqual(self.calls(), '')
+                with self.subTest(path=path, mode='foreign-context'):
+                    self.log.unlink(missing_ok=True)
+                    res = self.run_script(path, '--context', 'arn:aws:eks:unsafe')
+                    self.assertEqual(res.returncode, 2)
+                    self.assertIn('Refusing context', res.stderr)
+                    self.assertEqual(self.calls(), '')
+            for script in ('verify.sh', 'teardown.sh'):
+                path = f'stages/stage{stage}/scripts/{script}'
+                for args in (('--context', 'kind-apollo11'), ('kind-apollo11',)):
+                    with self.subTest(path=path, args=args):
+                        self.log.unlink(missing_ok=True)
+                        if script == 'teardown.sh':
+                            self.tool('kubectl', 'echo "$*" >> "$CALL_LOG"\nif [[ "$*" == *"get namespace"* ]]; then exit 1; fi\n')
+                        else:
+                            self.tool('curl', 'exit 1\n')
+                            self.tool('kubectl', """echo "$*" >> "$CALL_LOG"
+case "$*" in
+  *"-l app=search"*) echo ErrImagePull ;;
+  *"redis-cli"*) exit 1 ;;
+esac
+""")
+                        res = self.run_script(path, *args)
+                        self.assertNotIn('Refusing context', res.stderr)
+                        self.assertTrue(
+                            any(line.startswith('--context kind-apollo11 ') for line in self.calls().splitlines()),
+                            f'Expected --context kind-apollo11 in calls for {path} {args}: {self.calls()}'
+                        )
+
+    def test_stage2_teardown_deletes_traefik_serviceaccount(self):
+        marker = self.work / 'crd-deleted'
+        self.tool('kubectl', f"""echo "$*" >> "$CALL_LOG"
+case "$*" in
+  *"delete customresourcedefinition"*) touch "{marker}" ;;
+  *"get crd -o name"*) [[ -f "{marker}" ]] || echo customresourcedefinition.apiextensions.k8s.io/httproutes.gateway.networking.k8s.io ;;
+  *"get namespace"*) exit 1 ;;
+esac
+""")
+        result = self.run_script('stages/stage2/scripts/teardown.sh', '--context', 'kind-apollo11')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('delete serviceaccount traefik -n kube-system', self.calls())
+
+    def test_stage3_verify_fails_survival_when_booking_id_is_empty(self):
+        self.tool('kubectl', """echo "$*" >> "$CALL_LOG"
+case "$*" in
+  *"owning-gateway-name=apollo-gateway"*) echo 172.18.0.50 ;;
+  *"redis-cli"*) exit 1 ;;
+  *"get secret apollo-tls-secret"*) echo ZmFrZS1jZXJ0 ;;
+esac
+""")
+        self.tool('curl', """url="${@: -1}"
+if [[ "$url" == *untrusted.apollo.invalid* ]]; then exit 60; fi
+case "$url" in
+  */api/users/login) echo '{"token":"fake-token"}' ;;
+  */api/flights) echo '{"flights":[{"id":"flight-1","status":"SCHEDULED","availableSeats":10,"origin":"BOM","destination":"SIN","departureTime":"2026-10-05T08:00:00Z"}]}' ;;
+  */api/bookings) echo '{"error":"no seats"}' ;;
+  *) echo '{"status":"ok"}' ;;
+esac
+""")
+        result = self.run_script('stages/stage3/scripts/verify.sh', '--context', 'kind-apollo11')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Data survival skipped: booking creation failed', result.stdout)
+        self.assertNotIn('Data survival proven', result.stdout)
+
 
 if __name__ == '__main__':
     unittest.main()

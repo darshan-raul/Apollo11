@@ -4,21 +4,33 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-CONTEXT="${KUBE_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"
+CONTEXT="${KUBE_CONTEXT:-}"
+CONTEXT_SET=false
 SKIP_BUILD=false
 
 usage() {
   printf 'Usage: %s [--skip-build] [--context kind-apollo11|kind-apollo11-dev]\n' "$0"
+  printf '  --skip-build     Skip building and loading images into kind\n'
+  printf '  --context CTX    Kubernetes context (or set KUBE_CONTEXT)\n'
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --skip-build) SKIP_BUILD=true; shift ;;
-    --context) CONTEXT="${2:-}"; shift 2 ;;
-    --help) usage; exit 0 ;;
+    --context)
+      [[ $# -ge 2 ]] || { printf 'Missing value for --context\n' >&2; usage >&2; exit 2; }
+      CONTEXT="$2"
+      CONTEXT_SET=true
+      shift 2
+      ;;
+    --help|-h) usage; exit 0 ;;
     *) printf 'Unknown option: %s\n' "$1" >&2; usage >&2; exit 2 ;;
   esac
 done
+
+if [[ "${CONTEXT_SET}" == false && -z "${CONTEXT}" ]]; then
+  CONTEXT="$(kubectl config current-context 2>/dev/null || true)"
+fi
 
 case "${CONTEXT}" in
   kind-apollo11|kind-apollo11-dev) ;;
@@ -78,4 +90,4 @@ for deployment in identity flight booking search notification frontend; do
   kube rollout status "deployment/${deployment}" -n apollo-airlines --timeout=180s
 done
 
-printf '\nStage 1 is applied. Run:\n  bash %s/verify.sh %s\n' "${SCRIPT_DIR}" "${CONTEXT}"
+printf '\nStage 1 is applied. Run:\n  bash %s/verify.sh --context %s\n' "${SCRIPT_DIR}" "${CONTEXT}"

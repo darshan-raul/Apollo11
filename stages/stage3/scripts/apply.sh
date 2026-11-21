@@ -5,22 +5,33 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 K8S_DIR="${STAGE_DIR}/k8s"
-CONTEXT="${KUBE_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"
+CONTEXT="${KUBE_CONTEXT:-}"
+CONTEXT_SET=false
 SKIP_BUILD=false
 
 usage() {
   printf 'Usage: %s [--skip-build] [--context kind-apollo11|kind-apollo11-dev]\n' "$0"
   printf '  --skip-build   Skip building and loading images into kind\n'
+  printf '  --context CTX  Kubernetes context (or set KUBE_CONTEXT)\n'
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --skip-build) SKIP_BUILD=true; shift ;;
-    --context) CONTEXT="${2:-}"; shift 2 ;;
-    --help) usage; exit 0 ;;
+    --context)
+      [[ $# -ge 2 ]] || { printf 'Missing value for --context\n' >&2; usage >&2; exit 2; }
+      CONTEXT="$2"
+      CONTEXT_SET=true
+      shift 2
+      ;;
+    --help|-h) usage; exit 0 ;;
     *) printf 'Unknown option: %s\n' "$1" >&2; usage >&2; exit 2 ;;
   esac
 done
+
+if [[ "${CONTEXT_SET}" == false && -z "${CONTEXT}" ]]; then
+  CONTEXT="$(kubectl config current-context 2>/dev/null || true)"
+fi
 
 case "${CONTEXT}" in
   kind-apollo11|kind-apollo11-dev) ;;
@@ -42,7 +53,9 @@ printf '\n[1/7] Applying namespaces, configuration, secrets, and ServiceAccounts
 kube apply -f "${K8S_DIR}/config/"
 
 printf '\n[2/7] Applying stateful workloads (StatefulSets + Headless Services + Schema ConfigMaps)\n'
-kube apply -f "${K8S_DIR}/apps/" --recursive
+for component in identity-db flight-db booking-db redis; do
+  kube apply -f "${K8S_DIR}/apps/${component}/"
+done
 
 printf 'Waiting for StatefulSets to report ready replicas (schema bootstrap runs via entrypoint hook)...\n'
 for sts in identity-db flight-db booking-db redis; do
@@ -53,13 +66,7 @@ for db in identity-db-0 flight-db-0 booking-db-0 redis-0; do
   kube wait --for=condition=Ready "pod/${db}" -n apollo-airlines-apps --timeout=60s
 done
 
-printf '\n[3/7] Waiting for application Deployments...\n'
-for dep in identity flight booking search notification; do
-  kube rollout status "deployment/${dep}" -n apollo-airlines-apps --timeout=180s
-done
-kube rollout status deployment/frontend -n apollo-airlines-ui --timeout=180s
-
-printf '\n[4/7] Applying idempotent database seed Jobs\n'
+printf '\n[3/7] Applying idempotent database seed Jobs\n'
 kube delete jobs -n apollo-airlines-apps \
   seed-identity-db seed-flight-db seed-booking-db \
   --ignore-not-found --wait=true
@@ -68,6 +75,15 @@ kube apply -f "${K8S_DIR}/jobs/"
 for job in seed-identity-db seed-flight-db seed-booking-db; do
   kube wait --for=condition=Complete "job/${job}" -n apollo-airlines-apps --timeout=180s
 done
+
+printf '\n[4/7] Applying application Deployments and Services\n'
+for component in identity flight booking search notification frontend; do
+  kube apply -f "${K8S_DIR}/apps/${component}/"
+done
+for dep in identity flight booking search notification; do
+  kube rollout status "deployment/${dep}" -n apollo-airlines-apps --timeout=180s
+done
+kube rollout status deployment/frontend -n apollo-airlines-ui --timeout=180s
 
 printf '\n[5/7] Applying MetalLB LoadBalancer infrastructure\n'
 kube apply -f "${K8S_DIR}/metallb/00-metallb-native.yaml"

@@ -19,11 +19,11 @@ MetalLB) is unchanged.
 
 | | |
 |---|---|
-| **New concept** | StatefulSet, VolumeClaimTemplate, Headless Service (`clusterIP: None`), Postgres entrypoint-hook schema bootstrap (`/docker-entrypoint-initdb.d/`), PVC lifecycle, kind `local-path` StorageClass |
+| **New concept** | StatefulSet, VolumeClaimTemplate, Headless Service (`clusterIP: None`), Postgres entrypoint-hook schema bootstrap (`/docker-entrypoint-initdb.d/`), PVC lifecycle, kind `standard` (`rancher.io/local-path`) StorageClass |
 | **Workloads changed** | 4 (3 PostgreSQL + redis) |
 | **Workloads unchanged** | 6 (all app Deployments, frontend, gateway, MetalLB) |
 | **Code changes** | None (app code doesn't know or care about Deployment vs StatefulSet) |
-| **Verify target** | **69/69 checks pass** |
+| **Verify target** | **70/70 checks pass** |
 
 ---
 
@@ -185,7 +185,7 @@ directly resolve it from app code.
 
 ---
 
-## Init Container pattern for schema
+## Entrypoint Hook Pattern for Schema Bootstrap
 
 > **Implementation note (Stage 3 build log):** the original plan was a
 > separate `initContainers[]` entry that runs `psql -f /init/init.sql`
@@ -251,10 +251,10 @@ idempotent behaviour we want.
    into the pod lifecycle.
 
 The seed (data) is still a Job — you don't want to re-insert 186 flight
-rows every time the pod restarts. The seed is `ON CONFLICT DO NOTHING`
-(for tables with unique constraints; for `flights` we drop the conflict
-clause since each `flight_number` flies daily and there's no composite
-unique constraint to match against).
+rows every time the pod restarts. All seed statements use `ON CONFLICT DO NOTHING`
+(`ON CONFLICT (id) DO NOTHING` on `users`, `ON CONFLICT (code) DO NOTHING` on
+`airports`, and `ON CONFLICT (flight_number, departure_time) DO NOTHING` on
+`flights`), so re-running a seed Job is safe and idempotent.
 
 ---
 
@@ -265,28 +265,30 @@ satisfies that request by binding it to a `PersistentVolume` (PV) that
 matches its size, access mode, and (if specified) `storageClassName`.
 
 A `StorageClass` describes **how** to provision a PV:
-- `local-path` (default in kind) — provisions a `hostPath` PV on the node
-  the pod lands on. Fast, but the data is **node-local** — if the pod
-  reschedules to a different node, the data is gone (unless the
-  `local-path` provisioner is configured for `WaitForFirstConsumer`
-  binding mode, which it isn't in stock kind).
-- `standard` (GCE), `gp2`/`gp3` (AWS), `pd-standard` (GCP) — cloud
-  network-attached storage. Survives node failure.
+- `standard` (`rancher.io/local-path`, default in kind) — uses
+  `WaitForFirstConsumer` binding and provisions a node-local `hostPath` PV on
+  the worker node where the Pod first schedules. The resulting PV carries a
+  `nodeAffinity` rule pinning future restarts of `identity-db-0` back to that
+  same node. Data survives Pod deletion, but because storage is node-local:
+  - if that worker node becomes unavailable, the Pod stays `Pending`; and
+  - if the PVC is deleted (`ReclaimPolicy: Delete`) or the node's local-path
+    directory is wiped, the data is lost.
+- `gp2`/`gp3` (AWS EBS), `pd-standard`/`pd-balanced` (GCP PD) — cloud
+  network-attached storage that can re-attach across nodes within a zone.
 - For real production, use a CSI driver (AWS EBS, GCE PD, Rook/Ceph,
   Longhorn, etc.).
 
 **This Stage's PVCs omit `storageClassName`** — they use the cluster
-default, which kind sets to `local-path`. That works for our dev
-cluster because pods are rescheduled within the same node pool
-(two workers; StatefulSets with `replicas: 1` tend to land on the same
-node on each rollout).
+default, which kind names `standard`. Because `WaitForFirstConsumer` is active,
+the PVC remains `Pending` until the StatefulSet Pod is scheduled onto a worker,
+and then binds to a PV pinned to that node.
 
-To inspect the storage class in your cluster:
+To inspect the storage class and PVs in your cluster:
 
 ```bash
 kubectl get storageclass
-# NAME                 PROVISIONER                    RECLAIMPOLICY   ...
-# local-path (default) rancher.io/local-path          Delete          ...
+# NAME                 PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+# standard (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  ...
 
 kubectl get pvc -n apollo-airlines-apps
 # NAME                       STATUS   VOLUME                                     CAPACITY   ...
@@ -303,7 +305,7 @@ volumeClaimTemplates:
   - metadata: { name: pg-data }
     spec:
       accessModes: ["ReadWriteOnce"]
-      storageClassName: local-path   # <-- explicit
+      storageClassName: standard   # <-- explicit
       resources: { requests: { storage: 1Gi } }
 ```
 
@@ -314,7 +316,7 @@ volumeClaimTemplates:
 ```
         Browser
           |
-          |  HTTP, Host: <svc>.apollo.local
+          |  HTTP (80) / HTTPS (443), Host: <svc>.apollo.local
           v
    172.18.0.50  (MetalLB-assigned, persisted from Stage 2)
           |
@@ -362,25 +364,22 @@ cd stages/stage3
 ./scripts/apply.sh
 ```
 
-`apply.sh` runs 10 steps (after a preflight cluster check):
-1. **Build images** — frontend + 5 backend services
-2. **Namespaces + config + secrets**
-3. **ServiceAccounts** (13)
-4. **Apps** — 4 StatefulSets + 6 Deployments + 4 headless SVCs + 4 ClusterIP SVCs
-5. **Wait for StatefulSets** — `kubectl rollout status` for each
-6. **Seed jobs** (3)
-7. **Wait for seed jobs** to succeed
-8. **MetalLB** install + IP pool + L2 advertisement
-9. **Envoy Gateway** install + GatewayClass + Gateway + 6 HTTPRoutes
-10. **Wait for MetalLB to assign a LoadBalancer IP**, then print `/etc/hosts` reminder
+`apply.sh` runs 7 deployment steps (after image build and cluster preflight):
+1. **Namespaces, config, secrets & ServiceAccounts** (13 SAs)
+2. **Stateful workloads & wait** — 4 StatefulSets + Headless/ClusterIP Services + schema ConfigMaps; waits for `rollout status` and `Ready`
+3. **Database seed Jobs** — applies and waits for `seed-identity-db`, `seed-flight-db`, `seed-booking-db`
+4. **Application Deployments** — 6 Deployments + ClusterIP Services; waits for `rollout status`
+5. **MetalLB** — native install + IP pool + L2 advertisement
+6. **Envoy Gateway** — controller + CRDs install
+7. **Gateway API resources & IP** — GatewayClass, EnvoyProxy, TLS Secret (`generate-certs.sh`), Gateway, ReferenceGrant, 6 HTTPRoutes, then waits for MetalLB LoadBalancer IP
 
-**Why does step 5 exist?** The Postgres entrypoint runs the schema
+**Why does step 2 wait before step 3?** The Postgres entrypoint runs the schema
 during `initdb` on first start (empty data dir). The pod's readiness
 probe (a `pg_isready` exec check) only passes once initdb has finished
-and Postgres is accepting connections. We block on
-`kubectl rollout status` until `ready=1` and on `kubectl wait
---for=condition=Ready` until the actual readiness probe passes, so
-the seed Jobs in step 6 connect to a fully-initialized DB.
+and Postgres is accepting connections. Blocking on
+`kubectl rollout status` and `kubectl wait --for=condition=Ready` guarantees
+the seed Jobs in step 3 connect to a fully-initialized DB, and the app
+Deployments in step 4 start against seeded databases.
 
 After the script prints the MetalLB IP, set up local DNS:
 
@@ -403,7 +402,7 @@ curl -H 'Host: frontend.apollo.local' http://frontend.172-18-0-50.nip.io/
 ./scripts/verify.sh
 ```
 
-**Expected: 69/69 checks pass.** Coverage:
+**Expected: 70/70 checks pass.** Coverage:
 
 | Group | Checks | Description |
 |---|---|---|
@@ -415,7 +414,7 @@ curl -H 'Host: frontend.apollo.local' http://frontend.172-18-0-50.nip.io/
 | App Deployments & Jobs | 9 | 6 Deployments (2/2 ready) + 3 seed jobs completed |
 | Database Seed Integrity | 3 | Seed row counts (2 users, 6 airports, 186 flights across 31 days) |
 | Envoy Gateway & MetalLB | 14 | GatewayClass, Gateway, 6 HTTPRoutes, MetalLB IP, and HTTP 200 checks |
-| Flagship Workflow & Survival | 7 | Passenger auth, flight search, booking creation, pod termination, and data persistence proof |
+| Flagship Workflow & Survival | 6 | Passenger auth, flight search, booking creation, Postgres & Redis AOF survival, and trusted HTTPS workflow |
 
 ---
 
@@ -452,12 +451,70 @@ kubectl exec -n apollo-airlines-apps identity-db-0 -- \
   psql -U postgres -d identity -c \
   "INSERT INTO users (email, password_hash) VALUES ('test@x.com', 'x');"
 kubectl delete pod -n apollo-airlines-apps identity-db-0
-sleep 10
+kubectl wait --for=condition=Ready pod/identity-db-0 -n apollo-airlines-apps --timeout=60s
 kubectl exec -n apollo-airlines-apps identity-db-0 -- \
   psql -U postgres -d identity -c "SELECT email FROM users WHERE email = 'test@x.com';"
 #  email
 # ----------
 #  test@x.com
+kubectl exec -n apollo-airlines-apps identity-db-0 -- \
+  psql -U postgres -d identity -c "DELETE FROM users WHERE email = 'test@x.com';"
+```
+
+### Redis AOF persistence
+
+`redis-0` runs with `--appendonly yes --appendfsync everysec` backed by its own `redis-data-redis-0` PVC. Prove a key survives Pod replacement:
+
+```bash
+kubectl exec -n apollo-airlines-apps redis-0 -- redis-cli SET lab:persist ok
+sleep 2
+kubectl delete pod -n apollo-airlines-apps redis-0
+kubectl wait --for=condition=Ready pod/redis-0 -n apollo-airlines-apps --timeout=60s
+kubectl exec -n apollo-airlines-apps redis-0 -- redis-cli GET lab:persist
+# "ok"
+kubectl exec -n apollo-airlines-apps redis-0 -- redis-cli DEL lab:persist
+```
+
+### PVC deletion data-loss boundary & recovery
+
+Pod deletion preserves the PVC, whereas **PVC deletion destroys the underlying `Delete`-policy PV** and forces an empty schema bootstrap on the next start:
+
+```bash
+kubectl scale statefulset/flight-db -n apollo-airlines-apps --replicas=0
+kubectl delete pvc pg-data-flight-db-0 -n apollo-airlines-apps
+kubectl scale statefulset/flight-db -n apollo-airlines-apps --replicas=1
+kubectl wait --for=condition=Ready pod/flight-db-0 -n apollo-airlines-apps --timeout=60s
+
+# Entrypoint hook recreated the tables, but seeded rows are gone (0):
+kubectl exec -n apollo-airlines-apps flight-db-0 -- \
+  psql -U postgres -d flight -tAc 'SELECT count(*) FROM flights;'
+
+# Recover by re-running the idempotent seed Job:
+kubectl delete job seed-flight-db -n apollo-airlines-apps
+kubectl apply -f stages/stage3/k8s/jobs/seed-flight-db.yaml
+kubectl wait --for=condition=Complete job/seed-flight-db -n apollo-airlines-apps --timeout=60s
+kubectl exec -n apollo-airlines-apps flight-db-0 -- \
+  psql -U postgres -d flight -tAc 'SELECT count(*) FROM flights;'
+# 186
+```
+
+### Logical backup & restore (`pg_dump`)
+
+Prove you can take a logical backup and restore it into a separate database before cleaning up:
+
+```bash
+kubectl exec -n apollo-airlines-apps identity-db-0 -- \
+  pg_dump -U postgres -d identity > /tmp/identity-backup.sql
+kubectl exec -n apollo-airlines-apps identity-db-0 -- \
+  psql -U postgres -d postgres -c 'CREATE DATABASE identity_restore_test;'
+kubectl exec -i -n apollo-airlines-apps identity-db-0 -- \
+  psql -U postgres -d identity_restore_test < /tmp/identity-backup.sql
+kubectl exec -n apollo-airlines-apps identity-db-0 -- \
+  psql -U postgres -d identity_restore_test -tAc 'SELECT count(*) FROM users;'
+# 2
+kubectl exec -n apollo-airlines-apps identity-db-0 -- \
+  psql -U postgres -d postgres -c 'DROP DATABASE identity_restore_test;'
+rm -f /tmp/identity-backup.sql
 ```
 
 ---
@@ -504,13 +561,11 @@ services. Probes give Kubernetes the signal to restart unhealthy pods
 The canonical Gateway offers HTTP on port 80 and HTTPS on port 443. Frontend
 API URLs are now baked as HTTPS; rebuild images before switching snapshots.
 The certificate Secret is generated at installation time and preserved across
-reapplication. It is not part of Helm release ownership or the Kustomize base.
-Use `bash scripts/generate-certs.sh --rotate` to renew it deliberately.
+reapplication. Use `bash scripts/generate-certs.sh --rotate` to renew it
+deliberately.
 
 Export `KUBE_CONTEXT=kind-apollo11` (or `kind-apollo11-dev`) before using the
-scripts. For a manual Helm/Kustomize install, create both application namespaces
-and run the certificate generator before submitting Gateway resources. Argo CD
-bootstrap prepares separate certificates in each tenant's namespaces.
+scripts.
 
 Extract the public certificate, then check the actual DNS hostname and trust:
 

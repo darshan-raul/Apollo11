@@ -222,7 +222,10 @@ curl --fail http://127.0.0.1:30084/readyz
 ```
 
 `notification` remains ClusterIP because only Booking calls it. Exposing an
-internal-only dependency would add an unnecessary host entry point.
+internal-only dependency would add an unnecessary host entry point. Stage 1
+exposes NodePorts `30080–30084` as direct local plumbing so you can verify
+endpoints right away; Stage 2 Substage 2 teaches the NodePort service model
+formally.
 
 ## Break 1: delete a controller-owned Pod
 
@@ -296,6 +299,12 @@ curl --fail http://127.0.0.1:30084/readyz
 
 The working `apollo11/search:latest` image returns, failed Pods disappear, and
 the endpoint returns 200. Recovery is complete only after behavior is proven.
+
+> **Note (`kubectl v1.37+` warning):** `kubectl rollout undo` warns that it
+> does not update the `kubectl.kubernetes.io/last-applied-configuration`
+> annotation on the Deployment. That is expected: the live Deployment spec has
+> rolled back, and re-running `kubectl apply` on the Deployment manifest later
+> restores client-side apply agreement.
 
 ## Automated maintainer verification
 

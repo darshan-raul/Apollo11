@@ -2,7 +2,47 @@
 
 set -euo pipefail
 
-CONTEXT="${1:-${KUBE_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}}"
+usage() {
+  printf 'Usage: %s [--context kind-apollo11|kind-apollo11-dev] [kind-apollo11|kind-apollo11-dev]\n' "$0"
+  printf '  --context CTX  Kubernetes context (or set KUBE_CONTEXT)\n'
+}
+
+CONTEXT="${KUBE_CONTEXT:-}"
+CONTEXT_SET=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --context)
+      [[ $# -ge 2 ]] || { printf 'Missing value for --context\n' >&2; usage >&2; exit 2; }
+      CONTEXT="$2"
+      CONTEXT_SET=true
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    -*)
+      printf 'Unknown option: %s\n' "$1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      if [[ "${CONTEXT_SET}" == false ]]; then
+        CONTEXT="$1"
+        CONTEXT_SET=true
+        shift
+      else
+        printf 'Unexpected argument: %s\n' "$1" >&2
+        usage >&2
+        exit 2
+      fi
+      ;;
+  esac
+done
+
+if [[ "${CONTEXT_SET}" == false && -z "${CONTEXT}" ]]; then
+  CONTEXT="$(kubectl config current-context 2>/dev/null || true)"
+fi
 
 case "${CONTEXT}" in
   kind-apollo11|kind-apollo11-dev) ;;
@@ -98,11 +138,12 @@ for svc in identity-db-headless flight-db-headless booking-db-headless redis-hea
 done
 
 for db in identity-db flight-db booking-db redis; do
-  resolved=$(kube exec -n apollo-airlines-apps deployment/identity -- getent hosts "${db}-headless" 2>/dev/null | awk '{print $1}' | head -1 || echo "")
-  if [[ -n "$resolved" && "$resolved" =~ ^10\.244\. ]]; then
-    pass "CoreDNS resolves ${db}-headless directly to pod IP: $resolved"
+  pod_ip=$(kube get pod "${db}-0" -n apollo-airlines-apps -o jsonpath='{.status.podIP}' 2>/dev/null || echo "")
+  resolved=$(kube exec -n apollo-airlines-apps deployment/identity -- getent hosts "${db}-headless" 2>/dev/null | awk '{print $1}' || echo "")
+  if [[ -n "$pod_ip" ]] && grep -Fxq "$pod_ip" <<<"$resolved"; then
+    pass "CoreDNS resolves ${db}-headless directly to pod IP: $pod_ip"
   else
-    fail "Failed to resolve ${db}-headless to pod IP: $resolved"
+    fail "Failed to resolve ${db}-headless to pod IP (expected '$pod_ip', got '$resolved')"
   fi
 done
 
@@ -172,7 +213,7 @@ fi
 
 for route in identity flight booking search notification; do
   route_acc=$(kube get httproute "$route" -n apollo-airlines-apps -o jsonpath='{.status.parents[*].conditions[?(@.type=="Accepted")].status}' 2>/dev/null || echo "False")
-  if [[ "$route_acc" =~ "True" ]]; then
+  if [[ "$route_acc" == *"True"* && "$route_acc" != *"False"* ]]; then
     pass "HTTPRoute apollo-airlines-apps/$route accepted"
   else
     fail "HTTPRoute apollo-airlines-apps/$route not accepted"
@@ -180,7 +221,7 @@ for route in identity flight booking search notification; do
 done
 
 frontend_route_acc=$(kube get httproute frontend -n apollo-airlines-ui -o jsonpath='{.status.parents[*].conditions[?(@.type=="Accepted")].status}' 2>/dev/null || echo "False")
-if [[ "$frontend_route_acc" =~ "True" ]]; then
+if [[ "$frontend_route_acc" == *"True"* && "$frontend_route_acc" != *"False"* ]]; then
   pass "HTTPRoute apollo-airlines-ui/frontend accepted"
 else
   fail "HTTPRoute apollo-airlines-ui/frontend not accepted"
@@ -246,23 +287,47 @@ else
   fail "Booking creation failed: $booking_resp"
 fi
 
-info "Executing reversible failure experiment: Deleting pod booking-db-0 to test data persistence..."
-kube delete pod booking-db-0 -n apollo-airlines-apps --wait=true >/dev/null 2>&1
-kube wait --for=condition=Ready pod/booking-db-0 -n apollo-airlines-apps --timeout=60s >/dev/null 2>&1
+if [[ -n "$BOOKING_ID" ]]; then
+  info "Executing reversible failure experiment: Deleting pod booking-db-0 to test data persistence..."
+  kube delete pod booking-db-0 -n apollo-airlines-apps --wait=true >/dev/null 2>&1 || true
+  kube rollout status statefulset/booking-db -n apollo-airlines-apps --timeout=120s >/dev/null 2>&1 || true
+  kube wait --for=condition=Ready pod/booking-db-0 -n apollo-airlines-apps --timeout=60s >/dev/null 2>&1 || true
 
-persisted_booking=$(kube exec -n apollo-airlines-apps booking-db-0 -- psql -U postgres -d booking -tAc "SELECT id FROM bookings WHERE id='${BOOKING_ID}';" 2>/dev/null || echo "")
-if [[ "$persisted_booking" == "$BOOKING_ID" ]]; then
-  pass "Data survival proven: booking record persisted across booking-db-0 Pod restart via PVC"
+  persisted_booking=$(kube exec -n apollo-airlines-apps booking-db-0 -- psql -U postgres -d booking -tAc "SELECT id FROM bookings WHERE id='${BOOKING_ID}';" 2>/dev/null || echo "")
+  if [[ -n "$persisted_booking" && "$persisted_booking" == "$BOOKING_ID" ]]; then
+    pass "Data survival proven: booking record persisted across booking-db-0 Pod restart via PVC"
+  else
+    fail "Data lost! Booking $BOOKING_ID not found after pod recreation"
+  fi
+
+  # Clean up verified booking
+  curl -s -X DELETE "http://${EG_IP}/api/bookings/${BOOKING_ID}" \
+    -H "Host: booking.apollo.local" \
+    -H "Authorization: Bearer ${TOKEN}" >/dev/null 2>&1 || true
 else
-  fail "Data lost! Booking $BOOKING_ID not found after pod recreation"
+  fail "Data survival skipped: booking creation failed"
 fi
 
-# Clean up verified booking
-curl -s -X DELETE "http://${EG_IP}/api/bookings/${BOOKING_ID}" \
-  -H "Host: booking.apollo.local" \
-  -H "Authorization: Bearer ${TOKEN}" >/dev/null 2>&1 || true
+info "Executing Redis AOF persistence experiment: Deleting pod redis-0..."
+redis_marker="stage3-redis-${RANDOM}-${RANDOM}"
+if kube exec -n apollo-airlines-apps redis-0 -- redis-cli SET stage3:persist "$redis_marker" >/dev/null 2>&1; then
+  kube exec -n apollo-airlines-apps redis-0 -- redis-cli BGREWRITEAOF >/dev/null 2>&1 || true
+  sleep 2
+  kube delete pod redis-0 -n apollo-airlines-apps --wait=true >/dev/null 2>&1 || true
+  kube rollout status statefulset/redis -n apollo-airlines-apps --timeout=120s >/dev/null 2>&1 || true
+  kube wait --for=condition=Ready pod/redis-0 -n apollo-airlines-apps --timeout=60s >/dev/null 2>&1 || true
+  persisted_redis=$(kube exec -n apollo-airlines-apps redis-0 -- redis-cli GET stage3:persist 2>/dev/null | tr -d '\r' || echo "")
+  if [[ "$persisted_redis" == "$redis_marker" ]]; then
+    pass "Redis AOF survival proven: key persisted across redis-0 Pod restart via PVC"
+  else
+    fail "Redis AOF survival failed (expected '$redis_marker', got '$persisted_redis')"
+  fi
+  kube exec -n apollo-airlines-apps redis-0 -- redis-cli DEL stage3:persist >/dev/null 2>&1 || true
+else
+  fail "Failed to write Redis persistence marker to redis-0"
+fi
 
-if KUBE_CONTEXT="${CONTEXT:-${CURRENT_CTX:-}}" bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then
+if KUBE_CONTEXT="${CONTEXT}" bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then
   pass "trusted HTTPS workflow and hostname rejection"
 else
   fail "trusted HTTPS workflow or hostname rejection failed"

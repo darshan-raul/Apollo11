@@ -7,15 +7,14 @@ data:
   NS_APPS: "apollo-airlines-apps"
   NS_UI:   "apollo-airlines-ui"
 ---
-# Stage 2 set 5: drop the dev port. MetalLB gives Envoy a real cluster
-# IP, and the browser hits it directly.
+# Stage 3 preserves Envoy Gateway HTTP + HTTPS endpoints; Vite bakes VITE_* at build time.
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: apollo-airlines-config
   namespace: apollo-airlines-ui
 data:
-  VITE_IDENTITY_URL:  "http://identity.apollo.local"
-  VITE_FLIGHT_URL:    "http://flight.apollo.local"
-  VITE_BOOKING_URL:   "http://booking.apollo.local"
-  VITE_SEARCH_URL:    "http://search.apollo.local"
+  VITE_IDENTITY_URL:  "https://identity.apollo.local"
+  VITE_FLIGHT_URL:    "https://flight.apollo.local"
+  VITE_BOOKING_URL:   "https://booking.apollo.local"
+  VITE_SEARCH_URL:    "https://search.apollo.local"

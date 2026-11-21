@@ -2,7 +2,47 @@
 
 set -uo pipefail
 
-CONTEXT="${1:-${KUBE_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}}"
+usage() {
+  printf 'Usage: %s [--context kind-apollo11|kind-apollo11-dev] [kind-apollo11|kind-apollo11-dev]\n' "$0"
+  printf '  --context CTX  Kubernetes context (or set KUBE_CONTEXT)\n'
+}
+
+CONTEXT="${KUBE_CONTEXT:-}"
+CONTEXT_SET=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --context)
+      [[ $# -ge 2 ]] || { printf 'Missing value for --context\n' >&2; usage >&2; exit 2; }
+      CONTEXT="$2"
+      CONTEXT_SET=true
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    -*)
+      printf 'Unknown option: %s\n' "$1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      if [[ "${CONTEXT_SET}" == false ]]; then
+        CONTEXT="$1"
+        CONTEXT_SET=true
+        shift
+      else
+        printf 'Unexpected argument: %s\n' "$1" >&2
+        usage >&2
+        exit 2
+      fi
+      ;;
+  esac
+done
+
+if [[ "${CONTEXT_SET}" == false && -z "${CONTEXT}" ]]; then
+  CONTEXT="$(kubectl config current-context 2>/dev/null || true)"
+fi
 NAMESPACE=apollo-airlines
 PASSED=0
 FAILED=0
@@ -156,12 +196,16 @@ for service in booking flight notification; do
   check_contains "${service} logs carry the flagship request ID" "${service_logs}" "${request_id}"
 done
 
-old_booking_pod="$(kube get pod -n "${NAMESPACE}" -l app=booking -o jsonpath='{.items[0].metadata.name}')"
-old_booking_uid="$(kube get pod "${old_booking_pod}" -n "${NAMESPACE}" -o jsonpath='{.metadata.uid}')"
-kube delete pod "${old_booking_pod}" -n "${NAMESPACE}" --wait=true >/dev/null 2>&1
-check 'booking Deployment returns to two available replicas' kube rollout status deployment/booking -n "${NAMESPACE}" --timeout=120s
-new_booking_uids="$(kube get pods -n "${NAMESPACE}" -l app=booking -o jsonpath='{.items[*].metadata.uid}')"
-if [[ " ${new_booking_uids} " != *" ${old_booking_uid} "* ]]; then pass 'ReplicaSet replaces the deleted booking Pod'; else fail 'ReplicaSet replaces the deleted booking Pod'; fi
+old_booking_pod="$(kube get pod -n "${NAMESPACE}" -l app=booking -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+if [[ -n "${old_booking_pod}" ]]; then
+  old_booking_uid="$(kube get pod "${old_booking_pod}" -n "${NAMESPACE}" -o jsonpath='{.metadata.uid}')"
+  kube delete pod "${old_booking_pod}" -n "${NAMESPACE}" --wait=true >/dev/null 2>&1
+  check 'booking Deployment returns to two available replicas' kube rollout status deployment/booking -n "${NAMESPACE}" --timeout=120s
+  new_booking_uids="$(kube get pods -n "${NAMESPACE}" -l app=booking -o jsonpath='{.items[*].metadata.uid}')"
+  if [[ " ${new_booking_uids} " != *" ${old_booking_uid} "* ]]; then pass 'ReplicaSet replaces the deleted booking Pod'; else fail 'ReplicaSet replaces the deleted booking Pod'; fi
+else
+  fail 'ReplicaSet replaces the deleted booking Pod (no booking pod found)'
+fi
 check_equal 'booking stays behaviorally ready after Pod replacement' "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:30082/readyz || true)" '200'
 
 original_image="$(kube get deployment search -n "${NAMESPACE}" -o jsonpath='{.spec.template.spec.containers[0].image}')"

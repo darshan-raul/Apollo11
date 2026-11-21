@@ -29,8 +29,10 @@ func logJSON(level, service, message, traceID, spanID string, extra ...map[strin
 		"span_id":   spanID,
 		"message":   message,
 	}
-	for k, v := range extra[0] {
-		entry[k] = v
+	if len(extra) > 0 && extra[0] != nil {
+		for k, v := range extra[0] {
+			entry[k] = v
+		}
 	}
 	b, _ := json.Marshal(entry)
 	logger.Println(string(b))

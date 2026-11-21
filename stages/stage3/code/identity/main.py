@@ -60,9 +60,15 @@ def log_json(level: str, service: str, message: str, trace_id: str = "", span_id
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    conn = get_db()
+    conn = None
+    try:
+        conn = get_db()
+    except Exception as e:
+        log_json("WARN", "identity-service", f"DB unavailable at startup; continuing in degraded mode: {e}")
+    finally:
+        if conn is not None:
+            conn.close()
     yield
-    conn.close()
 
 
 app = FastAPI(title="identity-service", version="1.0.0", lifespan=lifespan)
@@ -79,6 +85,9 @@ app.add_middleware(
 class RegisterRequest(BaseModel):
     email: str
     password: str
+    firstName: Optional[str] = None
+    lastName: Optional[str] = None
+    passportNumber: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -108,28 +117,38 @@ async def healthz():
 
 @app.get("/readyz")
 async def readyz():
+    conn = None
+    cur = None
     try:
         conn = get_db()
         cur = conn.cursor()
         cur.execute("SELECT 1")
-        cur.close()
-        conn.close()
         return JSONResponse({"status": "ok"})
     except Exception as e:
         return JSONResponse({"status": "error", "detail": str(e)}, status_code=503)
+    finally:
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            conn.close()
 
 
 @app.get("/metrics")
 async def metrics():
+    conn = None
+    cur = None
     try:
         conn = get_db()
         cur = conn.cursor()
         cur.execute("SELECT 1")
-        cur.close()
-        conn.close()
         active = 1
-    except:
+    except Exception:
         active = 0
+    finally:
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            conn.close()
     return PlainTextResponse(
         "# HELP http_requests_total Total HTTP requests observed by the service.\n"
         "# TYPE http_requests_total counter\n"
@@ -158,59 +177,74 @@ def verify_jwt(authorization: str) -> dict:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
-@app.post("/api/users/register")
+@app.post("/api/users/register", status_code=201)
 async def register(body: RegisterRequest, request: Request):
     trace_id = getattr(request.state, "request_id", "")
     if not EMAIL_PATTERN.match(body.email):
         raise HTTPException(status_code=400, detail="A valid email address is required")
     if len(body.password) < MIN_PASSWORD_LENGTH:
         raise HTTPException(status_code=400, detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters")
+    conn = None
+    cur = None
     try:
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("SELECT id FROM users WHERE email = %s", (body.email,))
         existing = cur.fetchone()
         if existing:
-            cur.close()
-            conn.close()
             raise HTTPException(status_code=409, detail="Email already registered")
         password_hash = bcrypt.hashpw(body.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
         cur.execute(
-            """INSERT INTO users (email, password_hash)
-               VALUES (%s, %s)
-               RETURNING id, email, loyalty_tier, role""",
-            (body.email, password_hash)
+            """INSERT INTO users (email, password_hash, first_name, last_name, passport_number)
+               VALUES (%s, %s, %s, %s, %s)
+               RETURNING id, email, first_name, last_name, loyalty_tier, role""",
+            (body.email, password_hash, body.firstName, body.lastName, body.passportNumber)
         )
         user = cur.fetchone()
         conn.commit()
-        cur.close()
-        conn.close()
         log_json("INFO", "identity-service", "User registered", trace_id=trace_id, email=body.email)
         return {
             "id": str(user["id"]),
             "email": user["email"],
+            "firstName": user["first_name"],
+            "lastName": user["last_name"],
             "loyaltyTier": user["loyalty_tier"],
             "role": user["role"]
         }
     except HTTPException:
         raise
     except psycopg2.errors.UniqueViolation:
+        if conn is not None:
+            conn.rollback()
         # Two registrations for the same email raced past the lookup above.
         raise HTTPException(status_code=409, detail="Email already registered")
     except Exception as e:
+        if conn is not None:
+            conn.rollback()
         log_json("ERROR", "identity-service", str(e), trace_id=trace_id)
         raise HTTPException(status_code=500, detail="Registration failed")
+    finally:
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            conn.close()
 
 
 @app.post("/api/users/login")
 async def login(body: LoginRequest, request: Request):
     trace_id = getattr(request.state, "request_id", "")
-    conn = get_db()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT * FROM users WHERE email = %s", (body.email,))
-    user = cur.fetchone()
-    cur.close()
-    conn.close()
+    conn = None
+    cur = None
+    try:
+        conn = get_db()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM users WHERE email = %s", (body.email,))
+        user = cur.fetchone()
+    finally:
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            conn.close()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not bcrypt.checkpw(body.password.encode("utf-8"), user["password_hash"].encode("utf-8")):
@@ -239,15 +273,21 @@ async def login(body: LoginRequest, request: Request):
 
 @app.get("/api/users/me")
 async def get_me(authorization: str = Header(None), request: Request = None):
-    trace_id = getattr(request.state, "request_id", "")
+    trace_id = getattr(request.state, "request_id", "") if request else ""
     payload = verify_jwt(authorization)
     user_id = payload.get("sub")
-    conn = get_db()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-    user = cur.fetchone()
-    cur.close()
-    conn.close()
+    conn = None
+    cur = None
+    try:
+        conn = get_db()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        user = cur.fetchone()
+    finally:
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            conn.close()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return {
@@ -263,7 +303,7 @@ async def get_me(authorization: str = Header(None), request: Request = None):
 
 @app.put("/api/users/me")
 async def update_me(body: UpdateProfileRequest, authorization: str = Header(None), request: Request = None):
-    trace_id = getattr(request.state, "request_id", "")
+    trace_id = getattr(request.state, "request_id", "") if request else ""
     payload = verify_jwt(authorization)
     user_id = payload.get("sub")
     updates = []
@@ -281,16 +321,28 @@ async def update_me(body: UpdateProfileRequest, authorization: str = Header(None
         raise HTTPException(status_code=400, detail="No fields to update")
     updates.append("updated_at = NOW()")
     values.append(user_id)
-    conn = get_db()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute(
-        f"UPDATE users SET {', '.join(updates)} WHERE id = %s RETURNING *",
-        tuple(values)
-    )
-    user = cur.fetchone()
-    conn.commit()
-    cur.close()
-    conn.close()
+    conn = None
+    cur = None
+    try:
+        conn = get_db()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute(
+            f"UPDATE users SET {', '.join(updates)} WHERE id = %s RETURNING *",
+            tuple(values)
+        )
+        user = cur.fetchone()
+        conn.commit()
+    except Exception:
+        if conn is not None:
+            conn.rollback()
+        raise
+    finally:
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            conn.close()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     log_json("INFO", "identity-service", "Profile updated", trace_id=trace_id, user_id=user_id)
     return {
         "id": str(user["id"]),
@@ -305,7 +357,7 @@ async def update_me(body: UpdateProfileRequest, authorization: str = Header(None
 
 @app.get("/api/users/{user_id}")
 async def get_user_by_id(user_id: str, authorization: str = Header(None), request: Request = None):
-    trace_id = getattr(request.state, "request_id", "")
+    trace_id = getattr(request.state, "request_id", "") if request else ""
     payload = verify_jwt(authorization)
     role = payload.get("role")
     token_user_id = payload.get("sub")
@@ -313,12 +365,18 @@ async def get_user_by_id(user_id: str, authorization: str = Header(None), reques
         raise HTTPException(status_code=403, detail="Not authorized")
     if not is_uuid(user_id):
         raise HTTPException(status_code=400, detail="Invalid user ID")
-    conn = get_db()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-    user = cur.fetchone()
-    cur.close()
-    conn.close()
+    conn = None
+    cur = None
+    try:
+        conn = get_db()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        user = cur.fetchone()
+    finally:
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            conn.close()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if not user["is_active"]:
@@ -336,19 +394,25 @@ async def get_user_by_id(user_id: str, authorization: str = Header(None), reques
 
 @app.get("/api/admin/users")
 async def get_all_users(authorization: str = Header(None), request: Request = None):
-    trace_id = getattr(request.state, "request_id", "")
+    trace_id = getattr(request.state, "request_id", "") if request else ""
     payload = verify_jwt(authorization)
     if payload.get("role") != "ADMIN":
         raise HTTPException(status_code=403, detail="Admin access required")
-    conn = get_db()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute(
-        """SELECT id, email, first_name, last_name, loyalty_tier, role, is_active, created_at
-           FROM users ORDER BY created_at DESC"""
-    )
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+    conn = None
+    cur = None
+    try:
+        conn = get_db()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute(
+            """SELECT id, email, first_name, last_name, loyalty_tier, role, is_active, created_at
+               FROM users ORDER BY created_at DESC"""
+        )
+        rows = cur.fetchall()
+    finally:
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            conn.close()
     log_json("INFO", "identity-service", "Admin fetched all users", trace_id=trace_id, count=len(rows))
     return {
         "users": [

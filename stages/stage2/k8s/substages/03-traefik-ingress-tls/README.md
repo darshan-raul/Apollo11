@@ -14,6 +14,8 @@ Generate a self-signed wildcard certificate for `*.apollo.local` and store it as
 ```
 
 ### 1.2 Deploy Traefik Controller & Ingresses
+If you are upgrading manually from Substage 2, revert the application Services back to `ClusterIP` first (otherwise `frontend` keeps NodePort `30080` and conflicts with Traefik's `web` NodePort), or run `./stages/stage2/scripts/apply.sh --substage 3 --skip-build`.
+
 Deploy Traefik RBAC, IngressClass, DaemonSet, NodePort Service, and Ingress rules:
 
 ```bash
@@ -49,6 +51,8 @@ curl -s -H "Host: identity.apollo.local" http://localhost:30080/healthz
 # Routes to flight service
 curl -s -H "Host: flight.apollo.local" http://localhost:30080/healthz
 ```
+
+> **Note:** Because Traefik listens on NodePorts `30080`/`30443` and the frontend SPA bakes portless `*.apollo.local` API URLs, test endpoints with `curl` here; full browser UI workflows start in Substage 4 once MetalLB allocates standard ports 80/443.
 
 ### TLS Handshake & Certificate Verification
 Query the HTTPS endpoint (`30443`) and inspect the presented TLS certificate:

@@ -10,10 +10,14 @@ This substage completes the networking progression by migrating from the legacy 
 Before activating Envoy Gateway, remove the transitional Traefik controller and its Ingress resources:
 
 ```bash
-kubectl delete ingress --all -n apollo-airlines-apps
-kubectl delete ingress --all -n apollo-airlines-ui
+kubectl delete ingress --all -n apollo-airlines-apps --ignore-not-found
+kubectl delete ingress --all -n apollo-airlines-ui --ignore-not-found
 kubectl delete service traefik -n kube-system --ignore-not-found
 kubectl delete daemonset traefik -n kube-system --ignore-not-found
+kubectl delete ingressclass traefik --ignore-not-found
+kubectl delete clusterrolebinding traefik --ignore-not-found
+kubectl delete clusterrole traefik --ignore-not-found
+kubectl delete serviceaccount traefik -n kube-system --ignore-not-found
 ```
 
 ### 1.2 Install Envoy Gateway Controller & CRDs
@@ -38,6 +42,9 @@ kubectl apply -f stages/stage2/k8s/substages/05-envoy-gateway/00a-gatewayclass.y
 
 # EnvoyProxy instructs Envoy Gateway to provision a type: LoadBalancer service for MetalLB
 kubectl apply -f stages/stage2/k8s/substages/05-envoy-gateway/00b-envoyproxy.yaml
+
+# Ensure the local wildcard TLS Secret exists for the Gateway HTTPS listener
+./stages/stage2/k8s/substages/03-traefik-ingress-tls/generate-certs.sh
 
 # Gateway defines the listening port and allowed route namespaces
 kubectl apply -f stages/stage2/k8s/substages/05-envoy-gateway/01-gateway.yaml

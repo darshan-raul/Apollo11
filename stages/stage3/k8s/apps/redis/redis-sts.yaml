@@ -28,9 +28,13 @@ spec:
             - containerPort: 6379
           command:
             - redis-server
-            - --appendonly yes
-            - --appendfsync everysec
-            - --save 60 100
+            - --appendonly
+            - "yes"
+            - --appendfsync
+            - everysec
+            - --save
+            - "60"
+            - "100"
           volumeMounts:
             - name: redis-data
               mountPath: /data

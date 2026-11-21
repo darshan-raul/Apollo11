@@ -69,11 +69,21 @@ stages/stage2/
 ## Hands-On Lab Walkthrough
 
 ### 1. Build and Prepare Cluster
-Ensure your local `kind-apollo11` cluster is active, then build the service images:
+Ensure your local `kind-apollo11` cluster is active, then build the service images (use `--scheme http` for Substages 1–4, or `--scheme https` for Substage 5; `apply.sh` automatically selects the right scheme when run without `--skip-build`):
 
 ```bash
 ./stages/stage2/scripts/build-images.sh --cluster apollo11
 ```
+
+> [!NOTE]
+> **Browser UI boundary & local DNS:** The frontend image bakes `http(s)://<service>.apollo.local` API URLs at build time (with no port).
+> - **Substages 1–3:** Verify endpoints with `curl` from `curl-client`, NodePorts (`30080–30084`), or Traefik (`30080`/`30443`) — browser login/search calls cannot reach standard ports 80/443 until MetalLB is installed.
+> - **Substage 4 (MetalLB):** Browser UI works over HTTP after adding the MetalLB `EXTERNAL-IP` (e.g. `172.18.0.50`) to `/etc/hosts`:
+>   ```text
+>   172.18.0.50  frontend.apollo.local identity.apollo.local flight.apollo.local booking.apollo.local search.apollo.local
+>   ```
+> - **Substage 5 (Envoy Gateway):** Rebuild the frontend with `--scheme https` (or run `apply.sh --substage 5` without `--skip-build`) before opening `https://frontend.apollo.local`, so browser API calls use HTTPS and avoid mixed-content blocks.
+> - **Docker Desktop (macOS / Windows + WSL2):** MetalLB Layer-2 IPs on the `kind` bridge network are directly routable on Linux Docker Engine, but Docker Desktop isolates the Linux VM network from the host; use `kubectl port-forward` or `curl` inside the VM/node there (see the docs `labs/local-access.md` page).
 
 ### 2. Walk Through the Substages
 
@@ -105,7 +115,7 @@ Consolidate traffic behind an L7 reverse proxy with TLS termination:
 ./stages/stage2/scripts/apply.sh --substage 3 --skip-build
 ```
 - **Inspect:** Query `https://identity.apollo.local:30443/healthz` and verify TLS certificate subject (`CN=*.apollo.local`).
-- **Break:** Delete `apollo-tls-secret` in `apollo-airlines-apps`. Observe Traefik fallback to `TRAEFIK DEFAULT CERT`.
+- **Break:** Delete `apollo-tls-secret` in **both** `apollo-airlines-apps` and `apollo-airlines-ui` (Traefik pools certificates across namespaces, so deleting only one copy leaves `*.apollo.local` active). Observe Traefik fallback to `TRAEFIK DEFAULT CERT`.
 - **Recover:** Re-run `generate-certs.sh`. Certificate subject restored.
 - **Details:** See [`stages/stage2/k8s/substages/03-traefik-ingress-tls/README.md`](k8s/substages/03-traefik-ingress-tls/README.md).
 

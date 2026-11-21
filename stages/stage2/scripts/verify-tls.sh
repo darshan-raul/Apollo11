@@ -1,7 +1,46 @@
 #!/usr/bin/env bash
 # Validate certificate trust/hostname, HTTPS API workflow, and reversible booking.
 set -euo pipefail
-CONTEXT="${KUBE_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"
+usage() {
+  printf 'Usage: %s [--context kind-apollo11|kind-apollo11-dev] [kind-apollo11|kind-apollo11-dev]\n' "$0" >&2
+}
+
+CONTEXT="${KUBE_CONTEXT:-}"
+CONTEXT_SET=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --context)
+      [[ $# -ge 2 ]] || { echo "Missing value for --context" >&2; usage; exit 2; }
+      CONTEXT="$2"
+      CONTEXT_SET=true
+      shift 2
+      ;;
+    --help|-h)
+      printf 'Usage: %s [--context kind-apollo11|kind-apollo11-dev] [kind-apollo11|kind-apollo11-dev]\n' "$0"
+      exit 0
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      usage
+      exit 2
+      ;;
+    *)
+      if [[ "${CONTEXT_SET}" == false ]]; then
+        CONTEXT="$1"
+        CONTEXT_SET=true
+        shift
+      else
+        echo "Unexpected argument: $1" >&2
+        usage
+        exit 2
+      fi
+      ;;
+  esac
+done
+
+if [[ "${CONTEXT_SET}" == false && -z "${CONTEXT}" ]]; then
+  CONTEXT="$(kubectl config current-context 2>/dev/null || true)"
+fi
 case "$CONTEXT" in
   kind-apollo11|kind-apollo11-dev) ;;
   *) echo "Refusing HTTPS workflow in context '${CONTEXT:-<none>}'" >&2; exit 2 ;;

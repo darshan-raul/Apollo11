@@ -37,8 +37,10 @@ func logJSON(level, service, message, traceID, spanID string, extra ...map[strin
 		"span_id":   spanID,
 		"message":   message,
 	}
-	for k, v := range extra[0] {
-		entry[k] = v
+	if len(extra) > 0 && extra[0] != nil {
+		for k, v := range extra[0] {
+			entry[k] = v
+		}
 	}
 	b, _ := json.Marshal(entry)
 	logger.Println(string(b))
@@ -141,7 +143,9 @@ func validFlightID(c *gin.Context) (string, bool) {
 
 func main() {
 	initDB()
-	defer db.Close()
+	if db != nil {
+		defer db.Close()
+	}
 
 	r := gin.Default()
 
@@ -172,6 +176,10 @@ func main() {
 	})
 
 	r.GET("/readyz", func(c *gin.Context) {
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not reachable"})
+			return
+		}
 		if err := db.Ping(); err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not reachable"})
 			return
@@ -181,7 +189,9 @@ func main() {
 
 	r.GET("/metrics", func(c *gin.Context) {
 		var activeConns int
-		db.QueryRow("SELECT count(*) FROM pg_stat_activity WHERE datname = 'flight'").Scan(&activeConns)
+		if db != nil {
+			db.QueryRow("SELECT count(*) FROM pg_stat_activity WHERE datname = 'flight'").Scan(&activeConns)
+		}
 		metrics := fmt.Sprintf(`# HELP http_requests_total Total HTTP requests observed by the service.
 # TYPE http_requests_total counter
 http_requests_total{service="flight"} 0

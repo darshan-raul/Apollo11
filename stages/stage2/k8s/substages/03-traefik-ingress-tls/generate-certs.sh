@@ -4,13 +4,19 @@ CONTEXT="${KUBE_CONTEXT:-}"
 APPS_NAMESPACE=apollo-airlines-apps
 UI_NAMESPACE=apollo-airlines-ui
 ROTATE=false
+usage() {
+  local fd="${1:-1}"
+  echo "Usage: $0 [--context kind-apollo11|kind-apollo11-dev] [--apps-namespace NS] [--ui-namespace NS] [--rotate]" >&"$fd"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --context) CONTEXT="$2"; shift 2 ;;
-    --apps-namespace) APPS_NAMESPACE="$2"; shift 2 ;;
-    --ui-namespace) UI_NAMESPACE="$2"; shift 2 ;;
+    --context) [[ $# -ge 2 ]] || { usage 2; exit 2; }; CONTEXT="$2"; shift 2 ;;
+    --apps-namespace) [[ $# -ge 2 ]] || { usage 2; exit 2; }; APPS_NAMESPACE="$2"; shift 2 ;;
+    --ui-namespace) [[ $# -ge 2 ]] || { usage 2; exit 2; }; UI_NAMESPACE="$2"; shift 2 ;;
     --rotate) ROTATE=true; shift ;;
-    *) echo "Usage: $0 [--context kind-apollo11|kind-apollo11-dev] [--rotate]" >&2; exit 2 ;;
+    --help|-h) usage 1; exit 0 ;;
+    *) usage 2; exit 2 ;;
   esac
 done
 CONTEXT="${CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"

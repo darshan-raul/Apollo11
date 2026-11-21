@@ -4,25 +4,45 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-CONTEXT="${KUBE_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"
+CONTEXT="${KUBE_CONTEXT:-}"
+CONTEXT_SET=false
 SKIP_BUILD=false
 SUBSTAGE=5
 
 usage() {
   printf 'Usage: %s [--substage 1-5] [--skip-build] [--context kind-apollo11|kind-apollo11-dev]\n' "$0"
-  printf '  --substage N   Deploy up to substage N (1: ClusterIP/DNS, 2: NodePort, 3: Traefik Ingress+TLS, 4: MetalLB, 5: Envoy Gateway [default])\n'
+  printf '  --substage N   Deploy workloads and networking for substage N (1: ClusterIP/DNS, 2: NodePort, 3: Traefik Ingress+TLS, 4: MetalLB, 5: Envoy Gateway [default])\n'
   printf '  --skip-build   Skip building and loading images into kind\n'
+  printf '  --context CTX  Kubernetes context (or set KUBE_CONTEXT)\n'
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --substage) SUBSTAGE="$2"; shift 2 ;;
+    --substage)
+      [[ $# -ge 2 ]] || { printf 'Missing value for --substage\n' >&2; usage >&2; exit 2; }
+      SUBSTAGE="$2"
+      shift 2
+      ;;
     --skip-build) SKIP_BUILD=true; shift ;;
-    --context) CONTEXT="${2:-}"; shift 2 ;;
-    --help) usage; exit 0 ;;
+    --context)
+      [[ $# -ge 2 ]] || { printf 'Missing value for --context\n' >&2; usage >&2; exit 2; }
+      CONTEXT="$2"
+      CONTEXT_SET=true
+      shift 2
+      ;;
+    --help|-h) usage; exit 0 ;;
     *) printf 'Unknown option: %s\n' "$1" >&2; usage >&2; exit 2 ;;
   esac
 done
+
+case "${SUBSTAGE}" in
+  1|2|3|4|5) ;;
+  *) printf 'Invalid substage: %s. Must be between 1 and 5.\n' "${SUBSTAGE}" >&2; exit 2 ;;
+esac
+
+if [[ "${CONTEXT_SET}" == false && -z "${CONTEXT}" ]]; then
+  CONTEXT="$(kubectl config current-context 2>/dev/null || true)"
+fi
 
 case "${CONTEXT}" in
   kind-apollo11|kind-apollo11-dev) ;;
@@ -75,6 +95,16 @@ for job in init-identity-db init-flight-db init-booking-db; do
 done
 
 printf '\n[4/5] Applying core application services\n'
+if [[ "${SUBSTAGE}" != "2" ]]; then
+  # Clear Substage 2 NodePorts (especially 30080 on frontend) before restoring ClusterIP Services.
+  for item in "apollo-airlines-ui:frontend" "apollo-airlines-apps:identity" "apollo-airlines-apps:flight" "apollo-airlines-apps:booking" "apollo-airlines-apps:search"; do
+    ns="${item%%:*}"
+    svc="${item#*:}"
+    if [[ "$(kube get svc "$svc" -n "$ns" -o jsonpath='{.spec.type}' 2>/dev/null || true)" == "NodePort" ]]; then
+      kube patch svc "$svc" -n "$ns" --type=json -p '[{"op":"replace","path":"/spec/type","value":"ClusterIP"},{"op":"remove","path":"/spec/ports/0/nodePort"}]'
+    fi
+  done
+fi
 for component in identity flight booking search notification; do
   kube apply -f "${STAGE_DIR}/k8s/apps/${component}/${component}-dep.yaml"
   kube apply -f "${STAGE_DIR}/k8s/apps/${component}/${component}-svc.yaml"
@@ -129,6 +159,10 @@ case "${SUBSTAGE}" in
     kube delete ingress --all -n apollo-airlines-ui --ignore-not-found
     kube delete service traefik -n kube-system --ignore-not-found
     kube delete daemonset traefik -n kube-system --ignore-not-found
+    kube delete ingressclass traefik --ignore-not-found
+    kube delete clusterrolebinding traefik --ignore-not-found
+    kube delete clusterrole traefik --ignore-not-found
+    kube delete serviceaccount traefik -n kube-system --ignore-not-found
 
     kube apply -f "${STAGE_DIR}/k8s/substages/04-metallb/00-metallb-native.yaml"
     kube wait --namespace metallb-system --for=condition=ready pod --selector=app=metallb,component=controller --timeout=120s

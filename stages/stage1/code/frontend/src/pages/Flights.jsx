@@ -28,6 +28,7 @@ export default function Flights() {
   if (error) return <p className="text-rose-500">{error}</p>
   if (!flight) return <p className="text-center py-10">Loading...</p>
 
+  const durationMinutes = flight.duration ?? Math.max(0, Math.round((new Date(flight.arrivalTime) - new Date(flight.departureTime)) / 60000))
   const statusColor = flight.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' : flight.status === 'DELAYED' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
 
   return (
@@ -40,7 +41,7 @@ export default function Flights() {
             <p className="text-slate-500">{new Date(flight.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
           </div>
           <div className="flex-1 border-t-2 border-dashed border-slate-300 relative">
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-100 px-3 py-1 text-sm text-slate-500">{flight.duration} min</div>
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-100 px-3 py-1 text-sm text-slate-500">{durationMinutes} min</div>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold">{flight.destination}</p>

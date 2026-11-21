@@ -6,6 +6,7 @@ metadata:
   labels:
     app: curl-client
 spec:
+  automountServiceAccountToken: false
   containers:
     - name: curl
       image: curlimages/curl:8.5.0

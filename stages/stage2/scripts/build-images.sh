@@ -9,21 +9,31 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGE_DIR="$(dirname "$SCRIPT_DIR")"
 
 usage() {
-    echo "Usage: $0 [--cluster NAME] [--skip-kind-load]"
+    local code="${1:-0}"
+    echo "Usage: $0 [--scheme http|https] [--cluster NAME] [--skip-kind-load]"
+    echo "  --scheme SCHEME     API URL scheme baked into frontend (http for Substages 1-4, https for Substage 5; default: http)"
     echo "  --cluster NAME      kind cluster name (default: apollo11)"
     echo "  --skip-kind-load    build images only, skip loading into kind"
-    exit 1
+    exit "${code}"
 }
 
 SCHEME=http
 SKIP_KIND=false
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --scheme) SCHEME="$2"; shift 2 ;;
-        --cluster) CLUSTER="$2"; shift 2 ;;
+        --scheme)
+            [[ $# -ge 2 ]] || { echo "Missing value for --scheme" >&2; usage 2 >&2; }
+            SCHEME="$2"
+            shift 2
+            ;;
+        --cluster)
+            [[ $# -ge 2 ]] || { echo "Missing value for --cluster" >&2; usage 2 >&2; }
+            CLUSTER="$2"
+            shift 2
+            ;;
         --skip-kind-load) SKIP_KIND=true; shift ;;
-        --help) usage ;;
-        *) echo "Unknown option: $1"; usage ;;
+        --help|-h) usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 >&2 ;;
     esac
 done
 

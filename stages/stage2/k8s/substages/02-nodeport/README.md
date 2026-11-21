@@ -41,12 +41,14 @@ curl -s http://localhost:30083/healthz
 
 # Query flight service health
 curl -s http://localhost:30081/healthz
-# Expected: {"service":"flight","status":"healthy"}
+# Expected: {"status":"ok"}
 
 # Query frontend HTML
 curl -sI http://localhost:30080 | head -n 1
 # Expected: HTTP/1.1 200 OK
 ```
+
+> **Note:** The frontend image bakes `http://<service>.apollo.local` API URLs (standard port 80) at build time. In Substage 2, use `curl` against `localhost:30080–30084` to test services; browser API calls work starting in Substage 4 (MetalLB).
 
 ---
 
