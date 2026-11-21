@@ -9,19 +9,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGE_DIR="$(dirname "$SCRIPT_DIR")"
 
 usage() {
+    local code="${1:-1}"
     echo "Usage: $0 [--cluster NAME] [--skip-kind-load]"
     echo "  --cluster NAME      kind cluster name (default: apollo11)"
     echo "  --skip-kind-load    build images only, skip loading into kind"
-    exit 1
+    exit "$code"
 }
 
 SKIP_KIND=false
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --cluster) CLUSTER="$2"; shift 2 ;;
+        --cluster) [[ $# -ge 2 ]] || { echo "--cluster requires a value" >&2; usage 2; }; CLUSTER="$2"; shift 2 ;;
         --skip-kind-load) SKIP_KIND=true; shift ;;
-        --help) usage ;;
-        *) echo "Unknown option: $1"; usage ;;
+        --help|-h) usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 ;;
     esac
 done
 
@@ -53,8 +54,8 @@ fi
 
 if ! kind get clusters 2>/dev/null | grep -q "^${CLUSTER}$"; then
     echo ""
-    echo "kind cluster '${CLUSTER}' not found. Skipping image load."
-    exit 0
+    echo "kind cluster '${CLUSTER}' not found." >&2
+    exit 1
 fi
 
 echo ""

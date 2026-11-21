@@ -75,6 +75,8 @@ spec:
               value: "otel-collector.{{ .Values.observability.namespace }}.svc.cluster.local:4317"
             - name: OTEL_SERVICE_NAME
               value: {{ $name | quote }}
+            - name: REDIS_URL
+              value: {{ .Values.redis.url | quote }}
           {{- with .Values.probes.startup }}
           startupProbe:
             httpGet:

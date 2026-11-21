@@ -22,6 +22,7 @@ CODE_DIR="$STAGE_DIR/code"
 CHART_DIR="$STAGE_DIR/helm/apollo11"
 
 usage() {
+    local code="${1:-1}"
     cat <<EOF
 Usage: $0 [--tag TAG] [--cluster NAME] [--skip-load]
 
@@ -31,16 +32,16 @@ Options:
   --skip-load       Build only; skip loading images into kind
   --help            Show this help
 EOF
-    exit 1
+    exit "$code"
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --tag)        TAG="$2"; shift 2 ;;
-        --cluster)    CLUSTER="$2"; shift 2 ;;
+        --tag)        [[ $# -ge 2 ]] || { echo "--tag requires a value" >&2; usage 2; }; TAG="$2"; shift 2 ;;
+        --cluster)    [[ $# -ge 2 ]] || { echo "--cluster requires a value" >&2; usage 2; }; CLUSTER="$2"; shift 2 ;;
         --skip-load)  SKIP_KIND_LOAD=true; shift ;;
-        --help)       usage ;;
-        *) echo "Unknown option: $1"; usage ;;
+        --help|-h)    usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 ;;
     esac
 done
 
@@ -120,9 +121,9 @@ fi
 # Load into kind
 if ! kind get clusters 2>/dev/null | grep -q "^${CLUSTER}$"; then
     echo ""
-    echo "kind cluster '${CLUSTER}' not found. Skipping image load."
-    echo "Run: kind create cluster --name ${CLUSTER}"
-    exit 0
+    echo "kind cluster '${CLUSTER}' not found." >&2
+    echo "Run: kind create cluster --name ${CLUSTER}" >&2
+    exit 1
 fi
 
 echo ""

@@ -20,6 +20,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
@@ -53,26 +54,49 @@ func init() {
 	jwtSecret = getEnv("JWT_SECRET", "apollo-airlines-dev-secret")
 }
 
+func traceAndSpanFromContext(ctx context.Context) (string, string) {
+	if ctx == nil {
+		return "", ""
+	}
+	sc := trace.SpanFromContext(ctx).SpanContext()
+	if !sc.IsValid() {
+		return "", ""
+	}
+	return sc.TraceID().String(), sc.SpanID().String()
+}
+
 func logJSON(level, service, message, traceID, spanID string, extra ...map[string]interface{}) {
-	if traceID == "" {
-		span := trace.SpanFromContext(context.Background())
-		if span.SpanContext().IsValid() {
-			traceID = span.SpanContext().TraceID().String()
-			if spanID == "" {
-				spanID = span.SpanContext().SpanID().String()
-			}
+	entry := map[string]interface{}{
+		"timestamp":  time.Now().UTC().Format(time.RFC3339),
+		"level":      level,
+		"service":    service,
+		"request_id": "",
+		"trace_id":   traceID,
+		"span_id":    spanID,
+		"message":    message,
+	}
+	for _, m := range extra {
+		for k, v := range m {
+			entry[k] = v
 		}
 	}
+	b, _ := json.Marshal(entry)
+	logger.Println(string(b))
+}
+
+func logContext(ctx context.Context, requestID, level, service, message string, extra ...map[string]interface{}) {
+	traceID, spanID := traceAndSpanFromContext(ctx)
 	entry := map[string]interface{}{
-		"timestamp": time.Now().UTC().Format(time.RFC3339),
-		"level":     level,
-		"service":   service,
-		"trace_id":  traceID,
-		"span_id":   spanID,
-		"message":   message,
+		"timestamp":  time.Now().UTC().Format(time.RFC3339),
+		"level":      level,
+		"service":    service,
+		"request_id": requestID,
+		"trace_id":   traceID,
+		"span_id":    spanID,
+		"message":    message,
 	}
-	if len(extra) > 0 && extra[0] != nil {
-		for k, v := range extra[0] {
+	for _, m := range extra {
+		for k, v := range m {
 			entry[k] = v
 		}
 	}
@@ -114,6 +138,9 @@ func getEnv(key, fallback string) string {
 func addSSLMode(dsn string) string {
 	if strings.Contains(dsn, "sslmode=") {
 		return dsn
+	}
+	if strings.Contains(dsn, "?") {
+		return dsn + "&sslmode=disable"
 	}
 	return dsn + "?sslmode=disable"
 }
@@ -209,7 +236,12 @@ func initOTEL(ctx context.Context, serviceName string) (func(context.Context) er
 
 func prometheusHandler() http.Handler {
 	reg := prometheus.NewRegistry()
-	reg.MustRegister(httpRequestsTotal, httpRequestDurationMs)
+	reg.MustRegister(
+		httpRequestsTotal,
+		httpRequestDurationMs,
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
 	return promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg})
 }
 
@@ -226,7 +258,7 @@ func metricsMiddleware(service string) gin.HandlerFunc {
 		}
 		status := fmt.Sprintf("%d", c.Writer.Status())
 		httpRequestsTotal.WithLabelValues(service, c.Request.Method, path, status).Inc()
-		httpRequestDurationMs.WithLabelValues(service, c.Request.Method, path).Observe(float64(time.Since(start).Milliseconds()))
+		httpRequestDurationMs.WithLabelValues(service, c.Request.Method, path).Observe(float64(time.Since(start).Microseconds()) / 1000.0)
 	}
 }
 
@@ -264,7 +296,6 @@ func validFlightID(c *gin.Context) (string, bool) {
 
 func main() {
 	initDB()
-	defer db.Close()
 
 	otelCtx, otelCancel := context.WithCancel(context.Background())
 	defer otelCancel()
@@ -311,6 +342,10 @@ func main() {
 	r.GET("/healthz/startup", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "starting"}) })
 	r.GET("/healthz/live", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "alive"}) })
 	r.GET("/healthz/ready", func(c *gin.Context) {
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not initialized"})
+			return
+		}
 		if err := db.Ping(); err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not reachable"})
 			return
@@ -318,6 +353,10 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ready"})
 	})
 	r.GET("/readyz", func(c *gin.Context) {
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not initialized"})
+			return
+		}
 		if err := db.Ping(); err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not reachable"})
 			return
@@ -329,8 +368,12 @@ func main() {
 	r.GET("/metrics", gin.WrapH(prometheusHandler()))
 
 	r.GET("/api/flights", func(c *gin.Context) {
-		traceID := traceIDFromContext(c.Request.Context())
+		requestID := c.GetString("request_id")
 		ctx := c.Request.Context()
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
+			return
+		}
 		origin := c.Query("origin")
 		destination := c.Query("destination")
 		date := c.Query("date")
@@ -362,7 +405,7 @@ func main() {
 
 		rows, err := db.QueryContext(ctx, query, args...)
 		if err != nil {
-			logJSON("ERROR", "flight-service", fmt.Sprintf("Query failed: %v", err), traceID, "", nil)
+			logContext(ctx, requestID, "ERROR", "flight-service", fmt.Sprintf("Query failed: %v", err))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Query failed"})
 			return
 		}
@@ -380,13 +423,17 @@ func main() {
 			f.ArrivalTime = arrTime.Format(time.RFC3339)
 			flights = append(flights, f)
 		}
-		logJSON("INFO", "flight-service", "Flight search", traceID, "", map[string]interface{}{"count": len(flights)})
+		logContext(ctx, requestID, "INFO", "flight-service", "Flight search", map[string]interface{}{"count": len(flights)})
 		c.JSON(http.StatusOK, gin.H{"flights": flights})
 	})
 
 	r.GET("/api/flights/:id", func(c *gin.Context) {
-		traceID := traceIDFromContext(c.Request.Context())
+		requestID := c.GetString("request_id")
 		ctx := c.Request.Context()
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
+			return
+		}
 		id, ok := validFlightID(c)
 		if !ok {
 			return
@@ -403,7 +450,7 @@ func main() {
 			return
 		}
 		if err != nil {
-			logJSON("ERROR", "flight-service", fmt.Sprintf("DB error: %v", err), traceID, "", nil)
+			logContext(ctx, requestID, "ERROR", "flight-service", fmt.Sprintf("DB error: %v", err))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
 			return
 		}
@@ -413,7 +460,12 @@ func main() {
 	})
 
 	r.POST("/api/flights", authRequired("ADMIN"), func(c *gin.Context) {
-		traceID := traceIDFromContext(c.Request.Context())
+		requestID := c.GetString("request_id")
+		ctx := c.Request.Context()
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
+			return
+		}
 		var req CreateFlightRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
@@ -438,14 +490,14 @@ func main() {
 			return
 		}
 		var f Flight
-		err := db.QueryRow(
+		err := db.QueryRowContext(ctx,
 			`INSERT INTO flights (flight_number, origin, destination, departure_time, arrival_time, total_capacity, available_seats, status)
 			 VALUES ($1, $2, $3, $4, $5, $6, $6, 'SCHEDULED')
 			 RETURNING id, flight_number, origin, destination, departure_time, arrival_time, available_seats, status`,
 			req.FlightNumber, req.Origin, req.Destination, depTime, arrTime, req.TotalCapacity,
 		).Scan(&f.ID, &f.FlightNumber, &f.Origin, &f.Destination, &depTime, &arrTime, &f.AvailableSeats, &f.Status)
 		if err != nil {
-			logJSON("ERROR", "flight-service", fmt.Sprintf("Create flight failed: %v", err), traceID, "", nil)
+			logContext(ctx, requestID, "ERROR", "flight-service", fmt.Sprintf("Create flight failed: %v", err))
 			var pqErr *pq.Error
 			if errors.As(err, &pqErr) {
 				switch pqErr.Code {
@@ -462,12 +514,17 @@ func main() {
 		}
 		f.DepartureTime = depTime.Format(time.RFC3339)
 		f.ArrivalTime = arrTime.Format(time.RFC3339)
-		logJSON("INFO", "flight-service", "Flight created", traceID, "", map[string]interface{}{"flight": f.FlightNumber})
+		logContext(ctx, requestID, "INFO", "flight-service", "Flight created", map[string]interface{}{"flight": f.FlightNumber})
 		c.JSON(http.StatusCreated, f)
 	})
 
 	r.PUT("/api/flights/:id", authRequired("ADMIN"), func(c *gin.Context) {
-		traceID := traceIDFromContext(c.Request.Context())
+		requestID := c.GetString("request_id")
+		ctx := c.Request.Context()
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
+			return
+		}
 		id, ok := validFlightID(c)
 		if !ok {
 			return
@@ -516,8 +573,29 @@ func main() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
 			return
 		}
-		if dep, ok := newTimes["departureTime"]; ok {
-			if arr, ok := newTimes["arrivalTime"]; ok && !arr.After(dep) {
+		if len(newTimes) == 2 {
+			if !newTimes["arrivalTime"].After(newTimes["departureTime"]) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "arrivalTime must be after departureTime"})
+				return
+			}
+		} else if len(newTimes) == 1 {
+			var curDep, curArr time.Time
+			err := db.QueryRowContext(ctx, `SELECT departure_time, arrival_time FROM flights WHERE id = $1`, id).Scan(&curDep, &curArr)
+			if err == sql.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Flight not found"})
+				return
+			}
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
+				return
+			}
+			if dep, ok := newTimes["departureTime"]; ok {
+				curDep = dep
+			}
+			if arr, ok := newTimes["arrivalTime"]; ok {
+				curArr = arr
+			}
+			if !curArr.After(curDep) {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "arrivalTime must be after departureTime"})
 				return
 			}
@@ -525,7 +603,7 @@ func main() {
 		args = append(args, id)
 		var f Flight
 		var depTime, arrTime time.Time
-		err := db.QueryRow(
+		err := db.QueryRowContext(ctx,
 			fmt.Sprintf(`UPDATE flights SET %s, updated_at = NOW() WHERE id = $%d RETURNING id, flight_number, origin, destination, departure_time, arrival_time, available_seats, status`,
 				strings.Join(setParts, ", "), argIdx),
 			args...,
@@ -535,7 +613,7 @@ func main() {
 			return
 		}
 		if err != nil {
-			logJSON("ERROR", "flight-service", fmt.Sprintf("Update flight failed: %v", err), traceID, "", nil)
+			logContext(ctx, requestID, "ERROR", "flight-service", fmt.Sprintf("Update flight failed: %v", err))
 			var pqErr *pq.Error
 			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
 				c.JSON(http.StatusConflict, gin.H{"error": "Flight already exists for that departure time"})
@@ -550,7 +628,12 @@ func main() {
 	})
 
 	r.PATCH("/api/flights/:id/seats", authRequired("SERVICE"), func(c *gin.Context) {
-		traceID := traceIDFromContext(c.Request.Context())
+		requestID := c.GetString("request_id")
+		ctx := c.Request.Context()
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
+			return
+		}
 		id, ok := validFlightID(c)
 		if !ok {
 			return
@@ -568,7 +651,7 @@ func main() {
 		// cannot drive the count below zero or above capacity.
 		var f Flight
 		var depTime, arrTime time.Time
-		err := db.QueryRow(
+		err := db.QueryRowContext(ctx,
 			`UPDATE flights SET available_seats = available_seats + $1, updated_at = NOW()
 			 WHERE id = $2 AND available_seats + $1 BETWEEN 0 AND total_capacity
 			 RETURNING id, flight_number, origin, destination, departure_time, arrival_time, available_seats, status`,
@@ -576,7 +659,7 @@ func main() {
 		).Scan(&f.ID, &f.FlightNumber, &f.Origin, &f.Destination, &depTime, &arrTime, &f.AvailableSeats, &f.Status)
 		if err == sql.ErrNoRows {
 			var exists bool
-			if err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM flights WHERE id = $1)", id).Scan(&exists); err != nil {
+			if err := db.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM flights WHERE id = $1)", id).Scan(&exists); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
 				return
 			}
@@ -592,13 +675,13 @@ func main() {
 			return
 		}
 		if err != nil {
-			logJSON("ERROR", "flight-service", fmt.Sprintf("Seat update failed: %v", err), traceID, "", nil)
+			logContext(ctx, requestID, "ERROR", "flight-service", fmt.Sprintf("Seat update failed: %v", err))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
 			return
 		}
 		f.DepartureTime = depTime.Format(time.RFC3339)
 		f.ArrivalTime = arrTime.Format(time.RFC3339)
-		logJSON("INFO", "flight-service", "Seats updated", traceID, "", map[string]interface{}{"flight": f.FlightNumber, "delta": req.Delta})
+		logContext(ctx, requestID, "INFO", "flight-service", "Seats updated", map[string]interface{}{"flight": f.FlightNumber, "delta": req.Delta})
 		c.JSON(http.StatusOK, f)
 	})
 
@@ -623,8 +706,10 @@ func main() {
 		logJSON("ERROR", "flight-service", fmt.Sprintf("Shutdown error: %v", err), "", "", nil)
 	}
 
-	if err := db.Close(); err != nil {
-		logJSON("ERROR", "flight-service", fmt.Sprintf("DB close error: %v", err), "", "", nil)
+	if db != nil {
+		if err := db.Close(); err != nil {
+			logJSON("ERROR", "flight-service", fmt.Sprintf("DB close error: %v", err), "", "")
+		}
 	}
 	logJSON("INFO", "flight-service", "Server stopped", "", "", nil)
 }

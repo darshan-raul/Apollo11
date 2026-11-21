@@ -52,10 +52,23 @@ To break edge routing without deleting certificates, save the frontend HTTPRoute
 ```bash
 kube -n apollo-airlines-ui get httproute
 # Use the frontend route name shown above in the next commands.
-kube -n apollo-airlines-ui get httproute frontend -o yaml > /tmp/frontend-route.yaml
+kube -n apollo-airlines-ui get httproute frontend -o json | python3 -c '
+import json, sys
+obj = json.load(sys.stdin)
+obj.pop("status", None)
+meta = obj.setdefault("metadata", {})
+for k in ("resourceVersion", "uid", "creationTimestamp", "generation", "managedFields", "selfLink"):
+    meta.pop(k, None)
+ann = meta.get("annotations")
+if isinstance(ann, dict):
+    ann.pop("kubectl.kubernetes.io/last-applied-configuration", None)
+    if not ann:
+        meta.pop("annotations", None)
+print(json.dumps(obj))
+' > /tmp/frontend-route.json
 kube -n apollo-airlines-ui delete httproute frontend
 # Require edge probe_success=0 while internal probe_success=1.
-kube apply -f /tmp/frontend-route.yaml
+kube apply -f /tmp/frontend-route.json
 # Require edge probe_success=1 and frontend HTTPS response again.
 ```
 
@@ -65,11 +78,13 @@ Probes and trust ConfigMap with the observability namespace.
 ## Follow one booking across signals
 
 Run `bash scripts/trace-test.sh`. It creates and cancels a real booking, checks
-its linked Tempo trace, and now polls Loki for the same trace ID. In Grafana
-Explore, select Loki, expand that JSON log and click **View trace**. From its
+its linked Tempo trace, and now polls Loki for matching JSON `trace_id` and
+`request_id` correlation fields. In Grafana
+Explore, select Loki, query a known ID such as `{service=~".+"} | json | trace_id="<trace_id>"`
+or `{service=~".+"} | json | request_id="<request_id>"`, expand that JSON log and click **View trace**. From its
 Tempo span, follow **Logs** back to matching log lines. The datasource uses
-JSON `trace_id` filtering with a two-minute time margin. Trace IDs remain parsed
-fields, not high-cardinality Loki labels.
+JSON `trace_id` filtering with a two-minute time margin. Both `trace_id` and `request_id`
+remain parsed fields, not high-cardinality Loki labels.
 
 Break the Collector exporter using SIGNALS.md, generate a new request and show
 that logs still arrive while its trace does not. Restore the exporter and prove

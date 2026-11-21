@@ -15,9 +15,6 @@
 #   ./scripts/verify.sh --mode kustomize --env prod
 set -euo pipefail
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context.sh"
-apollo_context_guard
-
 GREEN='\033[0;32m'; RED='\033[0;31m'; CYAN='\033[0;36m'; NC='\033[0m'
 PASS=0; FAIL=0
 pass() { echo -e "${GREEN}[PASS]${NC} $1"; PASS=$((PASS+1)); }
@@ -26,40 +23,49 @@ step() { echo -e "${CYAN}▶ $1${NC}"; }
 
 MODE="auto"
 ENV="dev"
+RELEASE_NAME="apollo11"
 GATEWAY_EXPECTED=true
 
 usage() {
+    local code="${1:-1}"
     cat <<EOF
-Usage: $0 [--mode MODE] [--env ENV]
+Usage: $0 [--mode MODE] [--env ENV] [--release NAME] [--context CTX]
 
 Options:
-  --mode MODE   helm | kustomize | auto (default)
-  --env ENV     env for kustomize mode (default: dev)
+  --mode MODE     helm | kustomize | auto (default)
+  --env ENV       env for kustomize mode (default: dev)
+  --release NAME  Helm release name (default: apollo11)
+  --context CTX   Kubernetes context (kind-apollo11 or kind-apollo11-dev)
 EOF
-    exit 1
+    exit "$code"
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --mode) MODE="$2"; shift 2 ;;
-        --env)  ENV="$2"; shift 2 ;;
-        --help) usage ;;
-        *) echo "Unknown option: $1"; usage ;;
+        --mode)    [[ $# -ge 2 ]] || { echo "--mode requires a value" >&2; usage 2; }; MODE="$2"; shift 2 ;;
+        --env)     [[ $# -ge 2 ]] || { echo "--env requires a value" >&2; usage 2; }; ENV="$2"; shift 2 ;;
+        --release) [[ $# -ge 2 ]] || { echo "--release requires a value" >&2; usage 2; }; RELEASE_NAME="$2"; shift 2 ;;
+        --context) [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+        --help|-h) usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 ;;
     esac
 done
 
 case "$MODE" in
     auto|helm|kustomize) ;;
-    *) echo -e "${RED}Invalid mode '$MODE' (expected auto, helm, or kustomize).${NC}"; exit 1 ;;
+    *) echo -e "${RED}Invalid mode '$MODE' (expected auto, helm, or kustomize).${NC}" >&2; exit 2 ;;
 esac
 case "$ENV" in
     dev|staging|prod) ;;
-    *) echo -e "${RED}Invalid environment '$ENV' (expected dev, staging, or prod).${NC}"; exit 1 ;;
+    *) echo -e "${RED}Invalid environment '$ENV' (expected dev, staging, or prod).${NC}" >&2; exit 2 ;;
 esac
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context.sh"
+apollo_context_guard
 
 # Auto-detect mode
 if [[ "$MODE" == "auto" ]]; then
-    if helm list -n apollo-airlines-apps 2>/dev/null | grep -q apollo11; then
+    if helm list -n apollo-airlines-apps 2>/dev/null | grep -qw "$RELEASE_NAME"; then
         MODE="helm"
     elif kubectl get deployment -n apollo-airlines-apps identity >/dev/null 2>&1; then
         MODE="kustomize"
@@ -191,12 +197,17 @@ for dep in identity flight booking search notification; do
         fail "deployment/$dep not ready (ready=$ready)"
     fi
 done
+declare -A EXPECTED_PROBE_PATHS=(
+    [startupProbe]="/healthz/startup"
+    [livenessProbe]="/healthz/live"
+    [readinessProbe]="/healthz/ready"
+)
 for probe in startupProbe livenessProbe readinessProbe; do
     path=$(kubectl get deployment frontend -n apollo-airlines-ui -o jsonpath="{.spec.template.spec.containers[0].$probe.httpGet.path}" 2>/dev/null || echo "")
-    if [[ -n "$path" && "$path" == "/healthz/"* ]]; then
+    if [[ "$path" == "${EXPECTED_PROBE_PATHS[$probe]}" ]]; then
         pass "deployment/frontend $probe path=$path"
     else
-        fail "deployment/frontend $probe missing or wrong path ($path)"
+        fail "deployment/frontend $probe wrong path '$path' (expected ${EXPECTED_PROBE_PATHS[$probe]})"
     fi
 done
 
@@ -236,10 +247,10 @@ step "Probes on 6 app Deployments (startup/live/ready, all 3 distinct)"
 for dep in identity flight booking search notification; do
     for probe in startupProbe livenessProbe readinessProbe; do
         path=$(kubectl get deployment "$dep" -n apollo-airlines-apps -o jsonpath="{.spec.template.spec.containers[0].$probe.httpGet.path}" 2>/dev/null || echo "")
-        if [[ -n "$path" && "$path" == "/healthz/"* ]]; then
+        if [[ "$path" == "${EXPECTED_PROBE_PATHS[$probe]}" ]]; then
             pass "deployment/$dep $probe path=$path"
         else
-            fail "deployment/$dep $probe missing or wrong path ($path)"
+            fail "deployment/$dep $probe wrong path '$path' (expected ${EXPECTED_PROBE_PATHS[$probe]})"
         fi
     done
 done
@@ -447,8 +458,10 @@ fi
 
 if [[ "$MODE" == "helm" ]]; then
     step "Helm release and workload ownership metadata"
-    release_status=$(helm status apollo11 -n apollo-airlines-apps -o json 2>/dev/null | jq -r '.info.status // empty' || echo "")
-    if [[ "$release_status" == "deployed" ]]; then pass "Helm release apollo11 status=deployed"; else fail "Helm release apollo11 status=$release_status"; fi
+    release_status=$(helm status "$RELEASE_NAME" -n apollo-airlines-apps -o json 2>/dev/null | python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("info",{}).get("status",""))
+except Exception: print("")' || echo "")
+    if [[ "$release_status" == "deployed" ]]; then pass "Helm release $RELEASE_NAME status=deployed"; else fail "Helm release $RELEASE_NAME status=$release_status"; fi
     for entry in \
         "deployment:apollo-airlines-apps:identity" "deployment:apollo-airlines-apps:flight" \
         "deployment:apollo-airlines-apps:booking" "deployment:apollo-airlines-apps:search" \
@@ -535,30 +548,37 @@ if [[ "$GATEWAY_EXPECTED" == "true" ]]; then
         -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway \
         -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
     if [[ -n "$envoy_ip" ]]; then pass "Envoy LoadBalancer address=$envoy_ip"; else fail "Envoy LoadBalancer has no address"; fi
-    parent_count=$(kubectl get httproute -A -o custom-columns='P:.status.parents[*].controllerName' --no-headers 2>/dev/null | grep -c gateway.envoyproxy.io || true)
+    parent_count=0
+    for ns_r in "apollo-airlines-apps:identity" "apollo-airlines-apps:flight" "apollo-airlines-apps:booking" \
+                "apollo-airlines-apps:search" "apollo-airlines-apps:notification" "apollo-airlines-ui:frontend"; do
+        r_ns="${ns_r%%:*}"; r_name="${ns_r##*:}"
+        if kubectl get httproute "$r_name" -n "$r_ns" -o jsonpath='{.status.parents[*].controllerName}' 2>/dev/null | grep -q 'gateway.envoyproxy.io'; then
+            parent_count=$((parent_count + 1))
+        fi
+    done
     if [[ "$parent_count" -ge 6 ]]; then pass "all 6 HTTPRoutes report an Envoy parent"; else fail "only $parent_count/6 HTTPRoutes report an Envoy parent"; fi
     if [[ -n "$envoy_ip" ]]; then
         for route in identity flight booking search notification; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $route.apollo.local" "http://$envoy_ip/healthz" 2>/dev/null || echo 000)
+            code=$(curl -s --max-time 15 -o /dev/null -w '%{http_code}' -H "Host: $route.apollo.local" "http://$envoy_ip/healthz" 2>/dev/null || echo 000)
             if [[ "$code" == "200" ]]; then pass "Envoy -> $route /healthz -> 200"; else fail "Envoy -> $route /healthz -> $code"; fi
         done
-        code=$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: frontend.apollo.local' "http://$envoy_ip/" 2>/dev/null || echo 000)
+        code=$(curl -s --max-time 15 -o /dev/null -w '%{http_code}' -H 'Host: frontend.apollo.local' "http://$envoy_ip/" 2>/dev/null || echo 000)
         if [[ "$code" == "200" ]]; then pass "Envoy -> frontend / -> 200"; else fail "Envoy -> frontend / -> $code"; fi
-        login=$(curl -s -X POST -H 'Host: identity.apollo.local' -H 'Content-Type: application/json' \
+        login=$(curl -s --max-time 15 -X POST -H 'Host: identity.apollo.local' -H 'Content-Type: application/json' \
             -d '{"email":"admin@apolloairlines.com","password":"admin123"}' \
             "http://$envoy_ip/api/users/login" 2>/dev/null || echo "")
         if grep -q '"token":"[^" ]' <<<"$login"; then pass "login through Envoy returned a token"; else fail "login through Envoy returned no token"; fi
         for route in identity booking; do
-            code=$(curl -k -s -o /dev/null -w '%{http_code}' --resolve "$route.apollo.local:443:$envoy_ip" "https://$route.apollo.local/healthz" 2>/dev/null || echo 000)
+            code=$(curl -k -s --max-time 15 -o /dev/null -w '%{http_code}' --resolve "$route.apollo.local:443:$envoy_ip" "https://$route.apollo.local/healthz" 2>/dev/null || echo 000)
             if [[ "$code" == "200" ]]; then pass "Envoy HTTPS -> $route /healthz -> 200"; else fail "Envoy HTTPS -> $route /healthz -> $code"; fi
         done
-        fe_code=$(curl -k -s -o /dev/null -w '%{http_code}' --resolve "frontend.apollo.local:443:$envoy_ip" "https://frontend.apollo.local/" 2>/dev/null || echo 000)
+        fe_code=$(curl -k -s --max-time 15 -o /dev/null -w '%{http_code}' --resolve "frontend.apollo.local:443:$envoy_ip" "https://frontend.apollo.local/" 2>/dev/null || echo 000)
         if [[ "$fe_code" == "200" ]]; then pass "Envoy HTTPS -> frontend / -> 200"; else fail "Envoy HTTPS -> frontend / -> $fe_code"; fi
     fi
 fi
 
 if [[ "$GATEWAY_EXPECTED" == true ]]; then
-    if bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then
+    if KUBE_CONTEXT="$APOLLO_CONTEXT" bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then
         pass "trusted HTTPS API workflow and hostname rejection"
     else
         fail "trusted HTTPS API workflow or hostname rejection failed"

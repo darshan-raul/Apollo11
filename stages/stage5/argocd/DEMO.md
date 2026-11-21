@@ -48,8 +48,8 @@ from https://argo-cd.readthedocs.io/en/stable/cli_installation/.
 
 > **One thing to confirm before starting:** the `repoURL` in
 > `applications/*.yaml` is `https://github.com/darshan-raul/Apollo11.git`. If your
-> fork is at a different URL, set `GITOPS_REPO` or pass
-> `--repo-url https://github.com/<you>/Apollo11` to `bootstrap.sh`.
+> fork is at a different URL, pass
+> `--repo-url https://github.com/<you>/Apollo11.git` to `bootstrap.sh`.
 
 ---
 
@@ -232,9 +232,10 @@ xdg-open https://localhost:8080  # Linux
 **What you should see in the UI:**
 
 - 3 application cards: `apollo11-dev`, `apollo11-staging`, `apollo11-prod`
-- Click `apollo11-dev` → see the resource tree: 3 StatefulSets, 6
-  Deployments, 7 Services, 2 ConfigMaps, 1 Secret, 2 PDBs, 1 Gateway, 6
-  HTTPRoutes, 1 IPAddressPool, 1 L2Advertisement
+- Click `apollo11-dev` → see the isolated tenant resource tree (58 resources):
+  4 StatefulSets, 6 Deployments, 10 Services, 6 ConfigMaps, 2 Secrets,
+  3 Seed Jobs, 13 ServiceAccounts, 1 Gateway, 6 HTTPRoutes, 1 ReferenceGrant
+  (with shared PriorityClasses, GatewayClass, and MetalLB pool managed by the platform)
 - Click "App Details" → "Sync Status" → "Synced"
 - Click "History" → see 1 sync (the one `--sync` triggered)
 - Click "Details" → see `repoURL`, `revision`, `values-dev.yaml` listed

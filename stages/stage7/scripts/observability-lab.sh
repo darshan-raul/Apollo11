@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 # Prove edge failure/recovery and actual firing/resolved notification delivery.
 set -euo pipefail
+usage() {
+  local code="${1:-2}"
+  echo "Usage: $0 [--context kind-apollo11|kind-apollo11-dev]" >&2
+  exit "$code"
+}
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --context) [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+    --help|-h) usage 0 ;;
+    *) echo "Unknown option: $1" >&2; usage 2 ;;
+  esac
+done
 source "$(dirname "$0")/context.sh"
 apollo_context_guard
 ns=apollo-observability
@@ -9,7 +21,7 @@ work=$(mktemp -d)
 route_saved=false
 cleanup() {
   result=$?
-  if [[ "$route_saved" == true ]]; then kubectl apply -f "$work/route.yaml" >/dev/null || result=1; fi
+  if [[ "$route_saved" == true ]]; then kubectl apply -f "$work/route.json" >/dev/null || result=1; fi
   kubectl -n "$ns" delete prometheusrule apollo-delivery-lab --ignore-not-found >/dev/null || result=1
   kubectl -n "$ns" delete pod "$pod" --ignore-not-found --wait=false >/dev/null || result=1
   rm -rf "$work"
@@ -18,7 +30,7 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
-bash "$(dirname "$0")/edge-probe.sh"
+bash "$(dirname "$0")/edge-probe.sh" --context "$APOLLO_CONTEXT"
 kubectl -n "$ns" run "$pod" --image=curlimages/curl:8.10.1 --restart=Never --command -- sleep 900 >/dev/null
 kubectl -n "$ns" wait --for=condition=Ready pod/"$pod" --timeout=120s >/dev/null
 client() { kubectl -n "$ns" exec "$pod" -- curl --max-time 10 -fsS "$@"; }
@@ -32,11 +44,24 @@ probe() {
   echo "Edge probe never reached $expected" >&2; return 1
 }
 probe 1
-kubectl -n apollo-airlines-ui get httproute frontend -o yaml > "$work/route.yaml"
+kubectl -n apollo-airlines-ui get httproute frontend -o json | python3 -c '
+import json, sys
+obj = json.load(sys.stdin)
+obj.pop("status", None)
+meta = obj.setdefault("metadata", {})
+for k in ("resourceVersion", "uid", "creationTimestamp", "generation", "managedFields", "selfLink"):
+    meta.pop(k, None)
+ann = meta.get("annotations")
+if isinstance(ann, dict):
+    ann.pop("kubectl.kubernetes.io/last-applied-configuration", None)
+    if not ann:
+        meta.pop("annotations", None)
+print(json.dumps(obj))
+' > "$work/route.json"
 route_saved=true
 kubectl -n apollo-airlines-ui delete httproute frontend >/dev/null
 probe 0
-kubectl apply -f "$work/route.yaml" >/dev/null
+kubectl apply -f "$work/route.json" >/dev/null
 probe 1
 route_saved=false
 # Synthetic rule isolates the delivery path from the longer booking SLO windows.

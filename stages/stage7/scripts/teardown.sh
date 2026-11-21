@@ -7,9 +7,6 @@
 #   ./scripts/teardown.sh --purge               # also delete namespaces + cluster-scoped resources
 set -euo pipefail
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context.sh"
-apollo_context_guard
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGE_DIR="$(dirname "$SCRIPT_DIR")"
 CHART_DIR="$STAGE_DIR/helm/apollo11"
@@ -20,28 +17,45 @@ ENV="dev"
 PURGE=false
 
 usage() {
+    local code="${1:-1}"
     cat <<EOF
-Usage: $0 [--mode MODE] [--env ENV] [--purge]
+Usage: $0 [--mode MODE] [--env ENV] [--release NAME] [--context CTX] [--purge]
 
 Options:
-  --mode MODE   helm (default) | kustomize
-  --env ENV     dev (default) | staging | prod — used by --mode kustomize
-  --purge       Also delete the app, UI, observability, Envoy Gateway, and
-                MetalLB namespaces plus their cluster-scoped resources
-  --help        Show this help
+  --mode MODE     helm (default) | kustomize
+  --env ENV       dev (default) | staging | prod — used by --mode kustomize
+  --release NAME  Helm release name (default: apollo11)
+  --context CTX   Kubernetes context (kind-apollo11 or kind-apollo11-dev)
+  --purge         Also delete the app, UI, observability, Envoy Gateway, and
+                  MetalLB namespaces plus their cluster-scoped resources
+  --help          Show this help
 EOF
-    exit 1
+    exit "$code"
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --mode)  MODE="$2"; shift 2 ;;
-        --env)   ENV="$2"; shift 2 ;;
-        --purge) PURGE=true; shift ;;
-        --help)  usage ;;
-        *) echo "Unknown option: $1"; usage ;;
+        --mode)    [[ $# -ge 2 ]] || { echo "--mode requires a value" >&2; usage 2; }; MODE="$2"; shift 2 ;;
+        --env)     [[ $# -ge 2 ]] || { echo "--env requires a value" >&2; usage 2; }; ENV="$2"; shift 2 ;;
+        --release) [[ $# -ge 2 ]] || { echo "--release requires a value" >&2; usage 2; }; RELEASE_NAME="$2"; shift 2 ;;
+        --context) [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+        --purge)   PURGE=true; shift ;;
+        --help|-h) usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 ;;
     esac
 done
+
+case "$MODE" in
+    helm|kustomize) ;;
+    *) echo "Invalid --mode '$MODE' (expected helm or kustomize)" >&2; usage 2 ;;
+esac
+case "$ENV" in
+    dev|staging|prod) ;;
+    *) echo "Invalid --env '$ENV' (expected dev, staging, or prod)" >&2; usage 2 ;;
+esac
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context.sh"
+apollo_context_guard
 
 GREEN='\033[0;32m'; CYAN='\033[0;36m'; RED='\033[0;31m'; NC='\033[0m'
 step() { echo -e "${CYAN}▶ $1${NC}"; }
@@ -56,11 +70,11 @@ step "Tearing down (mode: $MODE, env: $ENV, purge: $PURGE)"
 # Recover any interrupted practical scaling lab before removing its HPA and
 # workloads. This also removes the temporary worker label and taint.
 if [[ -x "$SCRIPT_DIR/scaling-lab.sh" ]]; then
-    "$SCRIPT_DIR/scaling-lab.sh" cleanup >/dev/null 2>&1 || true
+    "$SCRIPT_DIR/scaling-lab.sh" cleanup --context "$APOLLO_CONTEXT" >/dev/null 2>&1 || true
 fi
 
 if [[ "$MODE" == "helm" ]]; then
-    if helm list -n apollo-airlines-apps 2>/dev/null | grep -q "$RELEASE_NAME"; then
+    if helm list -n apollo-airlines-apps 2>/dev/null | grep -qw "$RELEASE_NAME"; then
         step "Helm uninstall"
         helm uninstall "$RELEASE_NAME" -n apollo-airlines-apps --wait --timeout 5m 2>&1 | tail -3
         ok "helm uninstall complete"
@@ -101,18 +115,31 @@ fi
 if [[ "$PURGE" == "true" ]]; then
     step "Purging namespaces + cluster-scoped resources"
 
+    finalize_ns() {
+        local target_ns="$1"
+        kubectl get ns "$target_ns" -o json 2>/dev/null \
+            | python3 -c 'import json,sys
+ns = json.load(sys.stdin)
+ns.setdefault("spec", {})["finalizers"] = []
+print(json.dumps(ns))' \
+            | kubectl replace --raw "/api/v1/namespaces/${target_ns}/finalize" -f - >/dev/null 2>&1 || true
+    }
+
     # Force-delete stuck pods (the chart's CRDs may block normal deletion)
     for ns in apollo-airlines-apps apollo-airlines-ui apollo-observability; do
         if kubectl get ns "$ns" >/dev/null 2>&1; then
-            echo "  Patching namespace $ns for force-deletion..."
-            kubectl get pods -n "$ns" -o name 2>/dev/null | xargs -r -I{} kubectl --context "$APOLLO_CONTEXT" delete {} -n "$ns" --force --grace-period=0 2>/dev/null || true
+            echo "  Deleting pods in $ns..."
+            while IFS= read -r pod; do
+                [[ -n "$pod" ]] || continue
+                kubectl delete "$pod" -n "$ns" --force --grace-period=0 2>/dev/null || true
+            done < <(kubectl get pods -n "$ns" -o name 2>/dev/null || true)
         fi
     done
 
     # Namespaces (in order: data plane, then access plane)
     for ns in apollo-airlines-apps apollo-airlines-ui apollo-observability; do
         if kubectl get ns "$ns" >/dev/null 2>&1; then
-            kubectl delete ns "$ns" --ignore-not-found --timeout 60s 2>&1 | tail -2
+            kubectl delete ns "$ns" --ignore-not-found --timeout=60s 2>&1 | tail -2 || finalize_ns "$ns"
         fi
     done
 
@@ -120,8 +147,7 @@ if [[ "$PURGE" == "true" ]]; then
     step "Purging Envoy Gateway + MetalLB"
     for ns in envoy-gateway-system metallb-system; do
         if kubectl get ns "$ns" >/dev/null 2>&1; then
-            timeout 60 kubectl --context "$APOLLO_CONTEXT" delete ns "$ns" --ignore-not-found 2>&1 | tail -2 || \
-                kubectl patch ns "$ns" -p '{"spec":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+            kubectl delete ns "$ns" --ignore-not-found --timeout=60s 2>&1 | tail -2 || finalize_ns "$ns"
         fi
     done
 
@@ -134,11 +160,11 @@ if [[ "$PURGE" == "true" ]]; then
     kubectl delete gatewayclass eg --ignore-not-found >/dev/null 2>&1 || true
     kubectl delete priorityclass apollo-airlines-app-critical apollo-airlines-app-low --ignore-not-found >/dev/null 2>&1 || true
 
-    # Cluster-scoped RBAC and webhooks from MetalLB and Envoy Gateway outlive their namespaces
+    # Cluster-scoped RBAC and webhooks from MetalLB, Envoy Gateway, and Prometheus outlive their namespaces
     kubectl delete validatingwebhookconfiguration metallb-webhook-configuration --ignore-not-found >/dev/null 2>&1 || true
     kubectl delete mutatingwebhookconfiguration envoy-gateway-topology-injector.envoy-gateway-system --ignore-not-found >/dev/null 2>&1 || true
     for kind in clusterrolebinding clusterrole; do
-        for obj in $(kubectl get "$kind" -o name 2>/dev/null | grep -E 'metallb|eg-gateway-helm' || true); do
+        for obj in $(kubectl get "$kind" -o name 2>/dev/null | grep -E 'metallb|eg-gateway-helm|apollo-observability|prometheus-operator' || true); do
             kubectl delete "$obj" --ignore-not-found >/dev/null 2>&1 || true
         done
     done

@@ -36,11 +36,24 @@ func logJSON(level, service, message, traceID, spanID string, extra ...map[strin
 		"span_id":   spanID,
 		"message":   message,
 	}
-	for k, v := range extra[0] {
-		entry[k] = v
+	for _, m := range extra {
+		for k, v := range m {
+			entry[k] = v
+		}
 	}
 	b, _ := json.Marshal(entry)
 	logger.Println(string(b))
+}
+
+type flightItem struct {
+	ID             string `json:"id"`
+	FlightNumber   string `json:"flightNumber"`
+	Origin         string `json:"origin"`
+	Destination    string `json:"destination"`
+	DepartureTime  string `json:"departureTime"`
+	ArrivalTime    string `json:"arrivalTime"`
+	AvailableSeats int    `json:"availableSeats"`
+	Status         string `json:"status"`
 }
 
 type SearchResult struct {
@@ -156,47 +169,58 @@ db_connections_active{service="search"} 0
 			searchURL += "?" + params.Encode()
 		}
 
-		req, _ := http.NewRequest("GET", searchURL, nil)
+		req, err := http.NewRequest("GET", searchURL, nil)
+		if err != nil {
+			logJSON("ERROR", "search-service", fmt.Sprintf("Failed to build request: %v", err), traceID, "")
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
+			return
+		}
 		req.Header.Set("X-Request-ID", traceID)
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Do(req)
 		if err != nil {
-			logJSON("ERROR", "search-service", fmt.Sprintf("Flight service call failed: %v", err), traceID, "", nil)
+			logJSON("ERROR", "search-service", fmt.Sprintf("Flight service call failed: %v", err), traceID, "")
 			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
 			return
 		}
 		defer resp.Body.Close()
 
-		body, _ := io.ReadAll(resp.Body)
-		var result map[string]interface{}
-		decodeErr := json.Unmarshal(body, &result)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			logJSON("ERROR", "search-service", fmt.Sprintf("Failed to read flight response: %v", err), traceID, "")
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
+			return
+		}
+		var payload struct {
+			Flights []flightItem `json:"flights"`
+		}
+		decodeErr := json.Unmarshal(body, &payload)
 
 		// An upstream failure is not an empty result set.
-		flightsRaw, ok := result["flights"].([]interface{})
-		if resp.StatusCode != http.StatusOK || decodeErr != nil || !ok {
-			logJSON("ERROR", "search-service", fmt.Sprintf("Flight service returned HTTP %d", resp.StatusCode), traceID, "", nil)
+		if resp.StatusCode != http.StatusOK || decodeErr != nil || payload.Flights == nil {
+			logJSON("ERROR", "search-service", fmt.Sprintf("Flight service returned HTTP %d", resp.StatusCode), traceID, "")
 			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
 			return
 		}
 
-		results := []SearchResult{}
-		for _, f := range flightsRaw {
-			fm := f.(map[string]interface{})
-			depStr := fm["departureTime"].(string)
-			arrStr := fm["arrivalTime"].(string)
-			dep, _ := time.Parse(time.RFC3339, depStr)
-			arr, _ := time.Parse(time.RFC3339, arrStr)
-			duration := int(arr.Sub(dep).Minutes())
+		results := make([]SearchResult, 0, len(payload.Flights))
+		for _, fm := range payload.Flights {
+			dep, depErr := time.Parse(time.RFC3339, fm.DepartureTime)
+			arr, arrErr := time.Parse(time.RFC3339, fm.ArrivalTime)
+			duration := 0
+			if depErr == nil && arrErr == nil && arr.After(dep) {
+				duration = int(arr.Sub(dep).Minutes())
+			}
 			results = append(results, SearchResult{
-				ID:            fm["id"].(string),
-				FlightNumber:  fm["flightNumber"].(string),
-				Origin:        fm["origin"].(string),
-				Destination:   fm["destination"].(string),
-				DepartureTime: depStr,
-				ArrivalTime:   arrStr,
-				Duration:      duration,
-				AvailableSeats: int(fm["availableSeats"].(float64)),
-				Status:        fm["status"].(string),
+				ID:             fm.ID,
+				FlightNumber:   fm.FlightNumber,
+				Origin:         fm.Origin,
+				Destination:    fm.Destination,
+				DepartureTime:  fm.DepartureTime,
+				ArrivalTime:    fm.ArrivalTime,
+				Duration:       duration,
+				AvailableSeats: fm.AvailableSeats,
+				Status:         fm.Status,
 			})
 		}
 		logJSON("INFO", "search-service", "Search completed", traceID, "", map[string]interface{}{"count": len(results)})

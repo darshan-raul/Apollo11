@@ -24,9 +24,9 @@ data:
           fail_if_not_ssl: true
           tls_config:
             ca_file: /trust/ca.crt
-            server_name: frontend.apollo.local
+            server_name: {{ .Values.gateway.frontendHost | default (printf "frontend.%s" .Values.gateway.hostSuffix) }}
           headers:
-            Host: frontend.apollo.local
+            Host: {{ .Values.gateway.frontendHost | default (printf "frontend.%s" .Values.gateway.hostSuffix) }}
 ---
 apiVersion: apps/v1
 kind: Deployment

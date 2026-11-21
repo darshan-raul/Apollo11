@@ -20,7 +20,6 @@ import (
 var (
 	redisClient *redis.Client
 	logger      = log.New(os.Stdout, "", 0)
-	ctx         = context.Background()
 )
 
 func logJSON(level, service, message, traceID, spanID string, extra ...map[string]interface{}) {
@@ -32,8 +31,10 @@ func logJSON(level, service, message, traceID, spanID string, extra ...map[strin
 		"span_id":   spanID,
 		"message":   message,
 	}
-	for k, v := range extra[0] {
-		entry[k] = v
+	for _, m := range extra {
+		for k, v := range m {
+			entry[k] = v
+		}
 	}
 	b, _ := json.Marshal(entry)
 	logger.Println(string(b))
@@ -75,7 +76,6 @@ func generateRequestID() string {
 
 func main() {
 	initRedis()
-	defer redisClient.Close()
 
 	r := gin.Default()
 
@@ -116,7 +116,13 @@ func main() {
 	})
 
 	r.GET("/healthz/ready", func(c *gin.Context) {
-		if _, err := redisClient.Ping(ctx).Result(); err != nil {
+		if redisClient == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "Redis not initialized"})
+			return
+		}
+		reqCtx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
+		if _, err := redisClient.Ping(reqCtx).Result(); err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "Redis not reachable"})
 			return
 		}
@@ -124,7 +130,13 @@ func main() {
 	})
 
 	r.GET("/readyz", func(c *gin.Context) {
-		_, err := redisClient.Ping(ctx).Result()
+		if redisClient == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "Redis not initialized"})
+			return
+		}
+		reqCtx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
+		_, err := redisClient.Ping(reqCtx).Result()
 		if err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "Redis not reachable"})
 			return
@@ -147,16 +159,19 @@ db_connections_active{service="notification"} 0
 	})
 
 	r.POST("/api/notify", func(c *gin.Context) {
-		requestID, _ := c.Get("request_id")
-		traceID := requestID.(string)
+		traceID := c.GetString("request_id")
 
 		var req NotifyRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
+		if redisClient == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Notification queue unavailable"})
+			return
+		}
 
-		eventJSON, _ := json.Marshal(map[string]interface{}{
+		eventJSON, err := json.Marshal(map[string]interface{}{
 			"id":         uuid.New().String(),
 			"type":       req.Type,
 			"recipient":  req.Recipient,
@@ -164,10 +179,17 @@ db_connections_active{service="notification"} 0
 			"trace_id":   traceID,
 			"created_at": time.Now().UTC().Format(time.RFC3339),
 		})
-
-		err := redisClient.LPush(ctx, "notifications:queue", string(eventJSON)).Err()
 		if err != nil {
-			logJSON("ERROR", "notification-service", fmt.Sprintf("Failed to push to queue: %v", err), traceID, "", nil)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encode notification"})
+			return
+		}
+
+		reqCtx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
+		if err := redisClient.LPush(reqCtx, "notifications:queue", string(eventJSON)).Err(); err != nil {
+			logJSON("ERROR", "notification-service", fmt.Sprintf("Failed to push to queue: %v", err), traceID, "")
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Notification queue unavailable"})
+			return
 		}
 
 		logJSON("INFO", "notification-service", fmt.Sprintf("Event queued: %s", req.Type), traceID, "", map[string]interface{}{
@@ -178,7 +200,17 @@ db_connections_active{service="notification"} 0
 	})
 
 	r.GET("/api/notifications/pending", func(c *gin.Context) {
-		count, _ := redisClient.LLen(ctx, "notifications:queue").Result()
+		if redisClient == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Notification queue unavailable"})
+			return
+		}
+		reqCtx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
+		count, err := redisClient.LLen(reqCtx, "notifications:queue").Result()
+		if err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Notification queue unavailable"})
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{"pending": count})
 	})
 
@@ -204,8 +236,10 @@ db_connections_active{service="notification"} 0
 		logJSON("ERROR", "notification-service", fmt.Sprintf("Shutdown error: %v", err), "", "", nil)
 	}
 
-	if err := redisClient.Close(); err != nil {
-		logJSON("ERROR", "notification-service", fmt.Sprintf("Redis close error: %v", err), "", "", nil)
+	if redisClient != nil {
+		if err := redisClient.Close(); err != nil {
+			logJSON("ERROR", "notification-service", fmt.Sprintf("Redis close error: %v", err), "", "")
+		}
 	}
 	logJSON("INFO", "notification-service", "Server stopped", "", "", nil)
 }

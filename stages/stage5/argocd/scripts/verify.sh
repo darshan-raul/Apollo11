@@ -2,8 +2,6 @@
 # Verify the Stage 5 Argo CD module: controller health, project boundaries,
 # three isolated Applications, environment workloads, and real self-heal.
 set -euo pipefail
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/context.sh"
-apollo_context_guard
 
 ARGOCD_NS="argocd"
 SKIP_WORKLOADS=false
@@ -13,12 +11,26 @@ EXPECTED_REPO="https://github.com/darshan-raul/Apollo11.git"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --skip-workloads) SKIP_WORKLOADS=true; shift ;;
-        --skip-drift) SKIP_DRIFT=true; shift ;;
-        --repo-url) EXPECTED_REPO="$2"; shift 2 ;;
-        --help) echo "Usage: $0 [--skip-workloads] [--skip-drift] [--repo-url URL]"; exit 0 ;;
-        *) echo "Unknown option: $1"; exit 1 ;;
+        --skip-drift)     SKIP_DRIFT=true; shift ;;
+        --repo-url)       [[ $# -ge 2 ]] || { echo "--repo-url requires a value" >&2; exit 2; }; EXPECTED_REPO="$2"; shift 2 ;;
+        --context)        [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; exit 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+        --help|-h)        echo "Usage: $0 [--skip-workloads] [--skip-drift] [--repo-url URL] [--context CTX]"; exit 0 ;;
+        *) echo "Unknown option: $1" >&2; exit 2 ;;
     esac
 done
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/context.sh"
+apollo_context_guard
+
+DRIFT_RESTORE_NS=""
+DRIFT_ORIG_REPLICAS=""
+cleanup_drift() {
+    if [[ -n "$DRIFT_RESTORE_NS" && -n "$DRIFT_ORIG_REPLICAS" ]]; then
+        kubectl patch deployment booking -n "$DRIFT_RESTORE_NS" --type merge \
+            -p "{\"spec\":{\"replicas\":${DRIFT_ORIG_REPLICAS}}}" >/dev/null 2>&1 || true
+    fi
+}
+trap cleanup_drift EXIT
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; CYAN='\033[0;36m'; NC='\033[0m'
 PASS=0; FAIL=0
@@ -35,11 +47,14 @@ if [[ "$SKIP_WORKLOADS" == false ]]; then
     step "0/5 Waiting up to ${CONVERGE_TIMEOUT}s for automated Applications to converge"
     deadline=$((SECONDS + CONVERGE_TIMEOUT))
     while :; do
-        pending=$(kubectl get applications.argoproj.io -n "$ARGOCD_NS" \
-            -o jsonpath='{range .items[?(@.spec.syncPolicy.automated)]}{.metadata.name}={.status.sync.status}/{.status.health.status}{"\n"}{end}' 2>/dev/null \
-            | grep -v '=Synced/Healthy$' || true)
-        if [[ -z "$pending" ]]; then echo "  all automated Applications are Synced/Healthy"; break; fi
-        if (( SECONDS >= deadline )); then echo "  still converging after ${CONVERGE_TIMEOUT}s: $(tr '\n' ' ' <<<"$pending")"; break; fi
+        apps=$(kubectl get applications.argoproj.io -n "$ARGOCD_NS" \
+            -o jsonpath='{range .items[?(@.spec.syncPolicy.automated)]}{.metadata.name}={.status.sync.status}/{.status.health.status}{"\n"}{end}' 2>/dev/null || true)
+        pending=$(grep -v '=Synced/Healthy$' <<<"$apps" || true)
+        if [[ -n "$apps" && -z "$pending" ]]; then echo "  all automated Applications are Synced/Healthy"; break; fi
+        if (( SECONDS >= deadline )); then
+            echo "  still converging after ${CONVERGE_TIMEOUT}s: $(tr '\n' ' ' <<<"${pending:-no automated applications found}")"
+            break
+        fi
         sleep 15
     done
 fi
@@ -135,6 +150,8 @@ else
     if [[ "$original" != "1" ]]; then
         fail "dev booking replicas=$original before drift test (expected 1)"
     else
+        DRIFT_RESTORE_NS="$dev_ns"
+        DRIFT_ORIG_REPLICAS="$original"
         kubectl patch deployment booking -n "$dev_ns" --type merge -p '{"spec":{"replicas":2}}' >/dev/null
         # Avoid waiting for the normal reconciliation interval; this requests
         # an immediate comparison, after which automated selfHeal must revert.
@@ -143,7 +160,7 @@ else
         restored=false
         for _ in $(seq 1 45); do
             replicas=$(kubectl get deployment booking -n "$dev_ns" -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "")
-            if [[ "$replicas" == "1" ]]; then restored=true; break; fi
+            if [[ "$replicas" == "1" ]]; then restored=true; DRIFT_RESTORE_NS=""; break; fi
             sleep 2
         done
         if [[ "$restored" == "true" ]]; then pass "dev booking replicas self-healed 2 -> 1"; else fail "Argo CD did not self-heal dev booking replicas within 90s"; fi

@@ -5,9 +5,9 @@
 #
 # Rules:
 #   - Source repos:    only the Apollo11 GitHub repo
-#   - Destinations:    only the in-cluster, and only into 2 namespaces
+#   - Destinations:    only in-cluster, into the 6 tenant namespaces (dev/staging/prod apps + ui)
 #   - Cluster-scoped:  DENIED (no CRDs, no cluster roles, no nodes)
-#   - Namespaced:      everything in the 2 namespaces is allowed
+#   - Namespaced:      everything in those 6 tenant namespaces is allowed
 #   - Signatures:      keys can be added later (ApplicationSet / sigstore)
 #
 # Each Application CR references this project via:
@@ -39,7 +39,7 @@ spec:
   sourceRepos:
     - https://github.com/darshan-raul/Apollo11.git
 
-  # Destination restrictions: only the in-cluster, only 2 namespaces.
+  # Destination restrictions: only in-cluster, only the 6 isolated tenant namespaces.
   destinations:
     - namespace: apollo-airlines-dev-apps
       server: https://kubernetes.default.svc

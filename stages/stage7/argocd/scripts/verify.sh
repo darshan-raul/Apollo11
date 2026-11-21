@@ -2,23 +2,31 @@
 # Verify the Stage 7 Argo CD module: controller health, project boundaries,
 # three isolated tenant Applications, shared observability, and real self-heal.
 set -euo pipefail
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/context.sh"
-apollo_context_guard
 
 ARGOCD_NS="argocd"
 SKIP_WORKLOADS=false
 SKIP_DRIFT=false
 EXPECTED_REPO="https://github.com/darshan-raul/Apollo11.git"
 
+usage() {
+    local code="${1:-1}"
+    echo "Usage: $0 [--skip-workloads] [--skip-drift] [--repo-url URL] [--context CTX]"
+    exit "$code"
+}
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --skip-workloads) SKIP_WORKLOADS=true; shift ;;
-        --skip-drift) SKIP_DRIFT=true; shift ;;
-        --repo-url) EXPECTED_REPO="$2"; shift 2 ;;
-        --help) echo "Usage: $0 [--skip-workloads] [--skip-drift] [--repo-url URL]"; exit 0 ;;
-        *) echo "Unknown option: $1"; exit 1 ;;
+        --skip-drift)     SKIP_DRIFT=true; shift ;;
+        --repo-url)       [[ $# -ge 2 ]] || { echo "--repo-url requires a value" >&2; usage 2; }; EXPECTED_REPO="$2"; shift 2 ;;
+        --context)        [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+        --help|-h)        usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 ;;
     esac
 done
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/context.sh"
+apollo_context_guard
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; CYAN='\033[0;36m'; NC='\033[0m'
 PASS=0; FAIL=0
@@ -35,11 +43,11 @@ if [[ "$SKIP_WORKLOADS" == false ]]; then
     step "0/5 Waiting up to ${CONVERGE_TIMEOUT}s for automated Applications to converge"
     deadline=$((SECONDS + CONVERGE_TIMEOUT))
     while :; do
-        pending=$(kubectl get applications.argoproj.io -n "$ARGOCD_NS" \
-            -o jsonpath='{range .items[?(@.spec.syncPolicy.automated)]}{.metadata.name}={.status.sync.status}/{.status.health.status}{"\n"}{end}' 2>/dev/null \
-            | grep -v '=Synced/Healthy$' || true)
-        if [[ -z "$pending" ]]; then echo "  all automated Applications are Synced/Healthy"; break; fi
-        if (( SECONDS >= deadline )); then echo "  still converging after ${CONVERGE_TIMEOUT}s: $(tr '\n' ' ' <<<"$pending")"; break; fi
+        apps=$(kubectl get applications.argoproj.io -n "$ARGOCD_NS" \
+            -o jsonpath='{range .items[?(@.spec.syncPolicy.automated)]}{.metadata.name}={.status.sync.status}/{.status.health.status}{"\n"}{end}' 2>/dev/null || true)
+        pending=$(grep -v '^$' <<<"$apps" | grep -v '=Synced/Healthy$' || true)
+        if [[ -n "$apps" && -z "$pending" ]]; then echo "  all automated Applications are Synced/Healthy"; break; fi
+        if (( SECONDS >= deadline )); then echo "  still converging after ${CONVERGE_TIMEOUT}s: ${pending:-<no automated apps>}"; break; fi
         sleep 15
     done
 fi
@@ -90,7 +98,7 @@ for env in dev staging prod; do
     destination=$(kubectl get application "$app" -n "$ARGOCD_NS" -o jsonpath='{.spec.destination.namespace}' 2>/dev/null || echo "")
     if [[ "$destination" == "$apps_ns" ]]; then pass "$app destination=$apps_ns"; else fail "$app destination=$destination"; fi
     parameters=$(kubectl get application "$app" -n "$ARGOCD_NS" -o jsonpath='{range .spec.source.helm.parameters[*]}{.name}={.value}{"\n"}{end}' 2>/dev/null || echo "")
-    for expected in "namespaces.apps=$apps_ns" "namespaces.ui=$ui_ns" "gateway.createClass=false" "metallb.enabled=false" "observability.enabled=false"; do
+    for expected in "namespaces.apps=$apps_ns" "namespaces.ui=$ui_ns" "gateway.createClass=false" "priorityClasses.enabled=false" "metallb.enabled=false" "observability.enabled=false"; do
         if grep -qx "$expected" <<<"$parameters"; then pass "$app parameter $expected"; else fail "$app missing parameter $expected"; fi
     done
 
@@ -137,7 +145,7 @@ else
         gateway=$(kubectl get gateway apollo-gateway -n "$apps_ns" -o jsonpath='{.status.conditions[?(@.type=="Programmed")].status}' 2>/dev/null || echo "")
         if [[ "$gateway" == "True" ]]; then pass "$env gateway Programmed"; else fail "$env gateway status=$gateway"; fi
     done
-    for workload in grafana loki tempo; do
+    for workload in grafana loki tempo alertmanager alert-receiver blackbox; do
         ready=$(kubectl get deployment "$workload" -n apollo-observability -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo 0)
         [[ "$ready" -ge 1 ]] && pass "observability deployment/$workload ready=$ready" || fail "observability deployment/$workload not ready"
     done
@@ -154,6 +162,15 @@ else
     if [[ "$original" != "1" ]]; then
         fail "dev booking replicas=$original before drift test (expected 1)"
     else
+        DRIFT_PATCHED=true
+        restore_booking_drift() {
+            if [[ "${DRIFT_PATCHED:-false}" == "true" ]]; then
+                kubectl patch deployment booking -n "$dev_ns" --type merge -p '{"spec":{"replicas":1}}' >/dev/null 2>&1 || true
+            fi
+        }
+        trap restore_booking_drift EXIT
+        trap 'exit 130' INT
+        trap 'exit 143' TERM
         kubectl patch deployment booking -n "$dev_ns" --type merge -p '{"spec":{"replicas":2}}' >/dev/null
         # Avoid waiting for the normal reconciliation interval; this requests
         # an immediate comparison, after which automated selfHeal must revert.
@@ -165,7 +182,12 @@ else
             if [[ "$replicas" == "1" ]]; then restored=true; break; fi
             sleep 2
         done
-        if [[ "$restored" == "true" ]]; then pass "dev booking replicas self-healed 2 -> 1"; else fail "Argo CD did not self-heal dev booking replicas within 90s"; fi
+        if [[ "$restored" == "true" ]]; then
+            DRIFT_PATCHED=false
+            pass "dev booking replicas self-healed 2 -> 1"
+        else
+            fail "Argo CD did not self-heal dev booking replicas within 90s"
+        fi
     fi
 fi
 

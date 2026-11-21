@@ -30,13 +30,9 @@ spec:
     dev, staging, and prod namespace pairs. A fourth Application owns the
     shared observability platform.
 
-  # Source: this repo. For a kind/dev setup the repoURL is set on each
-  # Application; for a real prod cluster, change to:
-  #   repoURL: https://github.com/darshan-raul/Apollo11.git
-  #   targetRevision: HEAD
-  # and add a `sourceRepos` entry here. We use a wildcard for the demo
-  # so the same AppProject works for both local-path sources and
-  # git/HTTP sources.
+  # Source: this repository, pinned explicitly so unrelated repositories
+  # cannot be deployed through this AppProject. Override with
+  # scripts/bootstrap.sh --repo-url for forks or mirrors.
   sourceRepos:
     - https://github.com/darshan-raul/Apollo11.git
 

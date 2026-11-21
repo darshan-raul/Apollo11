@@ -24,10 +24,11 @@ for env in dev staging prod; do
         --set namespaces.ui="$ui_ns" \
         --set gateway.createClass=false \
         --set gateway.envoy.bundleInstall=false \
+        --set priorityClasses.enabled=false \
         --set metallb.enabled=false \
         --set observability.enabled=false > "$render"
 
-    if grep -Eq '^kind: (Namespace|GatewayClass|IPAddressPool|L2Advertisement)$' "$render"; then
+    if grep -Eq '^kind: (Namespace|GatewayClass|IPAddressPool|L2Advertisement|PriorityClass)$' "$render"; then
         echo "ERROR: $env Application render contains platform-owned resources" >&2
         rm -f "$render"
         exit 1
@@ -38,8 +39,8 @@ for env in dev staging prod; do
         exit 1
     fi
     count=$(grep -c '^kind:' "$render")
-    expected=60
-    [[ "$env" == "prod" ]] && expected=62
+    expected=58
+    [[ "$env" == "prod" ]] && expected=60
     if [[ "$count" -ne "$expected" ]]; then
         echo "ERROR: $env rendered $count resources; expected $expected" >&2
         rm -f "$render"

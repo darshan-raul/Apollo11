@@ -10,6 +10,8 @@ metadata:
     app.kubernetes.io/component: observability
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: grafana
@@ -35,7 +37,7 @@ spec:
             - name: GF_USERS_ALLOW_SIGN_UP
               value: "false"
             - name: GF_AUTH_ANONYMOUS_ENABLED
-              value: "true"
+              value: {{ .Values.observability.grafana.anonymousAccess | quote }}
             - name: GF_AUTH_ANONYMOUS_ORG_ROLE
               value: Viewer
             - name: GF_INSTALL_PLUGINS

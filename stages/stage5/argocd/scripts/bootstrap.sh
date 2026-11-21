@@ -24,8 +24,6 @@
 #     have CreateNamespace=true.
 
 set -euo pipefail
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/context.sh"
-apollo_context_guard
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ARGOCD_DIR="$(dirname "$SCRIPT_DIR")"
@@ -41,8 +39,9 @@ REPO_URL_OVERRIDE=""
 IMAGE_REPOSITORY_OVERRIDE=""
 
 usage() {
+    local code="${1:-1}"
     cat <<EOF
-Usage: $0 [--sync] [--include-prod] [--repo-url URL] [--image-repository REPO]
+Usage: $0 [--sync] [--include-prod] [--repo-url URL] [--image-repository REPO] [--context CTX]
 
 Options:
   --sync            After registering the Applications, force-sync dev
@@ -55,21 +54,26 @@ Options:
   --image-repository REPO
                     Override the shared image repository (for example
                     apollo11 when images are preloaded into kind).
+  --context CTX     Kubernetes context (kind-apollo11 or kind-apollo11-dev)
   --help            Show this help
 EOF
-    exit 1
+    exit "$code"
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --sync)         SYNC=true; shift ;;
-        --include-prod) INCLUDE_PROD=true; shift ;;
-        --repo-url)     REPO_URL_OVERRIDE="$2"; shift 2 ;;
-        --image-repository) IMAGE_REPOSITORY_OVERRIDE="$2"; shift 2 ;;
-        --help)         usage ;;
-        *) echo "Unknown option: $1"; usage ;;
+        --sync)             SYNC=true; shift ;;
+        --include-prod)     INCLUDE_PROD=true; shift ;;
+        --repo-url)         [[ $# -ge 2 ]] || { echo "--repo-url requires a value" >&2; usage 2; }; REPO_URL_OVERRIDE="$2"; shift 2 ;;
+        --image-repository) [[ $# -ge 2 ]] || { echo "--image-repository requires a value" >&2; usage 2; }; IMAGE_REPOSITORY_OVERRIDE="$2"; shift 2 ;;
+        --context)          [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+        --help|-h)          usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 ;;
     esac
 done
+
+source "${SCRIPT_DIR}/../../scripts/context.sh"
+apollo_context_guard
 
 GREEN='\033[0;32m'; CYAN='\033[0;36m'; RED='\033[0;31m'; NC='\033[0m'
 step() { echo -e "${CYAN}▶ $1${NC}"; }
@@ -92,12 +96,19 @@ metallb_bundle="$CHART_DIR/bundles/metallb-native.yaml"
 [[ -f "$metallb_bundle" ]] || fail "missing MetalLB bundle: $metallb_bundle"
 [[ -f "$PLATFORM_FILE" ]] || fail "missing platform manifest: $PLATFORM_FILE"
 kubectl create namespace envoy-gateway-system --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-kubectl apply --server-side -f "$envoy_bundle" >/dev/null
+kubectl apply --server-side --force-conflicts -f "$envoy_bundle" >/dev/null
 kubectl create namespace metallb-system --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 kubectl apply --server-side --force-conflicts -f "$metallb_bundle" >/dev/null
 kubectl wait --for=condition=Established crd/gateways.gateway.networking.k8s.io --timeout=60s >/dev/null || fail "Gateway API CRDs not established"
 kubectl wait --for=condition=Established crd/ipaddresspools.metallb.io --timeout=60s >/dev/null || fail "MetalLB CRDs not established"
 kubectl rollout status deployment/controller -n metallb-system --timeout=120s >/dev/null || fail "MetalLB controller not ready"
+endpoints=""
+for _ in $(seq 1 20); do
+    endpoints=$(kubectl get endpoints metallb-webhook-service -n metallb-system -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null || echo "")
+    [[ -n "$endpoints" ]] && break
+    sleep 3
+done
+[[ -n "$endpoints" ]] || fail "MetalLB webhook did not become ready within 60s"
 kubectl apply -f "$PLATFORM_FILE" >/dev/null
 ok "shared platform and isolated namespaces ready"
 for tenant in dev staging prod; do
@@ -129,7 +140,7 @@ for app_yaml in "$APPS_DIR"/*.yaml; do
             sed -i -E "s|repoURL: https://github.com/darshan-raul/Apollo11(\\.git)?|repoURL: $REPO_URL_OVERRIDE|" "$tmp"
         fi
         if [[ -n "$IMAGE_REPOSITORY_OVERRIDE" ]]; then
-            sed -i "s|value: ghcr.io/darshan-raul/apollo11|value: $IMAGE_REPOSITORY_OVERRIDE|" "$tmp"
+            sed -i -E "s|value: ghcr\\.io/darshan-raul/apollo11(/stage[0-9]+)?|value: $IMAGE_REPOSITORY_OVERRIDE|" "$tmp"
         fi
         kubectl apply -f "$tmp" 2>&1 | tail -1
         rm -f "$tmp"
@@ -178,7 +189,7 @@ echo ""
 echo "  Next steps:"
 echo "    1. Watch:        kubectl get applications -n $TENANT_NS -w"
 echo "    2. Open the UI:  kubectl port-forward svc/argocd-server -n argocd 8080:443 &"
-echo "                     open http://localhost:8080"
+echo "                     open https://localhost:8080"
 echo "    3. Verify:       bash scripts/verify.sh"
 echo ""
 ok "Bootstrap complete"

@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 # Configure a trusted HTTPS probe through the actual Envoy LoadBalancer.
 set -euo pipefail
+usage() {
+  local code="${1:-2}"
+  echo "Usage: $0 [--context kind-apollo11|kind-apollo11-dev]" >&2
+  exit "$code"
+}
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --context) [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+    --help|-h) usage 0 ;;
+    *) echo "Unknown option: $1" >&2; usage 2 ;;
+  esac
+done
 source "$(dirname "$0")/context.sh"
 apollo_context_guard
 ns=apollo-observability

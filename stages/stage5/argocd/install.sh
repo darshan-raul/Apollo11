@@ -22,8 +22,6 @@
 # is a no-op (it patches the namespace, then exits).
 
 set -euo pipefail
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../scripts/context.sh"
-apollo_context_guard
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUNDLE_DIR="$SCRIPT_DIR/bundles"
@@ -36,8 +34,9 @@ OFFLINE=false
 FETCH_ONLY=false
 
 usage() {
+    local code="${1:-1}"
     cat <<EOF
-Usage: $0 [--offline] [--fetch-bundle] [--version vX.Y.Z]
+Usage: $0 [--offline] [--fetch-bundle] [--version vX.Y.Z] [--context CTX]
 
 Options:
   --offline          Use the vendored bundle at bundles/argocd-install.yaml
@@ -46,18 +45,20 @@ Options:
                      bundles/, but don't install. Useful for prepping an
                      air-gapped environment.
   --version VER      ArgoCD version to install (default: $ARGO_VERSION)
+  --context CTX      Kubernetes context (kind-apollo11 or kind-apollo11-dev)
   --help             Show this help
 EOF
-    exit 1
+    exit "$code"
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --offline)       OFFLINE=true; shift ;;
         --fetch-bundle)  FETCH_ONLY=true; shift ;;
-        --version)       ARGO_VERSION="$2"; INSTALL_URL="https://raw.githubusercontent.com/argoproj/argo-cd/${ARGO_VERSION}/manifests/install.yaml"; shift 2 ;;
-        --help)          usage ;;
-        *) echo "Unknown option: $1"; usage ;;
+        --version)       [[ $# -ge 2 ]] || { echo "--version requires a value" >&2; usage 2; }; ARGO_VERSION="$2"; INSTALL_URL="https://raw.githubusercontent.com/argoproj/argo-cd/${ARGO_VERSION}/manifests/install.yaml"; shift 2 ;;
+        --context)       [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+        --help|-h)       usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 ;;
     esac
 done
 
@@ -66,14 +67,8 @@ step() { echo -e "${CYAN}▶ $1${NC}"; }
 ok()   { echo -e "${GREEN}✓ $1${NC}"; }
 fail() { echo -e "${RED}✗ $1${NC}"; exit 1; }
 
-step "0/6 Checking cluster"
-if ! kubectl cluster-info >/dev/null 2>&1; then
-    fail "kubectl cannot reach a cluster. Did you 'kind create cluster'?"
-fi
-ok "cluster reachable"
-
 # ---------------------------------------------------------------------------
-# Fetch-bundle mode
+# Fetch-bundle mode (does not require a Kubernetes cluster)
 # ---------------------------------------------------------------------------
 if [[ "$FETCH_ONLY" == "true" ]]; then
     step "1/1 Fetching ArgoCD $ARGO_VERSION install manifest"
@@ -83,6 +78,15 @@ if [[ "$FETCH_ONLY" == "true" ]]; then
     echo "  You can now run: $0 --offline"
     exit 0
 fi
+
+source "${SCRIPT_DIR}/../scripts/context.sh"
+apollo_context_guard
+
+step "0/6 Checking cluster"
+if ! kubectl cluster-info >/dev/null 2>&1; then
+    fail "kubectl cannot reach a cluster. Did you 'kind create cluster'?"
+fi
+ok "cluster reachable"
 
 # ---------------------------------------------------------------------------
 # Determine manifest source
@@ -169,7 +173,7 @@ if [[ "$PASSWORD_READY" == "true" ]]; then
     echo ""
     echo "  To open the UI:"
     echo "    kubectl port-forward svc/argocd-server -n $ARGOCD_NS 8080:443 &"
-    echo "    open http://localhost:8080"
+    echo "    open https://localhost:8080"
 else
     echo "  (info) initial credential Secret is absent; it may have been consumed on an earlier install"
 fi

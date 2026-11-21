@@ -17,6 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
@@ -48,31 +49,65 @@ func init() {
 	flightServiceURL = getEnv("FLIGHT_SERVICE_URL", "http://flight:8081")
 }
 
+func traceAndSpanFromContext(ctx context.Context) (string, string) {
+	if ctx == nil {
+		return "", ""
+	}
+	sc := trace.SpanFromContext(ctx).SpanContext()
+	if !sc.IsValid() {
+		return "", ""
+	}
+	return sc.TraceID().String(), sc.SpanID().String()
+}
+
 func logJSON(level, service, message, traceID, spanID string, extra ...map[string]interface{}) {
-	if traceID == "" {
-		span := trace.SpanFromContext(context.Background())
-		if span.SpanContext().IsValid() {
-			traceID = span.SpanContext().TraceID().String()
-			if spanID == "" {
-				spanID = span.SpanContext().SpanID().String()
-			}
-		}
-	}
 	entry := map[string]interface{}{
-		"timestamp": time.Now().UTC().Format(time.RFC3339),
-		"level":     level,
-		"service":   service,
-		"trace_id":  traceID,
-		"span_id":   spanID,
-		"message":   message,
+		"timestamp":  time.Now().UTC().Format(time.RFC3339),
+		"level":      level,
+		"service":    service,
+		"request_id": "",
+		"trace_id":   traceID,
+		"span_id":    spanID,
+		"message":    message,
 	}
-	if len(extra) > 0 && extra[0] != nil {
-		for k, v := range extra[0] {
+	for _, m := range extra {
+		for k, v := range m {
 			entry[k] = v
 		}
 	}
 	b, _ := json.Marshal(entry)
 	logger.Println(string(b))
+}
+
+func logContext(ctx context.Context, requestID, level, service, message string, extra ...map[string]interface{}) {
+	traceID, spanID := traceAndSpanFromContext(ctx)
+	entry := map[string]interface{}{
+		"timestamp":  time.Now().UTC().Format(time.RFC3339),
+		"level":      level,
+		"service":    service,
+		"request_id": requestID,
+		"trace_id":   traceID,
+		"span_id":    spanID,
+		"message":    message,
+	}
+	for _, m := range extra {
+		for k, v := range m {
+			entry[k] = v
+		}
+	}
+	b, _ := json.Marshal(entry)
+	logger.Println(string(b))
+}
+
+type flightItem struct {
+	ID             string `json:"id"`
+	FlightNumber   string `json:"flightNumber"`
+	Origin         string `json:"origin"`
+	Destination    string `json:"destination"`
+	DepartureTime  string `json:"departureTime"`
+	ArrivalTime    string `json:"arrivalTime"`
+	AvailableSeats int    `json:"availableSeats"`
+	Status         string `json:"status"`
 }
 
 type SearchResult struct {
@@ -159,7 +194,12 @@ func initOTEL(ctx context.Context, serviceName string) (func(context.Context) er
 
 func prometheusHandler() http.Handler {
 	reg := prometheus.NewRegistry()
-	reg.MustRegister(httpRequestsTotal, httpRequestDurationMs)
+	reg.MustRegister(
+		httpRequestsTotal,
+		httpRequestDurationMs,
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
 	return promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg})
 }
 
@@ -176,7 +216,7 @@ func metricsMiddleware(service string) gin.HandlerFunc {
 		}
 		status := fmt.Sprintf("%d", c.Writer.Status())
 		httpRequestsTotal.WithLabelValues(service, c.Request.Method, path, status).Inc()
-		httpRequestDurationMs.WithLabelValues(service, c.Request.Method, path).Observe(float64(time.Since(start).Milliseconds()))
+		httpRequestDurationMs.WithLabelValues(service, c.Request.Method, path).Observe(float64(time.Since(start).Microseconds()) / 1000.0)
 	}
 }
 
@@ -230,8 +270,7 @@ func main() {
 	r.GET("/metrics", gin.WrapH(prometheusHandler()))
 
 	r.GET("/api/search", func(c *gin.Context) {
-		requestID, _ := c.Get("request_id")
-		traceID := traceIDFromContext(c.Request.Context())
+		requestID := c.GetString("request_id")
 		ctx := c.Request.Context()
 		origin := c.Query("origin")
 		destination := c.Query("destination")
@@ -256,54 +295,80 @@ func main() {
 			searchURL += "?" + params.Encode()
 		}
 
-		req, _ := http.NewRequestWithContext(ctx, "GET", searchURL, nil)
-		req.Header.Set("X-Request-ID", requestID.(string))
+		clientCtx, clientSpan := otel.Tracer("search-service").Start(ctx,
+			fmt.Sprintf("HTTP GET %s", searchURL),
+			trace.WithSpanKind(trace.SpanKindClient),
+		)
+		req, err := http.NewRequestWithContext(clientCtx, "GET", searchURL, nil)
+		if err != nil {
+			clientSpan.RecordError(err)
+			clientSpan.End()
+			logContext(ctx, requestID, "ERROR", "search-service", fmt.Sprintf("Failed to build request: %v", err))
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
+			return
+		}
+		req.Header.Set("X-Request-ID", requestID)
 		// Inject W3C traceparent so the flight service span becomes a child
-		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
+		otel.GetTextMapPropagator().Inject(clientCtx, propagation.HeaderCarrier(req.Header))
 
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Do(req)
 		if err != nil {
-			logJSON("ERROR", "search-service", fmt.Sprintf("Flight service call failed: %v", err), traceID, "", nil)
+			clientSpan.RecordError(err)
+			clientSpan.End()
+			logContext(ctx, requestID, "ERROR", "search-service", fmt.Sprintf("Flight service call failed: %v", err))
 			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
 			return
 		}
 		defer resp.Body.Close()
 
-		body, _ := io.ReadAll(resp.Body)
-		var result map[string]interface{}
-		decodeErr := json.Unmarshal(body, &result)
+		clientSpan.SetAttributes(
+			semconv.HTTPResponseStatusCode(resp.StatusCode),
+			semconv.URLFull(searchURL),
+		)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			clientSpan.RecordError(readErr)
+			clientSpan.End()
+			logContext(ctx, requestID, "ERROR", "search-service", fmt.Sprintf("Failed to read flight response: %v", readErr))
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
+			return
+		}
+		clientSpan.End()
+
+		var payload struct {
+			Flights []flightItem `json:"flights"`
+		}
+		decodeErr := json.Unmarshal(body, &payload)
 
 		// An upstream failure is not an empty result set.
-		flightsRaw, ok := result["flights"].([]interface{})
-		if resp.StatusCode != http.StatusOK || decodeErr != nil || !ok {
-			logJSON("ERROR", "search-service", fmt.Sprintf("Flight service returned HTTP %d", resp.StatusCode), traceID, "", nil)
+		if resp.StatusCode != http.StatusOK || decodeErr != nil || payload.Flights == nil {
+			logContext(ctx, requestID, "ERROR", "search-service", fmt.Sprintf("Flight service returned HTTP %d", resp.StatusCode))
 			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
 			return
 		}
 
-		results := []SearchResult{}
-		for _, f := range flightsRaw {
-			fm := f.(map[string]interface{})
-			depStr, _ := fm["departureTime"].(string)
-			arrStr, _ := fm["arrivalTime"].(string)
-			dep, _ := time.Parse(time.RFC3339, depStr)
-			arr, _ := time.Parse(time.RFC3339, arrStr)
-			duration := int(arr.Sub(dep).Minutes())
-			avail, _ := fm["availableSeats"].(float64)
+		results := make([]SearchResult, 0, len(payload.Flights))
+		for _, fm := range payload.Flights {
+			dep, depErr := time.Parse(time.RFC3339, fm.DepartureTime)
+			arr, arrErr := time.Parse(time.RFC3339, fm.ArrivalTime)
+			duration := 0
+			if depErr == nil && arrErr == nil && arr.After(dep) {
+				duration = int(arr.Sub(dep).Minutes())
+			}
 			results = append(results, SearchResult{
-				ID:             fm["id"].(string),
-				FlightNumber:   fm["flightNumber"].(string),
-				Origin:         fm["origin"].(string),
-				Destination:    fm["destination"].(string),
-				DepartureTime:  depStr,
-				ArrivalTime:    arrStr,
+				ID:             fm.ID,
+				FlightNumber:   fm.FlightNumber,
+				Origin:         fm.Origin,
+				Destination:    fm.Destination,
+				DepartureTime:  fm.DepartureTime,
+				ArrivalTime:    fm.ArrivalTime,
 				Duration:       duration,
-				AvailableSeats: int(avail),
-				Status:         fm["status"].(string),
+				AvailableSeats: fm.AvailableSeats,
+				Status:         fm.Status,
 			})
 		}
-		logJSON("INFO", "search-service", "Search completed", traceID, "", map[string]interface{}{"count": len(results)})
+		logContext(ctx, requestID, "INFO", "search-service", "Search completed", map[string]interface{}{"count": len(results)})
 		c.JSON(http.StatusOK, gin.H{"results": results, "total": len(results), "page": 1, "limit": 20})
 	})
 

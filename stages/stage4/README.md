@@ -91,9 +91,9 @@ kubectl get priorityclass
 kubectl get deployment booking -n apollo-airlines-apps -o jsonpath="{.spec.template.spec.priorityClassName}"
 # Output: apollo-airlines-app-critical
 
-# Inspect replica distribution across nodes
+# Inspect replica distribution across nodes (non-control-plane workers)
 kubectl get pods -n apollo-airlines-apps -l app=booking -o wide
-# Look at the NODE column: replicas should be spread across apollo11-worker and apollo11-worker2
+# Look at the NODE column: replicas should be spread across available worker nodes
 ```
 
 Inspect PDB health:
@@ -116,6 +116,9 @@ kubectl logs -n apollo-airlines-apps "$POD" -f &
 LOG_PID=$!
 sleep 1
 kubectl delete pod -n apollo-airlines-apps "$POD" --wait=false
+sleep 10
+kill "$LOG_PID" 2>/dev/null || true
+wait "$LOG_PID" 2>/dev/null || true
 ```
 **Expected Observation:** The log outputs:
 `{"level":"INFO","message":"Received SIGTERM, shutting down gracefully"}`
@@ -141,14 +144,46 @@ EOF
 **Expected Observation:** The API server rejects the second eviction:
 `Error from server (TooManyRequests): Cannot evict pod as it would violate the pod disruption budget.`
 
+#### Experiment 3: Reversible Node Taint & Scheduling Gate (G20)
+Discover the first worker node dynamically, apply a `NoSchedule` taint, confirm an untolerated pod pinned to that node remains `Unschedulable`, then remove the taint and delete the probe pod:
+```bash
+TARGET_NODE=$(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' -o jsonpath="{.items[0].metadata.name}")
+kubectl taint node "$TARGET_NODE" apollo11.io/maintenance=true:NoSchedule
+
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: taint-probe
+  namespace: apollo-airlines-apps
+spec:
+  restartPolicy: Never
+  priorityClassName: apollo-airlines-app-low
+  nodeSelector:
+    kubernetes.io/hostname: ${TARGET_NODE}
+  containers:
+    - name: pause
+      image: busybox:1.36
+      command: ["sh", "-c", "sleep 5"]
+      resources:
+        requests: { cpu: 10m, memory: 16Mi }
+        limits: { cpu: 10m, memory: 16Mi }
+EOF
+kubectl describe pod taint-probe -n apollo-airlines-apps | tail -n 10
+# Expected: Pending / Unschedulable because node(s) had untolerated taint apollo11.io/maintenance
+
+kubectl delete pod taint-probe -n apollo-airlines-apps
+kubectl taint node "$TARGET_NODE" apollo11.io/maintenance=true:NoSchedule-
+```
+
 ---
 
 ### 4. Recover: Restoring Cluster Balance
 
 Verify that during the disruption experiment, live traffic through Envoy Gateway continued uninterrupted:
 ```bash
-curl -i -H "Host: booking.apollo.local" http://172.18.0.50/healthz
-# HTTP/1.1 200 OK
+GATEWAY_IP=$(kubectl -n envoy-gateway-system get service -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}')
+curl -fsS -H "Host: booking.apollo.local" "http://${GATEWAY_IP}/healthz"
 ```
 
 Wait for the replacement pod to initialize and confirm PDB recovery:
@@ -169,7 +204,7 @@ kubectl get pdb booking-pdb -n apollo-airlines-apps
 3. **What makes a pod `Guaranteed` QoS vs `Burstable`?**
    `Guaranteed` requires `requests == limits` for both CPU and memory on all containers. `Burstable` has requests lower than limits or limits omitted.
 4. **Why do we assign `apollo-airlines-app-critical` to booking and search?**
-   Under node resource starvation, Kubernetes scheduler evicts pods with lower priority (such as `notification`) to keep revenue-generating booking services alive.
+   Under node resource pressure, the scheduler can preempt lower-priority `Pending`/evictable workloads in favor of high-priority `booking` and `search` pods, while kubelet pressure-evicts lower-QoS pods first (these workloads also run `Guaranteed`).
 5. **How does `topologySpreadConstraints` improve availability in a multi-node cluster?**
    It prevents the scheduler from placing all replicas of a service on the same node, ensuring node failure or drain leaves surviving replicas on other nodes.
 
@@ -183,7 +218,9 @@ stages/stage4/
 ├── code/                              # Snapshot of Stage 3 code + probe endpoints & SIGTERM drains
 ├── scripts/
 │   ├── apply.sh                       # 8-step idempotent orchestrator
-│   ├── verify.sh                      # 149 automated checks including eviction & placement proofs
+│   ├── verify.sh                      # Automated checks including eviction & placement proofs
+│   ├── verify-tls.sh                  # Trusted HTTPS workflow & hostname rejection check
+│   ├── generate-certs.sh              # Self-signed wildcard TLS cert generator
 │   ├── teardown.sh                    # Teardown with zero cluster residue
 │   └── build-images.sh                # Builds & loads all 6 application images
 └── k8s/
@@ -191,7 +228,7 @@ stages/stage4/
     ├── apps/
     │   ├── identity-db/, flight-db/, booking-db/, redis/   # StatefulSets (Guaranteed QoS, 60s grace)
     │   ├── identity/, flight/, booking/, search/, notification/, frontend/ # Deployments (probes, QoS, preStop, topologySpread)
-    ├── jobs/                          # Idempotent seed jobs
+    ├── jobs/                          # Seed ConfigMaps (*-db-seed.yaml) & Jobs (seed-*-db.yaml)
     ├── pdb/                           # booking-pdb, frontend-pdb (minAvailable: 1)
     ├── gateway/                       # Envoy Gateway v1.5.0 + EnvoyProxy + HTTPRoutes
     └── metallb/                       # MetalLB L2 IP pool & advertisement
@@ -206,20 +243,19 @@ Run the verification suite:
 ./stages/stage4/scripts/verify.sh
 ```
 
-**Expected Result: 149/149 checks pass.**
-
 ## Local HTTPS and certificate ownership
 
 The canonical Gateway offers HTTP on port 80 and HTTPS on port 443. Frontend
 API URLs are now baked as HTTPS; rebuild images before switching snapshots.
-The certificate Secret is generated at installation time and preserved across
-reapplication. It is not part of Helm release ownership or the Kustomize base.
-Use `bash scripts/generate-certs.sh --rotate` to renew it deliberately.
+The certificate Secret is generated at installation time by
+`scripts/generate-certs.sh` and preserved across reapplication of the raw
+Stage 4 manifests. Use `bash scripts/generate-certs.sh --rotate` to renew it
+deliberately.
 
 Export `KUBE_CONTEXT=kind-apollo11` (or `kind-apollo11-dev`) before using the
-scripts. For a manual Helm/Kustomize install, create both application namespaces
-and run the certificate generator before submitting Gateway resources. Argo CD
-bootstrap prepares separate certificates in each tenant's namespaces.
+scripts. If applying the `k8s/gateway/` manifests manually, create both
+application namespaces (`k8s/config/00-namespaces.yaml`) and run
+`scripts/generate-certs.sh` before submitting Gateway resources.
 
 Extract the public certificate, then check the actual DNS hostname and trust:
 

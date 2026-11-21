@@ -14,6 +14,7 @@ metadata:
 value: 1000000
 globalDefault: false
 description: "Apollo Airlines app-critical pods (booking, search)."
+
 ---
 # Source: apollo11/templates/config/priorityclass.yaml
 apiVersion: scheduling.k8s.io/v1
@@ -46,6 +47,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
+
 ---
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
@@ -61,6 +63,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
+
 ---
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
@@ -76,6 +79,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
+
 ---
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
@@ -91,6 +95,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
+
 ---
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
@@ -106,6 +111,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
+
 ---
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
@@ -121,6 +127,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
+
 ---
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
@@ -136,6 +143,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
+
 ---
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
@@ -151,6 +159,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
+
 ---
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
@@ -166,6 +175,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
+
 ---
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
@@ -181,6 +191,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
+
 ---
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
@@ -196,6 +207,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
+
 ---
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
@@ -211,6 +223,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: apollo-airlines
     hermes: managed
+
 ---
 # Source: apollo11/templates/config/serviceaccount.yaml
 apiVersion: v1
@@ -245,6 +258,7 @@ type: Opaque
 stringData:
   POSTGRES_PASSWORD: "postgres"
   JWT_SECRET:        "apollo-airlines-dev-secret-change-in-production"
+
 ---
 # Source: apollo11/templates/config/secrets.yaml
 # Kept for symmetry — if future ui-ns workloads need the JWT secret too,
@@ -282,6 +296,7 @@ metadata:
 data:
   NS_APPS: "apollo-airlines-apps"
   NS_UI:   "apollo-airlines-ui"
+
 ---
 # Source: apollo11/templates/config/configmap.yaml
 # UI namespace: keep the VITE_* URLs in a ConfigMap so they're visible to
@@ -322,7 +337,7 @@ metadata:
 data:
   init.sql: |-
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-    
+
     CREATE TABLE IF NOT EXISTS users (
         id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         email            VARCHAR(255) UNIQUE NOT NULL,
@@ -336,6 +351,8 @@ data:
         created_at       TIMESTAMP DEFAULT NOW(),
         updated_at       TIMESTAMP DEFAULT NOW()
     );
+
+
 ---
 # Source: apollo11/templates/infra/postgres.yaml
 apiVersion: v1
@@ -358,6 +375,8 @@ data:
         ('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'admin@apolloairlines.com', '$2b$12$kflBUCuS6Lagf1HRHUX8c.R68u93qgg7CRQ9exm8/x5IhA3s9eT3i', 'Admin', 'User', 'ADMIN123', 'PLATINUM', 'ADMIN', true),
         ('b2c3d4e5-f6a7-8901-bcde-f12345678901', 'passenger@apolloairlines.com', '$2b$12$YK9qpQ28hFUSICvWuiLm5OLjiibWe.zXXDsLiHl7YNrT6adahZ8Gu', 'Passenger', 'User', 'PASS123', 'STANDARD', 'PASSENGER', true)
     ON CONFLICT (id) DO NOTHING;
+
+
 ---
 # Source: apollo11/templates/infra/postgres.yaml
 apiVersion: v1
@@ -375,7 +394,7 @@ metadata:
 data:
   init.sql: |-
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-    
+
     CREATE TABLE IF NOT EXISTS airports (
         id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         code      VARCHAR(3) UNIQUE NOT NULL,
@@ -384,7 +403,7 @@ data:
         country   VARCHAR(100) NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
     );
-    
+
     CREATE TABLE IF NOT EXISTS flights (
         id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         flight_number     VARCHAR(10) NOT NULL,
@@ -399,6 +418,8 @@ data:
         updated_at        TIMESTAMP   DEFAULT NOW(),
         UNIQUE (flight_number, departure_time)
     );
+
+
 ---
 # Source: apollo11/templates/infra/postgres.yaml
 apiVersion: v1
@@ -423,7 +444,7 @@ data:
         ('55555555-5555-5555-1111-111111111111'::uuid, 'LHR', 'Heathrow Airport', 'London', 'UK'),
         ('66666666-6666-6666-1111-111111111111'::uuid, 'JFK', 'John F. Kennedy International', 'New York', 'USA')
     ON CONFLICT (code) DO NOTHING;
-    
+
     INSERT INTO flights (flight_number, origin, destination, departure_time, arrival_time, total_capacity, available_seats, status)
     SELECT
         f.flight_number, f.origin, f.destination,
@@ -440,7 +461,10 @@ data:
         ('AA301', 'BOM', 'LHR', '01:00:00'::time, '10:00:00'::time, 300),
         ('AA401', 'DEL', 'JFK', '02:00:00'::time, '14:00:00'::time, 280)
     ) AS f(flight_number, origin, destination, dep_time, arr_time, total_capacity)
-    CROSS JOIN generate_series(0, 30) AS n;
+    CROSS JOIN generate_series(0, 30) AS n
+    ON CONFLICT (flight_number, departure_time) DO NOTHING;
+
+
 ---
 # Source: apollo11/templates/infra/postgres.yaml
 apiVersion: v1
@@ -458,7 +482,7 @@ metadata:
 data:
   init.sql: |-
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-    
+
     CREATE TABLE IF NOT EXISTS bookings (
         id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         booking_reference VARCHAR(20) UNIQUE NOT NULL,
@@ -469,6 +493,8 @@ data:
         created_at        TIMESTAMP DEFAULT NOW(),
         updated_at        TIMESTAMP DEFAULT NOW()
     );
+
+
 ---
 # Source: apollo11/templates/infra/postgres.yaml
 apiVersion: v1
@@ -487,6 +513,8 @@ data:
   seed.sql: |-
     -- Bookings are created at runtime; seed is empty but kept for symmetry.
     SELECT 1;
+
+
 ---
 # Source: apollo11/templates/apps/booking.yaml
 apiVersion: v1
@@ -509,6 +537,7 @@ spec:
     - port: 8082
       targetPort: 8082
       protocol: TCP
+
 ---
 # Source: apollo11/templates/apps/flight.yaml
 apiVersion: v1
@@ -531,6 +560,7 @@ spec:
     - port: 8081
       targetPort: 8081
       protocol: TCP
+
 ---
 # Source: apollo11/templates/apps/identity.yaml
 apiVersion: v1
@@ -553,6 +583,7 @@ spec:
     - port: 8080
       targetPort: 8080
       protocol: TCP
+
 ---
 # Source: apollo11/templates/apps/notification.yaml
 apiVersion: v1
@@ -575,6 +606,7 @@ spec:
     - port: 8084
       targetPort: 8084
       protocol: TCP
+
 ---
 # Source: apollo11/templates/apps/search.yaml
 apiVersion: v1
@@ -597,6 +629,7 @@ spec:
     - port: 8083
       targetPort: 8083
       protocol: TCP
+
 ---
 # Source: apollo11/templates/infra/postgres.yaml
 # ClusterIP service — the regular DNS name `<db>-db` resolves to this.
@@ -620,6 +653,7 @@ spec:
     - port: 5432
       targetPort: 5432
       protocol: TCP
+
 ---
 # Source: apollo11/templates/infra/postgres.yaml
 # Headless service — wired as `serviceName` on the StatefulSet. Gives the
@@ -645,6 +679,7 @@ spec:
     - port: 5432
       targetPort: 5432
       protocol: TCP
+
 ---
 # Source: apollo11/templates/infra/postgres.yaml
 # ClusterIP service — the regular DNS name `<db>-db` resolves to this.
@@ -668,6 +703,7 @@ spec:
     - port: 5432
       targetPort: 5432
       protocol: TCP
+
 ---
 # Source: apollo11/templates/infra/postgres.yaml
 # Headless service — wired as `serviceName` on the StatefulSet. Gives the
@@ -693,6 +729,7 @@ spec:
     - port: 5432
       targetPort: 5432
       protocol: TCP
+
 ---
 # Source: apollo11/templates/infra/postgres.yaml
 # ClusterIP service — the regular DNS name `<db>-db` resolves to this.
@@ -716,6 +753,7 @@ spec:
     - port: 5432
       targetPort: 5432
       protocol: TCP
+
 ---
 # Source: apollo11/templates/infra/postgres.yaml
 # Headless service — wired as `serviceName` on the StatefulSet. Gives the
@@ -741,6 +779,7 @@ spec:
     - port: 5432
       targetPort: 5432
       protocol: TCP
+
 ---
 # Source: apollo11/templates/infra/redis.yaml
 apiVersion: v1
@@ -763,6 +802,7 @@ spec:
     - port: 6379
       targetPort: 6379
       protocol: TCP
+
 ---
 # Source: apollo11/templates/infra/redis.yaml
 apiVersion: v1
@@ -786,6 +826,7 @@ spec:
     - port: 6379
       targetPort: 6379
       protocol: TCP
+
 ---
 # Source: apollo11/templates/ui/frontend.yaml
 apiVersion: v1
@@ -808,6 +849,7 @@ spec:
     - port: 3000
       targetPort: 3000
       protocol: TCP
+
 ---
 # Source: apollo11/templates/apps/booking.yaml
 apiVersion: apps/v1
@@ -1464,6 +1506,7 @@ spec:
         resources:
           requests:
             storage: 1Gi
+
 ---
 # Source: apollo11/templates/infra/postgres.yaml
 apiVersion: apps/v1
@@ -1560,6 +1603,7 @@ spec:
         resources:
           requests:
             storage: 1Gi
+
 ---
 # Source: apollo11/templates/infra/postgres.yaml
 apiVersion: apps/v1
@@ -1700,9 +1744,13 @@ spec:
               protocol: TCP
           command:
             - redis-server
-            - --appendonly yes
-            - --appendfsync everysec
-            - --save 60 100
+            - --appendonly
+            - "yes"
+            - --appendfsync
+            - everysec
+            - --save
+            - "60"
+            - "100"
           volumeMounts:
             - name: redis-data
               mountPath: /data
@@ -1771,7 +1819,16 @@ spec:
             - -c
             - |
               set -e
-              until pg_isready -h identity-db -U postgres; do echo "Waiting for identity-db..."; sleep 2; done
+              attempts=0
+              until pg_isready -h identity-db -U postgres -d identity; do
+                attempts=$((attempts + 1))
+                if [ "$attempts" -ge 30 ]; then
+                  echo "identity-db did not become ready in time" >&2
+                  exit 1
+                fi
+                echo "Waiting for identity-db..."
+                sleep 2
+              done
               psql -h identity-db -U postgres -d identity -v ON_ERROR_STOP=1 -f /init/seed.sql
               echo "identity DB seeded"
           env:
@@ -1787,6 +1844,7 @@ spec:
         - name: seed-script
           configMap:
             name: identity-db-seed
+
 ---
 # Source: apollo11/templates/jobs/seed.yaml
 apiVersion: batch/v1
@@ -1819,7 +1877,16 @@ spec:
             - -c
             - |
               set -e
-              until pg_isready -h flight-db -U postgres; do echo "Waiting for flight-db..."; sleep 2; done
+              attempts=0
+              until pg_isready -h flight-db -U postgres -d flight; do
+                attempts=$((attempts + 1))
+                if [ "$attempts" -ge 30 ]; then
+                  echo "flight-db did not become ready in time" >&2
+                  exit 1
+                fi
+                echo "Waiting for flight-db..."
+                sleep 2
+              done
               psql -h flight-db -U postgres -d flight -v ON_ERROR_STOP=1 -f /init/seed.sql
               echo "flight DB seeded"
           env:
@@ -1835,6 +1902,7 @@ spec:
         - name: seed-script
           configMap:
             name: flight-db-seed
+
 ---
 # Source: apollo11/templates/jobs/seed.yaml
 apiVersion: batch/v1
@@ -1867,7 +1935,16 @@ spec:
             - -c
             - |
               set -e
-              until pg_isready -h booking-db -U postgres; do echo "Waiting for booking-db..."; sleep 2; done
+              attempts=0
+              until pg_isready -h booking-db -U postgres -d booking; do
+                attempts=$((attempts + 1))
+                if [ "$attempts" -ge 30 ]; then
+                  echo "booking-db did not become ready in time" >&2
+                  exit 1
+                fi
+                echo "Waiting for booking-db..."
+                sleep 2
+              done
               psql -h booking-db -U postgres -d booking -v ON_ERROR_STOP=1 -f /init/seed.sql
               echo "booking DB seeded"
           env:
@@ -1886,10 +1963,10 @@ spec:
 
 ---
 # Source: apollo11/templates/gateway/gateway.yaml
-# The Gateway itself. Listens on port 80 (HTTP). allowedRoutes.namespaces
+# The Gateway itself. Listens on HTTP and optional HTTPS. allowedRoutes.namespaces
 # is set to "All" so HTTPRoutes in any namespace can attach — but cross-
-# namespace attachment still requires a ReferenceGrant in the target
-# namespace (see below).
+# namespace backend references require a ReferenceGrant; attachment is
+# authorized by allowedRoutes.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -1921,6 +1998,7 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
+
 ---
 # Source: apollo11/templates/gateway/gateway.yaml
 # GatewayClass — referenced by every Gateway. The controller name must
@@ -1938,6 +2016,7 @@ metadata:
     hermes: managed
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
+
 ---
 # Source: apollo11/templates/gateway/httproutes.yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -1962,6 +2041,7 @@ spec:
     - backendRefs:
         - name: identity
           port: 8080
+
 ---
 # Source: apollo11/templates/gateway/httproutes.yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -1986,6 +2066,7 @@ spec:
     - backendRefs:
         - name: flight
           port: 8081
+
 ---
 # Source: apollo11/templates/gateway/httproutes.yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -2010,6 +2091,7 @@ spec:
     - backendRefs:
         - name: booking
           port: 8082
+
 ---
 # Source: apollo11/templates/gateway/httproutes.yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -2034,6 +2116,7 @@ spec:
     - backendRefs:
         - name: search
           port: 8083
+
 ---
 # Source: apollo11/templates/gateway/httproutes.yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -2058,11 +2141,12 @@ spec:
     - backendRefs:
         - name: notification
           port: 8084
+
 ---
 # Source: apollo11/templates/gateway/httproutes.yaml
 # Frontend route — cross-namespace. The route lives in apollo-airlines-ui
-# but attaches to the Gateway in apollo-airlines-apps. ReferenceGrant in
-# apollo-airlines-ui authorizes this.
+# but attaches to the Gateway in apollo-airlines-apps via allowedRoutes.
+# Its backend is in the Route namespace and needs no ReferenceGrant.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -2085,6 +2169,7 @@ spec:
     - backendRefs:
         - name: frontend
           port: 3000
+
 ---
 # Source: apollo11/templates/gateway/metallb.yaml
 apiVersion: metallb.io/v1beta1
@@ -2102,6 +2187,7 @@ metadata:
 spec:
   addresses:
     - 172.18.0.50-172.18.0.100
+
 ---
 # Source: apollo11/templates/gateway/metallb.yaml
 apiVersion: metallb.io/v1beta1
@@ -2122,7 +2208,7 @@ spec:
 
 ---
 # Source: apollo11/templates/gateway/httproutes.yaml
-# Cross-namespace ReferenceGrant — required because HTTPRoutes in
+# Reference-only cross-namespace backend grant for an HTTPRoute in
 # apollo-airlines-apps (5 of them, above) need to attach to the frontend
 # Service in apollo-airlines-ui, and HTTPRoutes in apollo-airlines-ui
 # (1 of them, frontend) attach to the Gateway in apollo-airlines-apps.

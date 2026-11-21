@@ -2,11 +2,24 @@
 # Bounded booking-creation outage; restore Flight and cancel the recovery booking.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+usage() {
+  local code="${1:-2}"
+  echo "Usage: $0 [--context kind-apollo11|kind-apollo11-dev]" >&2
+  exit "$code"
+}
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --context) [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+    --help|-h) usage 0 ;;
+    *) echo "Unknown option: $1" >&2; usage 2 ;;
+  esac
+done
 source "$SCRIPT_DIR/context.sh"
 apollo_context_guard
 NS=apollo-airlines-apps
 POD="apollo-slo-$RANDOM"
 ORIGINAL_REPLICAS=$(kubectl get deployment flight -n "$NS" -o jsonpath='{.spec.replicas}')
+[[ "$ORIGINAL_REPLICAS" =~ ^[1-9][0-9]*$ ]] || { echo "Refusing SLO lab with unexpected flight replica count '${ORIGINAL_REPLICAS:-<empty>}' (expected >= 1)" >&2; exit 1; }
 BOOKING_ID=""
 TOKEN=""
 RESTORED=false

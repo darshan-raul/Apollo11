@@ -13,13 +13,13 @@ spec:
       interval: 30s
       rules:
         - alert: ApolloServiceDown
-          expr: up{namespace="{{ .Values.namespaces.apps }}"} == 0
+          expr: up{namespace=~"apollo-airlines-(.*-)?apps"} == 0
           for: 2m
           labels: { severity: critical, team: platform }
           annotations:
             summary: Apollo backend metrics target is down
         - alert: ApolloServiceFlapping
-          expr: changes(up{namespace="{{ .Values.namespaces.apps }}"}[10m]) > 6
+          expr: changes(up{namespace=~"apollo-airlines-(.*-)?apps"}[10m]) > 6
           labels: { severity: warning, team: platform }
           annotations:
             summary: Apollo backend metrics target is flapping

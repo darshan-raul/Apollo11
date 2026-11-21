@@ -1,9 +1,28 @@
 #!/usr/bin/env bash
 # Add observability cumulatively to an installed Stage 6 baseline.
-# Usage: signals-lab.sh render|apply 1..6 [helm|kustomize]
+# Usage: signals-lab.sh [--context CTX] render|apply 1..6 [helm|kustomize]
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STAGE_DIR="$(dirname "$SCRIPT_DIR")"
+usage() {
+  local code="${1:-2}"
+  echo "Usage: $0 [--context kind-apollo11|kind-apollo11-dev] render|apply 1..6 [helm|kustomize]" >&2
+  exit "$code"
+}
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --context) [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+    --help|-h) usage 0 ;;
+    -*) echo "Unknown option: $1" >&2; usage 2 ;;
+    *) POSITIONAL+=("$1"); shift ;;
+  esac
+done
+if [[ ${#POSITIONAL[@]} -gt 0 ]]; then
+  set -- "${POSITIONAL[@]}"
+else
+  set --
+fi
 ACTION="${1:-render}"
 SUBSTAGE="${2:-1}"
 MODE="${3:-helm}"
@@ -39,6 +58,7 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 kubectl rollout status statefulset/prometheus-apollo -n apollo-observability --timeout=240s
+kubectl rollout status deployment/blackbox -n apollo-observability --timeout=240s
 if [[ "$SUBSTAGE" -ge 2 ]]; then kubectl rollout status deployment/grafana -n apollo-observability --timeout=240s; fi
 if [[ "$SUBSTAGE" -ge 3 ]]; then
   kubectl rollout status deployment/alertmanager -n apollo-observability --timeout=240s

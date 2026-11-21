@@ -67,6 +67,7 @@ spec:
       - PruneLast=true
       - ServerSideApply=true
       - ApplyOutOfSyncOnly=true
+      - RespectIgnoreDifferences=true
     retry:
       limit: 5
       backoff:
@@ -75,6 +76,11 @@ spec:
         maxDuration: 3m
 
   ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: search
+      jsonPointers:
+        - /spec/replicas
     - group: admissionregistration.k8s.io
       kind: ValidatingWebhookConfiguration
       jsonPointers:

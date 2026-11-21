@@ -2,23 +2,77 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLUSTER=""
+CONTEXT="${KUBE_CONTEXT:-}"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --help|-h)
+            echo "Usage: $0 [--context kind-apollo11|kind-apollo11-dev] [--cluster NAME]"
+            exit 0
+            ;;
+        --context)
+            [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; exit 2; }
+            CONTEXT="$2"; shift 2
+            ;;
+        --cluster)
+            [[ $# -ge 2 ]] || { echo "--cluster requires a value" >&2; exit 2; }
+            CLUSTER="$2"; shift 2
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            exit 2
+            ;;
+    esac
+done
+
+CONTEXT="${CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"
 CLUSTER="${CLUSTER:-apollo11}"
 ALLOWED_CONTEXTS=("kind-${CLUSTER}" "kind-${CLUSTER}-dev")
 
-CURRENT_CTX="$(kubectl config current-context 2>/dev/null || true)"
 ctx_matched=false
 for allowed in "${ALLOWED_CONTEXTS[@]}"; do
-    if [[ "$CURRENT_CTX" == "$allowed" ]]; then
+    if [[ "$CONTEXT" == "$allowed" ]]; then
         ctx_matched=true
         break
     fi
 done
 
 if [[ "$ctx_matched" != "true" ]]; then
-    echo "Refusing to run against context '$CURRENT_CTX'."
-    echo "This script only targets one of: ${ALLOWED_CONTEXTS[*]}"
-    exit 1
+    echo "Refusing to run against context '${CONTEXT:-<none>}'." >&2
+    echo "This script only targets one of: ${ALLOWED_CONTEXTS[*]}" >&2
+    exit 2
 fi
+
+kube() {
+    kubectl --context "$CONTEXT" "$@"
+}
+
+TARGET_NODE=""
+SIGTERM_LOG=""
+LOG_PID=""
+BOOKING_ID=""
+TOKEN=""
+GATEWAY_IP=""
+
+restore_stage4_lab() {
+    if [[ -n "$LOG_PID" ]]; then
+        kill "$LOG_PID" 2>/dev/null || true
+        wait "$LOG_PID" 2>/dev/null || true
+    fi
+    [[ -n "$SIGTERM_LOG" ]] && rm -f "$SIGTERM_LOG"
+    kube delete pod g20-taint-probe -n apollo-airlines-apps --ignore-not-found --wait=false >/dev/null 2>&1 || true
+    if [[ -n "$TARGET_NODE" ]]; then
+        kube taint node "$TARGET_NODE" apollo11.io/maintenance=true:NoSchedule- >/dev/null 2>&1 || true
+    fi
+    if [[ -n "$BOOKING_ID" && -n "$TOKEN" && -n "$GATEWAY_IP" ]]; then
+        curl -sS --max-time 10 -X DELETE -H "Host: booking.apollo.local" \
+            -H "Authorization: Bearer $TOKEN" \
+            "http://${GATEWAY_IP}/api/bookings/${BOOKING_ID}" >/dev/null 2>&1 || true
+    fi
+}
+trap restore_stage4_lab EXIT
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -49,7 +103,7 @@ header() {
 
 header "1. Core Namespaces"
 for ns in apollo-airlines-apps apollo-airlines-ui envoy-gateway-system metallb-system; do
-    if kubectl get namespace "$ns" >/dev/null 2>&1; then
+    if kube get namespace "$ns" >/dev/null 2>&1; then
         pass "Namespace $ns exists"
     else
         fail "Namespace $ns is missing"
@@ -75,7 +129,7 @@ EXPECTED_SAS=(
 for sa_entry in "${EXPECTED_SAS[@]}"; do
     ns="${sa_entry%%:*}"
     sa="${sa_entry##*:}"
-    automount=$(kubectl get serviceaccount "$sa" -n "$ns" -o jsonpath='{.automountServiceAccountToken}' 2>/dev/null || echo "")
+    automount=$(kube get serviceaccount "$sa" -n "$ns" -o jsonpath='{.automountServiceAccountToken}' 2>/dev/null || echo "")
     if [[ "$automount" == "false" ]]; then
         pass "SA $ns/$sa exists (automount=false)"
     else
@@ -85,7 +139,8 @@ done
 
 header "3. StatefulSets & Workload Identity"
 for sts in identity-db flight-db booking-db redis; do
-    ready=$(kubectl get statefulset "$sts" -n apollo-airlines-apps -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+    ready=$(kube get statefulset "$sts" -n apollo-airlines-apps -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+    ready="${ready:-0}"
     if [[ "$ready" -ge 1 ]]; then
         pass "StatefulSet apollo-airlines-apps/$sts ready (replicas=$ready)"
     else
@@ -94,7 +149,7 @@ for sts in identity-db flight-db booking-db redis; do
 done
 
 for pod in identity-db-0 flight-db-0 booking-db-0 redis-0; do
-    status=$(kubectl get pod "$pod" -n apollo-airlines-apps -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "")
+    status=$(kube get pod "$pod" -n apollo-airlines-apps -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "")
     if [[ "$status" == "True" ]]; then
         pass "StatefulSet Pod apollo-airlines-apps/$pod is Ready"
     else
@@ -110,7 +165,7 @@ EXPECTED_PVCS=(
     "redis-data-redis-0"
 )
 for pvc in "${EXPECTED_PVCS[@]}"; do
-    phase=$(kubectl get pvc "$pvc" -n apollo-airlines-apps -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+    phase=$(kube get pvc "$pvc" -n apollo-airlines-apps -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
     if [[ "$phase" == "Bound" ]]; then
         pass "PVC $pvc is Bound (1Gi)"
     else
@@ -120,7 +175,7 @@ done
 
 header "5. Headless Services & CoreDNS Resolution"
 for svc in identity-db-headless flight-db-headless booking-db-headless redis-headless; do
-    cip=$(kubectl get service "$svc" -n apollo-airlines-apps -o jsonpath='{.spec.clusterIP}' 2>/dev/null || echo "")
+    cip=$(kube get service "$svc" -n apollo-airlines-apps -o jsonpath='{.spec.clusterIP}' 2>/dev/null || echo "")
     if [[ "$cip" == "None" ]]; then
         pass "Headless Service $svc has clusterIP=None"
     else
@@ -130,22 +185,23 @@ done
 
 header "6. Application Deployments & Seed Jobs"
 for dep in identity flight booking search notification; do
-    ready=$(kubectl get deployment "$dep" -n apollo-airlines-apps -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+    ready=$(kube get pods -n apollo-airlines-apps -l "app=$dep" -o jsonpath='{range .items[*]}{.metadata.deletionTimestamp}{"|"}{range .status.conditions[?(@.type=="Ready")]}{.status}{end}{"\n"}{end}' 2>/dev/null | awk -F'|' '$1=="" && $2=="True"{c++} END{print c+0}')
     if [[ "$ready" -ge 2 ]]; then
-        pass "Deployment apollo-airlines-apps/$dep ready ($ready replicas)"
+        pass "Deployment apollo-airlines-apps/$dep ready ($ready non-terminating replicas)"
     else
-        fail "Deployment apollo-airlines-apps/$dep not ready ($ready replicas)"
+        fail "Deployment apollo-airlines-apps/$dep not ready ($ready non-terminating replicas)"
     fi
 done
-fe_ready=$(kubectl get deployment frontend -n apollo-airlines-ui -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+fe_ready=$(kube get pods -n apollo-airlines-ui -l app=frontend -o jsonpath='{range .items[*]}{.metadata.deletionTimestamp}{"|"}{range .status.conditions[?(@.type=="Ready")]}{.status}{end}{"\n"}{end}' 2>/dev/null | awk -F'|' '$1=="" && $2=="True"{c++} END{print c+0}')
 if [[ "$fe_ready" -ge 2 ]]; then
-    pass "Deployment apollo-airlines-ui/frontend ready ($fe_ready replicas)"
+    pass "Deployment apollo-airlines-ui/frontend ready ($fe_ready non-terminating replicas)"
 else
-    fail "Deployment apollo-airlines-ui/frontend not ready ($fe_ready replicas)"
+    fail "Deployment apollo-airlines-ui/frontend not ready ($fe_ready non-terminating replicas)"
 fi
 
 for job in seed-identity-db seed-flight-db seed-booking-db; do
-    succ=$(kubectl get job "$job" -n apollo-airlines-apps -o jsonpath='{.status.succeeded}' 2>/dev/null || echo "0")
+    succ=$(kube get job "$job" -n apollo-airlines-apps -o jsonpath='{.status.succeeded}' 2>/dev/null || echo "0")
+    succ="${succ:-0}"
     if [[ "$succ" -ge 1 ]]; then
         pass "Database seed job apollo-airlines-apps/$job completed"
     else
@@ -154,21 +210,24 @@ for job in seed-identity-db seed-flight-db seed-booking-db; do
 done
 
 header "7. Database Seed Integrity"
-user_cnt=$(kubectl exec -n apollo-airlines-apps identity-db-0 -- psql -U postgres -d identity -tAc "SELECT count(*) FROM users;" 2>/dev/null || echo "0")
+user_cnt=$(kube exec -n apollo-airlines-apps identity-db-0 -- psql -U postgres -d identity -tAc "SELECT count(*) FROM users;" 2>/dev/null || echo "0")
+user_cnt="${user_cnt:-0}"
 if [[ "$user_cnt" -ge 2 ]]; then
     pass "identity-db users table has $user_cnt rows"
 else
     fail "identity-db users table has $user_cnt rows (expected >= 2)"
 fi
 
-airport_cnt=$(kubectl exec -n apollo-airlines-apps flight-db-0 -- psql -U postgres -d flight -tAc "SELECT count(*) FROM airports;" 2>/dev/null || echo "0")
+airport_cnt=$(kube exec -n apollo-airlines-apps flight-db-0 -- psql -U postgres -d flight -tAc "SELECT count(*) FROM airports;" 2>/dev/null || echo "0")
+airport_cnt="${airport_cnt:-0}"
 if [[ "$airport_cnt" -ge 6 ]]; then
     pass "flight-db airports table has $airport_cnt rows"
 else
     fail "flight-db airports table has $airport_cnt rows (expected >= 6)"
 fi
 
-flight_cnt=$(kubectl exec -n apollo-airlines-apps flight-db-0 -- psql -U postgres -d flight -tAc "SELECT count(*) FROM flights;" 2>/dev/null || echo "0")
+flight_cnt=$(kube exec -n apollo-airlines-apps flight-db-0 -- psql -U postgres -d flight -tAc "SELECT count(*) FROM flights;" 2>/dev/null || echo "0")
+flight_cnt="${flight_cnt:-0}"
 if [[ "$flight_cnt" -ge 180 ]]; then
     pass "flight-db flights table has $flight_cnt rows"
 else
@@ -176,39 +235,38 @@ else
 fi
 
 header "8. Envoy Gateway & MetalLB Access Stack"
-gw_status=$(kubectl get gateway apollo-gateway -n apollo-airlines-apps -o jsonpath='{.status.conditions[?(@.type=="Programmed")].status}' 2>/dev/null || echo "")
+gw_status=$(kube get gateway apollo-gateway -n apollo-airlines-apps -o jsonpath='{.status.conditions[?(@.type=="Programmed")].status}' 2>/dev/null || echo "")
 if [[ "$gw_status" == "True" ]]; then
     pass "Gateway apollo-gateway is Programmed"
 else
     fail "Gateway apollo-gateway is not Programmed (status=$gw_status)"
 fi
 
-GATEWAY_IP=$(kubectl get service -n envoy-gateway-system -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+GATEWAY_IP=$(kube get service -n envoy-gateway-system -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
 if [[ -n "$GATEWAY_IP" ]]; then
     pass "MetalLB assigned LoadBalancer IP: $GATEWAY_IP"
+    for host in identity.apollo.local flight.apollo.local booking.apollo.local search.apollo.local; do
+        code=$(curl -s --max-time 15 -o /dev/null -w "%{http_code}" -H "Host: $host" "http://${GATEWAY_IP}/healthz" 2>/dev/null || echo "000")
+        if [[ "$code" == "200" ]]; then
+            pass "Envoy Gateway HTTPRoute to $host returned HTTP 200"
+        else
+            fail "Envoy Gateway HTTPRoute to $host returned HTTP $code"
+        fi
+    done
+    fe_code=$(curl -s --max-time 15 -o /dev/null -w "%{http_code}" -H "Host: frontend.apollo.local" "http://${GATEWAY_IP}/" 2>/dev/null || echo "000")
+    if [[ "$fe_code" == "200" ]]; then
+        pass "Envoy Gateway frontend HTTPRoute returned HTTP 200"
+    else
+        fail "Envoy Gateway frontend HTTPRoute returned HTTP $fe_code"
+    fi
 else
     fail "MetalLB did not assign an IP to Envoy Gateway service"
-fi
-
-for host in identity.apollo.local flight.apollo.local booking.apollo.local search.apollo.local; do
-    code=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: $host" "http://${GATEWAY_IP}/healthz" 2>/dev/null || echo "000")
-    if [[ "$code" == "200" ]]; then
-        pass "Envoy Gateway HTTPRoute to $host returned HTTP 200"
-    else
-        fail "Envoy Gateway HTTPRoute to $host returned HTTP $code"
-    fi
-done
-fe_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: frontend.apollo.local" "http://${GATEWAY_IP}/" 2>/dev/null || echo "000")
-if [[ "$fe_code" == "200" ]]; then
-    pass "Envoy Gateway frontend HTTPRoute returned HTTP 200"
-else
-    fail "Envoy Gateway frontend HTTPRoute returned HTTP $fe_code"
 fi
 
 header "9. Stage 4: Probes Configuration (Startup, Liveness, Readiness)"
 for dep in identity flight booking search notification; do
     for probe in startupProbe livenessProbe readinessProbe; do
-        path=$(kubectl get deploy "$dep" -n apollo-airlines-apps -o jsonpath="{.spec.template.spec.containers[0].${probe}.httpGet.path}" 2>/dev/null || echo "")
+        path=$(kube get deploy "$dep" -n apollo-airlines-apps -o jsonpath="{.spec.template.spec.containers[0].${probe}.httpGet.path}" 2>/dev/null || echo "")
         if [[ -n "$path" ]]; then
             pass "deploy/$dep has $probe ($path)"
         else
@@ -218,7 +276,7 @@ for dep in identity flight booking search notification; do
 done
 
 for probe in startupProbe livenessProbe readinessProbe; do
-    path=$(kubectl get deploy frontend -n apollo-airlines-ui -o jsonpath="{.spec.template.spec.containers[0].${probe}.httpGet.path}" 2>/dev/null || echo "")
+    path=$(kube get deploy frontend -n apollo-airlines-ui -o jsonpath="{.spec.template.spec.containers[0].${probe}.httpGet.path}" 2>/dev/null || echo "")
     if [[ -n "$path" ]]; then
         pass "deploy/frontend has $probe ($path)"
     else
@@ -228,14 +286,14 @@ done
 
 for sts in identity-db flight-db booking-db redis; do
     for probe in livenessProbe readinessProbe; do
-        cmd=$(kubectl get statefulset "$sts" -n apollo-airlines-apps -o jsonpath="{.spec.template.spec.containers[0].${probe}.exec.command[0]}" 2>/dev/null || echo "")
+        cmd=$(kube get statefulset "$sts" -n apollo-airlines-apps -o jsonpath="{.spec.template.spec.containers[0].${probe}.exec.command[0]}" 2>/dev/null || echo "")
         if [[ -n "$cmd" ]]; then
             pass "statefulset/$sts has $probe ($cmd)"
         else
             fail "statefulset/$sts missing $probe"
         fi
     done
-    sp=$(kubectl get statefulset "$sts" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.containers[0].startupProbe}' 2>/dev/null || echo "")
+    sp=$(kube get statefulset "$sts" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.containers[0].startupProbe}' 2>/dev/null || echo "")
     if [[ -z "$sp" || "$sp" == "<nil>" || "$sp" == "null" ]]; then
         pass "statefulset/$sts has no startupProbe (implicit via initdb/redis init)"
     else
@@ -255,7 +313,7 @@ for app_info in "apollo-airlines-apps:identity:8080" \
     svc="${remainder%%:*}"
     port="${remainder##*:}"
     for p in startup live ready; do
-        resp=$(kubectl exec -n "$ns" "deploy/$svc" -- sh -c "wget -q -O- http://127.0.0.1:$port/healthz/$p 2>/dev/null || python3 -c \"import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:$port/healthz/$p').read().decode())\" 2>/dev/null || echo FAIL" 2>/dev/null | tr -d '\n' || echo "FAIL")
+        resp=$(kube exec -n "$ns" "deploy/$svc" -- sh -c "wget -q -O- http://127.0.0.1:$port/healthz/$p 2>/dev/null || python3 -c \"import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:$port/healthz/$p').read().decode())\" 2>/dev/null || echo FAIL" 2>/dev/null | tr -d '\n' || echo "FAIL")
         if [[ "$resp" != "FAIL" && -n "$resp" ]]; then
             pass "Pod $svc live probe /healthz/$p responded: $(echo "$resp" | head -c 25)"
         else
@@ -266,19 +324,19 @@ done
 
 header "11. Stage 4: Guaranteed QoS & Lifecycle PreStop Hooks"
 for dep in identity flight booking search notification; do
-    qos=$(kubectl get pods -n apollo-airlines-apps -l app="$dep" -o jsonpath='{.items[0].status.qosClass}' 2>/dev/null || echo "")
+    qos=$(kube get pods -n apollo-airlines-apps -l app="$dep" -o jsonpath='{.items[0].status.qosClass}' 2>/dev/null || echo "")
     if [[ "$qos" == "Guaranteed" ]]; then
         pass "Pod $dep QoS class is Guaranteed (requests == limits)"
     else
         fail "Pod $dep QoS class is '$qos' (expected Guaranteed)"
     fi
-    grace=$(kubectl get deploy "$dep" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.terminationGracePeriodSeconds}' 2>/dev/null || echo "")
+    grace=$(kube get deploy "$dep" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.terminationGracePeriodSeconds}' 2>/dev/null || echo "")
     if [[ "$grace" == "30" ]]; then
         pass "deploy/$dep terminationGracePeriodSeconds is 30"
     else
         fail "deploy/$dep terminationGracePeriodSeconds is '$grace' (expected 30)"
     fi
-    prestop=$(kubectl get deploy "$dep" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.containers[0].lifecycle.preStop.exec.command[0]}' 2>/dev/null || echo "")
+    prestop=$(kube get deploy "$dep" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.containers[0].lifecycle.preStop.exec.command[0]}' 2>/dev/null || echo "")
     if [[ -n "$prestop" ]]; then
         pass "deploy/$dep has lifecycle preStop hook configured"
     else
@@ -286,13 +344,19 @@ for dep in identity flight booking search notification; do
     fi
 done
 
-fe_qos=$(kubectl get pods -n apollo-airlines-ui -l app=frontend -o jsonpath='{.items[0].status.qosClass}' 2>/dev/null || echo "")
+fe_qos=$(kube get pods -n apollo-airlines-ui -l app=frontend -o jsonpath='{.items[0].status.qosClass}' 2>/dev/null || echo "")
 if [[ "$fe_qos" == "Guaranteed" ]]; then
     pass "Pod frontend QoS class is Guaranteed"
 else
     fail "Pod frontend QoS class is '$fe_qos' (expected Guaranteed)"
 fi
-fe_prestop=$(kubectl get deploy frontend -n apollo-airlines-ui -o jsonpath='{.spec.template.spec.containers[0].lifecycle.preStop.exec.command[0]}' 2>/dev/null || echo "")
+fe_grace=$(kube get deploy frontend -n apollo-airlines-ui -o jsonpath='{.spec.template.spec.terminationGracePeriodSeconds}' 2>/dev/null || echo "")
+if [[ "$fe_grace" == "30" ]]; then
+    pass "deploy/frontend terminationGracePeriodSeconds is 30"
+else
+    fail "deploy/frontend terminationGracePeriodSeconds is '$fe_grace' (expected 30)"
+fi
+fe_prestop=$(kube get deploy frontend -n apollo-airlines-ui -o jsonpath='{.spec.template.spec.containers[0].lifecycle.preStop.exec.command[0]}' 2>/dev/null || echo "")
 if [[ -n "$fe_prestop" ]]; then
     pass "deploy/frontend has lifecycle preStop hook configured"
 else
@@ -300,13 +364,13 @@ else
 fi
 
 for sts in identity-db flight-db booking-db redis; do
-    qos=$(kubectl get pod "$sts-0" -n apollo-airlines-apps -o jsonpath='{.status.qosClass}' 2>/dev/null || echo "")
+    qos=$(kube get pod "$sts-0" -n apollo-airlines-apps -o jsonpath='{.status.qosClass}' 2>/dev/null || echo "")
     if [[ "$qos" == "Guaranteed" ]]; then
         pass "StatefulSet pod $sts-0 QoS class is Guaranteed"
     else
         fail "StatefulSet pod $sts-0 QoS class is '$qos' (expected Guaranteed)"
     fi
-    grace=$(kubectl get statefulset "$sts" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.terminationGracePeriodSeconds}' 2>/dev/null || echo "")
+    grace=$(kube get statefulset "$sts" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.terminationGracePeriodSeconds}' 2>/dev/null || echo "")
     if [[ "$grace" == "60" ]]; then
         pass "statefulset/$sts terminationGracePeriodSeconds is 60"
     else
@@ -316,8 +380,8 @@ done
 
 header "12. Stage 4: PriorityClasses & Scheduling Placement"
 for pc in apollo-airlines-app-critical apollo-airlines-app-low; do
-    if kubectl get priorityclass "$pc" >/dev/null 2>&1; then
-        val=$(kubectl get priorityclass "$pc" -o jsonpath='{.value}' 2>/dev/null || echo "")
+    if kube get priorityclass "$pc" >/dev/null 2>&1; then
+        val=$(kube get priorityclass "$pc" -o jsonpath='{.value}' 2>/dev/null || echo "")
         pass "PriorityClass $pc exists (value=$val)"
     else
         fail "PriorityClass $pc missing"
@@ -325,7 +389,7 @@ for pc in apollo-airlines-app-critical apollo-airlines-app-low; do
 done
 
 for crit_app in booking search; do
-    app_pc=$(kubectl get deploy "$crit_app" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.priorityClassName}' 2>/dev/null || echo "")
+    app_pc=$(kube get deploy "$crit_app" -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.priorityClassName}' 2>/dev/null || echo "")
     if [[ "$app_pc" == "apollo-airlines-app-critical" ]]; then
         pass "deploy/$crit_app assigned priorityClassName=apollo-airlines-app-critical"
     else
@@ -333,7 +397,7 @@ for crit_app in booking search; do
     fi
 done
 
-notif_pc=$(kubectl get deploy notification -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.priorityClassName}' 2>/dev/null || echo "")
+notif_pc=$(kube get deploy notification -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.priorityClassName}' 2>/dev/null || echo "")
 if [[ "$notif_pc" == "apollo-airlines-app-low" ]]; then
     pass "deploy/notification assigned priorityClassName=apollo-airlines-app-low"
 else
@@ -343,7 +407,7 @@ fi
 for dep_entry in "apollo-airlines-apps:booking" "apollo-airlines-apps:flight" "apollo-airlines-apps:search" "apollo-airlines-ui:frontend"; do
     ns="${dep_entry%%:*}"
     dep="${dep_entry##*:}"
-    key=$(kubectl get deploy "$dep" -n "$ns" -o jsonpath='{.spec.template.spec.topologySpreadConstraints[0].topologyKey}' 2>/dev/null || echo "")
+    key=$(kube get deploy "$dep" -n "$ns" -o jsonpath='{.spec.template.spec.topologySpreadConstraints[0].topologyKey}' 2>/dev/null || echo "")
     if [[ "$key" == "kubernetes.io/hostname" ]]; then
         pass "deploy/$dep has topologySpreadConstraints (topologyKey=kubernetes.io/hostname)"
     else
@@ -355,8 +419,9 @@ header "13. Stage 4: PodDisruptionBudgets (PDB)"
 for pdb_entry in "apollo-airlines-apps:booking-pdb" "apollo-airlines-ui:frontend-pdb"; do
     ns="${pdb_entry%%:*}"
     pdb="${pdb_entry##*:}"
-    min_avail=$(kubectl get pdb "$pdb" -n "$ns" -o jsonpath='{.spec.minAvailable}' 2>/dev/null || echo "")
-    healthy=$(kubectl get pdb "$pdb" -n "$ns" -o jsonpath='{.status.currentHealthy}' 2>/dev/null || echo "0")
+    min_avail=$(kube get pdb "$pdb" -n "$ns" -o jsonpath='{.spec.minAvailable}' 2>/dev/null || echo "")
+    healthy=$(kube get pdb "$pdb" -n "$ns" -o jsonpath='{.status.currentHealthy}' 2>/dev/null || echo "0")
+    healthy="${healthy:-0}"
     if [[ "$min_avail" == "1" && "$healthy" -ge 1 ]]; then
         pass "PDB $ns/$pdb active (minAvailable=1, currentHealthy=$healthy)"
     else
@@ -365,30 +430,44 @@ for pdb_entry in "apollo-airlines-apps:booking-pdb" "apollo-airlines-ui:frontend
 done
 
 header "14. Flagship Booking Workflow & Graceful SIGTERM Shutdown Proof"
-LOGIN_RESP=$(curl -s -X POST -H "Host: identity.apollo.local" -H "Content-Type: application/json" \
+LOGIN_RESP=$(curl -s --max-time 15 -X POST -H "Host: identity.apollo.local" -H "Content-Type: application/json" \
     -d '{"email":"passenger@apolloairlines.com","password":"pass123"}' \
     "http://${GATEWAY_IP}/api/users/login" 2>/dev/null || echo "")
-TOKEN=$(echo "$LOGIN_RESP" | grep -o '"token":"[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
+TOKEN=$(python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("token",""))
+except Exception: print("")' <<< "$LOGIN_RESP")
 if [[ -n "$TOKEN" ]]; then
     pass "Passenger login succeeded and returned JWT"
 else
     fail "Passenger login failed: $LOGIN_RESP"
 fi
 
-FLIGHT_RESP=$(curl -s -H "Host: flight.apollo.local" "http://${GATEWAY_IP}/api/flights" 2>/dev/null || echo "")
-FLIGHT_ID=$(echo "$FLIGHT_RESP" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
+FLIGHT_RESP=$(curl -s --max-time 15 -H "Host: flight.apollo.local" "http://${GATEWAY_IP}/api/flights" 2>/dev/null || echo "")
+FLIGHT_ID=$(python3 -c 'import json,sys
+try:
+    flights = json.load(sys.stdin).get("flights", [])
+    print(next((f["id"] for f in flights if f.get("status") == "SCHEDULED" and f.get("availableSeats", 0) > 0), ""))
+except Exception:
+    print("")' <<< "$FLIGHT_RESP")
 if [[ -n "$FLIGHT_ID" ]]; then
-    pass "Flight inventory query returned valid flight ID: $FLIGHT_ID"
+    pass "Flight inventory query returned valid SCHEDULED flight ID: $FLIGHT_ID"
 else
     fail "Flight inventory query failed: $FLIGHT_RESP"
 fi
 
-BOOKING_RESP=$(curl -s -X POST -H "Host: booking.apollo.local" \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer $TOKEN" \
-    -d "{\"flightId\":\"$FLIGHT_ID\"}" \
-    "http://${GATEWAY_IP}/api/bookings" 2>/dev/null || echo "")
-BOOKING_ID=$(echo "$BOOKING_RESP" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
+if [[ -n "$TOKEN" && -n "$FLIGHT_ID" && -n "$GATEWAY_IP" ]]; then
+    BOOKING_RESP=$(curl -s --max-time 15 -X POST -H "Host: booking.apollo.local" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $TOKEN" \
+        -d "{\"flightId\":\"$FLIGHT_ID\"}" \
+        "http://${GATEWAY_IP}/api/bookings" 2>/dev/null || echo "")
+    BOOKING_ID=$(python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("id",""))
+except Exception: print("")' <<< "$BOOKING_RESP")
+else
+    BOOKING_RESP=""
+    BOOKING_ID=""
+fi
 if [[ -n "$BOOKING_ID" ]]; then
     pass "Flagship booking workflow succeeded (bookingId: $BOOKING_ID)"
 else
@@ -396,13 +475,13 @@ else
 fi
 
 info "Executing reversible termination experiment: Testing graceful SIGTERM shutdown..."
-BOOKING_POD=$(kubectl get pods -n apollo-airlines-apps -l app=booking -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+BOOKING_POD=$(kube get pods -n apollo-airlines-apps -l app=booking -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
 if [[ -n "$BOOKING_POD" ]]; then
     SIGTERM_LOG=$(mktemp)
-    kubectl logs -n apollo-airlines-apps "$BOOKING_POD" --follow > "$SIGTERM_LOG" 2>&1 &
+    kube logs -n apollo-airlines-apps "$BOOKING_POD" --follow > "$SIGTERM_LOG" 2>&1 &
     LOG_PID=$!
     sleep 0.5
-    kubectl delete pod "$BOOKING_POD" -n apollo-airlines-apps --wait=false >/dev/null 2>&1 || true
+    kube delete pod "$BOOKING_POD" -n apollo-airlines-apps --wait=false >/dev/null 2>&1 || true
     for _ in $(seq 1 30); do
         if grep -q "Received SIGTERM, shutting down gracefully" "$SIGTERM_LOG" 2>/dev/null; then
             break
@@ -411,17 +490,19 @@ if [[ -n "$BOOKING_POD" ]]; then
     done
     kill "$LOG_PID" 2>/dev/null || true
     wait "$LOG_PID" 2>/dev/null || true
+    LOG_PID=""
     if grep -q "Received SIGTERM, shutting down gracefully" "$SIGTERM_LOG" 2>/dev/null; then
         pass "Booking pod logged graceful SIGTERM drain before container exit"
     else
         fail "Booking pod did not log graceful SIGTERM shutdown"
     fi
     rm -f "$SIGTERM_LOG"
+    SIGTERM_LOG=""
 
     # Wait on the Deployment, not the label: the label also matches the old
     # Pod while it terminates, and under `set -e` a timed-out wait would end
     # the verifier without a summary.
-    if kubectl rollout status deployment/booking -n apollo-airlines-apps --timeout=120s >/dev/null 2>&1; then
+    if kube rollout status deployment/booking -n apollo-airlines-apps --timeout=120s >/dev/null 2>&1; then
         pass "Booking replacement pod is Ready after termination"
     else
         fail "Booking did not return to full readiness within 120s after termination"
@@ -430,15 +511,27 @@ else
     fail "Could not locate booking pod to test graceful shutdown"
 fi
 
+if [[ -n "$BOOKING_ID" && -n "$TOKEN" && -n "$GATEWAY_IP" ]]; then
+    cancel_resp=$(curl -s --max-time 15 -X DELETE -H "Host: booking.apollo.local" \
+        -H "Authorization: Bearer $TOKEN" \
+        "http://${GATEWAY_IP}/api/bookings/${BOOKING_ID}" 2>/dev/null || echo "")
+    if echo "$cancel_resp" | grep -q "Booking cancelled"; then
+        pass "Cancelled flagship verification booking $BOOKING_ID"
+        BOOKING_ID=""
+    else
+        fail "Failed to cancel flagship verification booking ${BOOKING_ID}: ${cancel_resp}"
+    fi
+fi
+
 header "15. Reversible Eviction API & PodDisruptionBudget Enforcement Proof"
 info "Testing PDB contract: verifying first eviction succeeds and second is blocked..."
-read -r -a BOOKING_PODS <<< "$(kubectl get pods -n apollo-airlines-apps -l app=booking -o jsonpath='{.items[*].metadata.name}')"
+read -r -a BOOKING_PODS <<< "$(kube get pods -n apollo-airlines-apps -l app=booking -o jsonpath='{.items[*].metadata.name}')"
 if [[ "${#BOOKING_PODS[@]}" -ge 2 ]]; then
     POD1="${BOOKING_PODS[0]}"
     POD2="${BOOKING_PODS[1]}"
     
     # First eviction: should succeed because minAvailable=1 and 2 are healthy
-    evict1_resp=$(kubectl create --raw "/api/v1/namespaces/apollo-airlines-apps/pods/${POD1}/eviction" -f - <<EOF 2>&1 || true
+    evict1_resp=$(kube create --raw "/api/v1/namespaces/apollo-airlines-apps/pods/${POD1}/eviction" -f - <<EOF 2>&1 || true
 {
   "apiVersion": "policy/v1",
   "kind": "Eviction",
@@ -456,7 +549,7 @@ EOF
     fi
 
     # Second eviction immediately after: should be BLOCKED with 429 / DisruptionBudget
-    evict2_resp=$(kubectl create --raw "/api/v1/namespaces/apollo-airlines-apps/pods/${POD2}/eviction" -f - <<EOF 2>&1 || true
+    evict2_resp=$(kube create --raw "/api/v1/namespaces/apollo-airlines-apps/pods/${POD2}/eviction" -f - <<EOF 2>&1 || true
 {
   "apiVersion": "policy/v1",
   "kind": "Eviction",
@@ -474,7 +567,7 @@ EOF
     fi
 
     # Prove live traffic still serves HTTP 200 during eviction
-    evict_traffic=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: booking.apollo.local" "http://${GATEWAY_IP}/healthz" 2>/dev/null || echo "000")
+    evict_traffic=$(curl -s --max-time 15 -o /dev/null -w "%{http_code}" -H "Host: booking.apollo.local" "http://${GATEWAY_IP}/healthz" 2>/dev/null || echo "000")
     if [[ "$evict_traffic" == "200" ]]; then
         pass "Traffic survived eviction disruption (booking service returned HTTP 200)"
     else
@@ -483,8 +576,9 @@ EOF
 
     # Wait for replacement pod to be Ready
     info "Waiting for replacement pod to be Ready..."
-    kubectl rollout status deployment/booking -n apollo-airlines-apps --timeout=60s >/dev/null 2>&1
-    booking_healthy=$(kubectl get pdb booking-pdb -n apollo-airlines-apps -o jsonpath='{.status.currentHealthy}' 2>/dev/null || echo "0")
+    kube rollout status deployment/booking -n apollo-airlines-apps --timeout=60s >/dev/null 2>&1 || true
+    booking_healthy=$(kube get pdb booking-pdb -n apollo-airlines-apps -o jsonpath='{.status.currentHealthy}' 2>/dev/null || echo "0")
+    booking_healthy="${booking_healthy:-0}"
     if [[ "$booking_healthy" -ge 2 ]]; then
         pass "booking-pdb fully recovered: currentHealthy=$booking_healthy"
     else
@@ -495,36 +589,79 @@ else
 fi
 
 header "16. Reversible Placement Lab (Topology Spread & Node Taints)"
-# Check topology spread distribution
-worker_nodes_used=$(kubectl get pods -n apollo-airlines-apps -l app=booking -o jsonpath='{.items[*].spec.nodeName}' | tr ' ' '\n' | sort -u | wc -l)
-if [[ "$worker_nodes_used" -ge 2 ]]; then
-    pass "topologySpreadConstraints active: booking pods distributed across $worker_nodes_used nodes"
+worker_nodes_total=$(kube get nodes -l '!node-role.kubernetes.io/control-plane' --no-headers 2>/dev/null | wc -l | tr -d ' ')
+worker_nodes_used=$(kube get pods -n apollo-airlines-apps -l app=booking -o jsonpath='{range .items[*]}{.metadata.deletionTimestamp}{"|"}{.spec.nodeName}{"\n"}{end}' 2>/dev/null | awk -F'|' '$1=="" && $2!=""{print $2}' | sort -u | wc -l | tr -d ' ')
+if [[ "$worker_nodes_total" -ge 2 ]]; then
+    if [[ "$worker_nodes_used" -ge 2 ]]; then
+        pass "topologySpreadConstraints active: booking pods spread across $worker_nodes_used/$worker_nodes_total workers"
+    else
+        fail "topologySpreadConstraints expected booking across >= 2 workers, found $worker_nodes_used/$worker_nodes_total"
+    fi
 else
-    info "booking pods currently on $worker_nodes_used node(s)"
+    info "Single worker cluster detected; skipping multi-worker spread assertion ($worker_nodes_used node)"
 fi
 
-TARGET_NODE="apollo11-worker"
-if kubectl get node "$TARGET_NODE" >/dev/null 2>&1; then
-    info "Executing reversible taint/toleration experiment on $TARGET_NODE..."
-    kubectl taint node "$TARGET_NODE" apollo11.io/maintenance=true:NoSchedule >/dev/null 2>&1
-    taint_val=$(kubectl get node "$TARGET_NODE" -o jsonpath='{.spec.taints[?(@.key=="apollo11.io/maintenance")].value}' 2>/dev/null || echo "")
+TARGET_NODE=$(kube get nodes -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+if [[ -n "$TARGET_NODE" ]]; then
+    info "Executing reversible taint scheduling gate lab on $TARGET_NODE..."
+    kube taint node "$TARGET_NODE" apollo11.io/maintenance=true:NoSchedule >/dev/null 2>&1
+    taint_val=$(kube get node "$TARGET_NODE" -o jsonpath='{.spec.taints[?(@.key=="apollo11.io/maintenance")].value}' 2>/dev/null || echo "")
     if [[ "$taint_val" == "true" ]]; then
         pass "Reversible taint applied to $TARGET_NODE (NoSchedule)"
     else
         fail "Failed to apply taint to $TARGET_NODE"
     fi
 
+    # Prove G20b: an untolerated pod pinned to TARGET_NODE stays Pending/Unschedulable
+    kube apply -f - >/dev/null <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: g20-taint-probe
+  namespace: apollo-airlines-apps
+  labels:
+    apollo11.io/lab: g20
+spec:
+  restartPolicy: Never
+  priorityClassName: apollo-airlines-app-low
+  nodeSelector:
+    kubernetes.io/hostname: ${TARGET_NODE}
+  containers:
+    - name: pause
+      image: busybox:1.36
+      command: ["sh", "-c", "sleep 5"]
+      resources:
+        requests: { cpu: 10m, memory: 16Mi }
+        limits: { cpu: 10m, memory: 16Mi }
+EOF
+    probe_reason=""
+    for _ in $(seq 1 10); do
+        probe_reason=$(kube get pod g20-taint-probe -n apollo-airlines-apps -o jsonpath='{.status.conditions[?(@.type=="PodScheduled")].reason}' 2>/dev/null || echo "")
+        if [[ "$probe_reason" == "Unschedulable" ]]; then
+            break
+        fi
+        sleep 1
+    done
+    if [[ "$probe_reason" == "Unschedulable" ]]; then
+        pass "Taint scheduling gate proven: untolerated pod blocked on $TARGET_NODE (Unschedulable)"
+    else
+        fail "Expected untolerated pod on tainted node $TARGET_NODE to be Unschedulable (got '${probe_reason:-none}')"
+    fi
+    kube delete pod g20-taint-probe -n apollo-airlines-apps --ignore-not-found --wait=false >/dev/null 2>&1 || true
+
     # Remove taint and restore node state
-    kubectl taint node "$TARGET_NODE" apollo11.io/maintenance=true:NoSchedule- >/dev/null 2>&1
-    taint_check=$(kubectl get node "$TARGET_NODE" -o jsonpath='{.spec.taints[?(@.key=="apollo11.io/maintenance")].value}' 2>/dev/null || echo "")
+    kube taint node "$TARGET_NODE" apollo11.io/maintenance=true:NoSchedule- >/dev/null 2>&1
+    taint_check=$(kube get node "$TARGET_NODE" -o jsonpath='{.spec.taints[?(@.key=="apollo11.io/maintenance")].value}' 2>/dev/null || echo "")
     if [[ -z "$taint_check" ]]; then
         pass "Node $TARGET_NODE successfully restored (taint removed)"
     else
         fail "Node $TARGET_NODE still has taint"
     fi
+else
+    fail "Could not discover a non-control-plane worker node for reversible taint test"
 fi
 
-if KUBE_CONTEXT="${CONTEXT:-${CURRENT_CTX:-}}" bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then
+if KUBE_CONTEXT="$CONTEXT" bash "${SCRIPT_DIR}/verify-tls.sh"; then
   pass "trusted HTTPS workflow and hostname rejection"
 else
   fail "trusted HTTPS workflow or hostname rejection failed"

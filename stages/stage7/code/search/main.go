@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -18,11 +20,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
@@ -34,10 +38,12 @@ import (
 )
 
 const (
-	// Stage 7: cache TTL for search results. 5 minutes matches the AGENTS.md
+	// Stage 7: default cache TTL for search results. 5 minutes matches the AGENTS.md
 	// spec — long enough to absorb traffic spikes, short enough that stale
-	// flight availability data is bounded.
-	cacheTTLSeconds = 5 * 60
+	// flight availability data is bounded. Overridable via CACHE_TTL_SECONDS.
+	defaultCacheTTLSeconds = 300
+	cacheTTLSeconds        = defaultCacheTTLSeconds
+	redisReconnectCooldown = 5 * time.Second
 )
 
 var (
@@ -45,9 +51,10 @@ var (
 	logger           = log.New(os.Stdout, "", 0)
 
 	// redisClient may be nil if Redis lost the startup race. redisMu guards
-	// bounded lazy reconnection from readiness probes and live requests.
-	redisClient *redis.Client
-	redisMu     sync.Mutex
+	// bounded lazy reconnection with cooldown from readiness probes and live requests.
+	redisClient   *redis.Client
+	lastRedisFail time.Time
+	redisMu       sync.Mutex
 
 	httpRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "http_requests_total", Help: "Total HTTP requests by service, method, path, status."},
@@ -73,31 +80,65 @@ func init() {
 	flightServiceURL = getEnv("FLIGHT_SERVICE_URL", "http://flight:8081")
 }
 
+func traceAndSpanFromContext(ctx context.Context) (string, string) {
+	if ctx == nil {
+		return "", ""
+	}
+	sc := trace.SpanFromContext(ctx).SpanContext()
+	if !sc.IsValid() {
+		return "", ""
+	}
+	return sc.TraceID().String(), sc.SpanID().String()
+}
+
 func logJSON(level, service, message, traceID, spanID string, extra ...map[string]interface{}) {
-	if traceID == "" {
-		span := trace.SpanFromContext(context.Background())
-		if span.SpanContext().IsValid() {
-			traceID = span.SpanContext().TraceID().String()
-			if spanID == "" {
-				spanID = span.SpanContext().SpanID().String()
-			}
-		}
-	}
 	entry := map[string]interface{}{
-		"timestamp": time.Now().UTC().Format(time.RFC3339),
-		"level":     level,
-		"service":   service,
-		"trace_id":  traceID,
-		"span_id":   spanID,
-		"message":   message,
+		"timestamp":  time.Now().UTC().Format(time.RFC3339),
+		"level":      level,
+		"service":    service,
+		"request_id": "",
+		"trace_id":   traceID,
+		"span_id":    spanID,
+		"message":    message,
 	}
-	if len(extra) > 0 && extra[0] != nil {
-		for k, v := range extra[0] {
+	for _, m := range extra {
+		for k, v := range m {
 			entry[k] = v
 		}
 	}
 	b, _ := json.Marshal(entry)
 	logger.Println(string(b))
+}
+
+func logContext(ctx context.Context, requestID, level, service, message string, extra ...map[string]interface{}) {
+	traceID, spanID := traceAndSpanFromContext(ctx)
+	entry := map[string]interface{}{
+		"timestamp":  time.Now().UTC().Format(time.RFC3339),
+		"level":      level,
+		"service":    service,
+		"request_id": requestID,
+		"trace_id":   traceID,
+		"span_id":    spanID,
+		"message":    message,
+	}
+	for _, m := range extra {
+		for k, v := range m {
+			entry[k] = v
+		}
+	}
+	b, _ := json.Marshal(entry)
+	logger.Println(string(b))
+}
+
+type flightItem struct {
+	ID             string `json:"id"`
+	FlightNumber   string `json:"flightNumber"`
+	Origin         string `json:"origin"`
+	Destination    string `json:"destination"`
+	DepartureTime  string `json:"departureTime"`
+	ArrivalTime    string `json:"arrivalTime"`
+	AvailableSeats int    `json:"availableSeats"`
+	Status         string `json:"status"`
 }
 
 type SearchResult struct {
@@ -119,36 +160,78 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// getRedisClient establishes the Redis client with a bounded timeout. A failed
-// attempt leaves the client nil, allowing search to serve uncached responses.
-// Later probes or requests retry once per call, so the cache recovers after a
-// startup race or temporary Redis outage without an unbounded retry loop.
+func getCacheTTL() time.Duration {
+	raw := strings.TrimSpace(os.Getenv("CACHE_TTL_SECONDS"))
+	if raw == "" {
+		return time.Duration(defaultCacheTTLSeconds) * time.Second
+	}
+	secs, err := strconv.Atoi(raw)
+	if err != nil || secs <= 0 {
+		logJSON("WARN", "search-service", fmt.Sprintf("Invalid CACHE_TTL_SECONDS=%q, using default %ds", raw, defaultCacheTTLSeconds), "", "", nil)
+		return time.Duration(defaultCacheTTLSeconds) * time.Second
+	}
+	return time.Duration(secs) * time.Second
+}
+
+func resetRedisClient() {
+	redisMu.Lock()
+	defer redisMu.Unlock()
+	if redisClient != nil {
+		_ = redisClient.Close()
+		redisClient = nil
+	}
+	lastRedisFail = time.Time{}
+}
+
+// getRedisClient establishes the Redis client with a bounded timeout and
+// reconnect cooldown. Network I/O runs outside redisMu so concurrent requests do
+// not serialize behind a Redis timeout.
 func getRedisClient(parent context.Context, timeout time.Duration) (*redis.Client, error) {
 	if getEnv("CACHE_ENABLED", "true") == "false" {
 		return nil, nil
 	}
-	redisMu.Lock()
-	defer redisMu.Unlock()
-	if redisClient != nil {
-		return redisClient, nil
-	}
-
 	redisURL := getEnv("REDIS_URL", "redis://redis:6379")
 	opt, err := redis.ParseURL(redisURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse REDIS_URL: %w", err)
 	}
+
+	redisMu.Lock()
+	if redisClient != nil {
+		client := redisClient
+		redisMu.Unlock()
+		return client, nil
+	}
+	if !lastRedisFail.IsZero() && time.Since(lastRedisFail) < redisReconnectCooldown {
+		redisMu.Unlock()
+		return nil, fmt.Errorf("redis reconnect cooling down")
+	}
+	redisMu.Unlock()
+
 	candidate := redis.NewClient(opt)
 	ctx, cancel := context.WithTimeout(parent, timeout)
 	defer cancel()
 	if _, err := candidate.Ping(ctx).Result(); err != nil {
 		_ = candidate.Close()
+		redisMu.Lock()
+		lastRedisFail = time.Now()
+		redisMu.Unlock()
 		return nil, fmt.Errorf("ping redis: %w", err)
 	}
-	redisClient = candidate
-	logJSON("INFO", "search-service", "Connected to Redis", "", "", nil)
-	return redisClient, nil
 
+	redisMu.Lock()
+	if redisClient != nil {
+		existing := redisClient
+		redisMu.Unlock()
+		_ = candidate.Close()
+		return existing, nil
+	}
+	redisClient = candidate
+	lastRedisFail = time.Time{}
+	redisMu.Unlock()
+
+	logJSON("INFO", "search-service", "Connected to Redis", "", "", nil)
+	return candidate, nil
 }
 
 func initRedis() error {
@@ -221,7 +304,14 @@ func initOTEL(ctx context.Context, serviceName string) (func(context.Context) er
 
 func prometheusHandler() http.Handler {
 	reg := prometheus.NewRegistry()
-	reg.MustRegister(httpRequestsTotal, httpRequestDurationMs, cacheHitsTotal, cacheMissesTotal)
+	reg.MustRegister(
+		httpRequestsTotal,
+		httpRequestDurationMs,
+		cacheHitsTotal,
+		cacheMissesTotal,
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
 	return promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg})
 }
 
@@ -238,7 +328,7 @@ func metricsMiddleware(service string) gin.HandlerFunc {
 		}
 		status := fmt.Sprintf("%d", c.Writer.Status())
 		httpRequestsTotal.WithLabelValues(service, c.Request.Method, path, status).Inc()
-		httpRequestDurationMs.WithLabelValues(service, c.Request.Method, path).Observe(float64(time.Since(start).Milliseconds()))
+		httpRequestDurationMs.WithLabelValues(service, c.Request.Method, path).Observe(float64(time.Since(start).Microseconds()) / 1000.0)
 	}
 }
 
@@ -350,14 +440,14 @@ func newRouter() *gin.Engine {
 	r.GET("/metrics", gin.WrapH(prometheusHandler()))
 
 	r.GET("/api/search", func(c *gin.Context) {
-		requestID, _ := c.Get("request_id")
-		traceID := traceIDFromContext(c.Request.Context())
+		requestID := c.GetString("request_id")
 		ctx := c.Request.Context()
 		origin := c.Query("origin")
 		destination := c.Query("destination")
 		date := c.Query("date")
 		if date != "" {
 			if _, err := time.Parse("2006-01-02", date); err != nil {
+				logContext(ctx, requestID, "WARN", "search-service", "Invalid date parameter", map[string]interface{}{"date": date})
 				c.JSON(http.StatusBadRequest, gin.H{"error": "date must be YYYY-MM-DD"})
 				return
 			}
@@ -384,16 +474,15 @@ func newRouter() *gin.Engine {
 				c.Header("X-Cache", "HIT")
 				c.Header("Content-Type", "application/json")
 				c.String(http.StatusOK, cached)
-				logJSON("INFO", "search-service", "Search served from cache",
-					traceID, "", map[string]interface{}{"cache_key": cacheKey})
+				logContext(ctx, requestID, "INFO", "search-service", "Search served from cache", map[string]interface{}{"cache_key": cacheKey})
 				return
 			}
 			if !errors.Is(cerr, redis.Nil) {
-				// Real error (not just "key not found"). Log + treat as miss
+				// Real error (not just "key not found"). Record OTEL error + treat as miss
 				// so a Redis blip doesn't break search.
-				logJSON("WARN", "search-service",
-					fmt.Sprintf("Redis GET failed (degrading to miss): %v", cerr),
-					traceID, "", nil)
+				cacheSpan.RecordError(cerr)
+				cacheSpan.SetStatus(codes.Error, cerr.Error())
+				logContext(ctx, requestID, "WARN", "search-service", fmt.Sprintf("Redis GET failed (degrading to miss): %v", cerr))
 			}
 			cacheSpan.SetAttributes(attribute.Bool("cache.hit", false))
 			cacheSpan.End()
@@ -413,51 +502,80 @@ func newRouter() *gin.Engine {
 			searchURL += "?" + params.Encode()
 		}
 
-		req, _ := http.NewRequestWithContext(ctx, "GET", searchURL, nil)
-		req.Header.Set("X-Request-ID", requestID.(string))
+		clientCtx, clientSpan := tracer.Start(ctx,
+			fmt.Sprintf("HTTP GET %s", searchURL),
+			trace.WithSpanKind(trace.SpanKindClient),
+		)
+		req, err := http.NewRequestWithContext(clientCtx, "GET", searchURL, nil)
+		if err != nil {
+			clientSpan.RecordError(err)
+			clientSpan.SetStatus(codes.Error, err.Error())
+			clientSpan.End()
+			logContext(ctx, requestID, "ERROR", "search-service", fmt.Sprintf("Failed to build request: %v", err))
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
+			return
+		}
+		req.Header.Set("X-Request-ID", requestID)
 		// Inject W3C traceparent so the flight service span becomes a child
-		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
+		otel.GetTextMapPropagator().Inject(clientCtx, propagation.HeaderCarrier(req.Header))
 
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Do(req)
 		if err != nil {
-			logJSON("ERROR", "search-service", fmt.Sprintf("Flight service call failed: %v", err), traceID, "", nil)
+			clientSpan.RecordError(err)
+			clientSpan.SetStatus(codes.Error, err.Error())
+			clientSpan.End()
+			logContext(ctx, requestID, "ERROR", "search-service", fmt.Sprintf("Flight service call failed: %v", err))
 			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
 			return
 		}
 		defer resp.Body.Close()
 
-		body, _ := io.ReadAll(resp.Body)
-		var result map[string]interface{}
-		decodeErr := json.Unmarshal(body, &result)
-
-		// An upstream failure is not an empty result set, and must not be
-		// cached as one.
-		flightsRaw, ok := result["flights"].([]interface{})
-		if resp.StatusCode != http.StatusOK || decodeErr != nil || !ok {
-			logJSON("ERROR", "search-service", fmt.Sprintf("Flight service returned HTTP %d", resp.StatusCode), traceID, "", nil)
+		clientSpan.SetAttributes(
+			semconv.HTTPResponseStatusCode(resp.StatusCode),
+			semconv.URLFull(searchURL),
+		)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			clientSpan.RecordError(readErr)
+			clientSpan.SetStatus(codes.Error, readErr.Error())
+			clientSpan.End()
+			logContext(ctx, requestID, "ERROR", "search-service", fmt.Sprintf("Failed to read flight response: %v", readErr))
 			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
 			return
 		}
-		results := make([]SearchResult, 0, len(flightsRaw))
-		for _, f := range flightsRaw {
-			fm := f.(map[string]interface{})
-			depStr, _ := fm["departureTime"].(string)
-			arrStr, _ := fm["arrivalTime"].(string)
-			dep, _ := time.Parse(time.RFC3339, depStr)
-			arr, _ := time.Parse(time.RFC3339, arrStr)
-			duration := int(arr.Sub(dep).Minutes())
-			avail, _ := fm["availableSeats"].(float64)
+		clientSpan.End()
+
+		var flightResp struct {
+			Flights []flightItem `json:"flights"`
+		}
+		decodeErr := json.Unmarshal(body, &flightResp)
+
+		// An upstream failure is not an empty result set, and must not be
+		// cached as one.
+		if resp.StatusCode != http.StatusOK || decodeErr != nil || flightResp.Flights == nil {
+			logContext(ctx, requestID, "ERROR", "search-service", fmt.Sprintf("Flight service returned HTTP %d", resp.StatusCode))
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service unavailable"})
+			return
+		}
+		results := make([]SearchResult, 0, len(flightResp.Flights))
+		for _, fm := range flightResp.Flights {
+			dep, depErr := time.Parse(time.RFC3339, fm.DepartureTime)
+			arr, arrErr := time.Parse(time.RFC3339, fm.ArrivalTime)
+			duration := 0
+			if depErr == nil && arrErr == nil && arr.After(dep) {
+				duration = int(arr.Sub(dep).Minutes())
+			}
 			results = append(results, SearchResult{
-				ID:             fm["id"].(string),
-				FlightNumber:   fm["flightNumber"].(string),
-				Origin:         fm["origin"].(string),
-				Destination:    fm["destination"].(string),
-				DepartureTime:  depStr,
-				ArrivalTime:    arrStr,
+				ID:             fm.ID,
+				FlightNumber:   fm.FlightNumber,
+				Origin:         fm.Origin,
+				Destination:    fm.Destination,
+				DepartureTime:  fm.DepartureTime,
+				ArrivalTime:    fm.ArrivalTime,
 				Duration:       duration,
-				AvailableSeats: int(avail),
-				Status:         fm["status"].(string),
+				AvailableSeats: fm.AvailableSeats,
+				Status:         fm.Status,
 			})
 		}
 		payload := gin.H{"results": results, "total": len(results), "page": 1, "limit": 20}
@@ -470,20 +588,19 @@ func newRouter() *gin.Engine {
 				_, setSpan := tracer.Start(ctx, "cache.set",
 					trace.WithAttributes(attribute.String("cache.key", cacheKey)))
 				setCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
-				sErr := cacheClient.Set(setCtx, cacheKey, payloadBytes, time.Duration(cacheTTLSeconds)*time.Second).Err()
+				sErr := cacheClient.Set(setCtx, cacheKey, payloadBytes, getCacheTTL()).Err()
 				cancel()
 				if sErr != nil {
-					logJSON("WARN", "search-service",
-						fmt.Sprintf("Redis SET failed (response still served): %v", sErr),
-						traceID, "", nil)
+					setSpan.RecordError(sErr)
+					setSpan.SetStatus(codes.Error, sErr.Error())
+					logContext(ctx, requestID, "WARN", "search-service", fmt.Sprintf("Redis SET failed (response still served): %v", sErr))
 				}
 				setSpan.End()
 			}
 		}
 
 		c.Header("X-Cache", "MISS")
-		logJSON("INFO", "search-service", "Search completed",
-			traceID, "", map[string]interface{}{"count": len(results), "cache_key": cacheKey})
+		logContext(ctx, requestID, "INFO", "search-service", "Search completed", map[string]interface{}{"count": len(results), "cache_key": cacheKey})
 		c.JSON(http.StatusOK, payload)
 	})
 

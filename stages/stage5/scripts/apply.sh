@@ -41,42 +41,48 @@ SKIP_BUILD=false
 RELEASE_NAME="apollo11"
 
 usage() {
+    local code="${1:-1}"
     cat <<EOF
-Usage: $0 [--mode MODE] [--env ENV] [--tag TAG] [--skip-build] [--release NAME]
+Usage: $0 [--mode MODE] [--env ENV] [--tag TAG] [--skip-build] [--release NAME] [--context CTX]
 
 Options:
   --mode MODE       helm (default) | kustomize
   --env ENV         dev (default) | staging | prod
                     helm mode:      picks helm/apollo11/values-\$ENV.yaml
                     kustomize mode: picks overlays/\$ENV/
-  --tag TAG         Helm image-tag override (default: latest). Kustomize tags
-                    are declared by the selected overlay and must match.
+  --tag TAG         Helm image-tag override (default: latest for dev/staging, v1.0.0 for prod).
+                    Kustomize tags are declared by the selected overlay and must match.
   --skip-build      Reuse pre-built images; skip the docker build step
   --release NAME    Helm release name (default: apollo11)
+  --context CTX     Kubernetes context (kind-apollo11 or kind-apollo11-dev)
   --help            Show this help
-
-Examples:
-  $0                                          # helm install (defaults: tag=latest, no env file)
-  $0 --env dev                                # helm with values-dev.yaml (1 replica, tag=latest)
-  $0 --env staging --tag latest               # helm with values-staging.yaml
-  $0 --env prod --tag v1.2.3                  # helm with values-prod.yaml
-  $0 --mode kustomize --env dev               # kustomize overlays/dev/
 EOF
-    exit 1
+    exit "$code"
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --mode)        MODE="$2"; shift 2 ;;
-        --env)         ENV="$2"; shift 2 ;;
-        --tag)         TAG="$2"; TAG_EXPLICIT=true; shift 2 ;;
+        --mode)        [[ $# -ge 2 ]] || { echo "--mode requires a value" >&2; usage 2; }; MODE="$2"; shift 2 ;;
+        --env)         [[ $# -ge 2 ]] || { echo "--env requires a value" >&2; usage 2; }; ENV="$2"; shift 2 ;;
+        --tag)         [[ $# -ge 2 ]] || { echo "--tag requires a value" >&2; usage 2; }; TAG="$2"; TAG_EXPLICIT=true; shift 2 ;;
         --skip-build)  SKIP_BUILD=true; shift ;;
-        --release)     RELEASE_NAME="$2"; shift 2 ;;
-        --cluster)     CLUSTER="$2"; shift 2 ;;
-        --help)        usage ;;
-        *) echo "Unknown option: $1"; usage ;;
+        --release)     [[ $# -ge 2 ]] || { echo "--release requires a value" >&2; usage 2; }; RELEASE_NAME="$2"; shift 2 ;;
+        --cluster)     [[ $# -ge 2 ]] || { echo "--cluster requires a value" >&2; usage 2; }; CLUSTER="$2"; shift 2 ;;
+        --context)     [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+        --help|-h)     usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 ;;
     esac
 done
+
+# Validate env early before cluster contact
+case "$ENV" in
+    dev|staging|prod) ;;
+    *) echo "Invalid --env '$ENV' (expected dev, staging, or prod)" >&2; usage 2 ;;
+esac
+case "$MODE" in
+    helm|kustomize) ;;
+    *) echo "Invalid --mode '$MODE' (expected helm or kustomize)" >&2; usage 2 ;;
+esac
 
 source "${SCRIPT_DIR}/context.sh"
 apollo_context_guard
@@ -86,16 +92,11 @@ if [[ -n "$CLUSTER" && "kind-$CLUSTER" != "$APOLLO_CONTEXT" ]]; then
 fi
 CLUSTER="${APOLLO_CONTEXT#kind-}"
 
-
-# Validate env early so a typo doesn't surface mid-install
-case "$ENV" in
-    dev|staging|prod) ;;
-    *) echo "Invalid --env '$ENV' (expected dev, staging, or prod)"; usage ;;
-esac
-case "$MODE" in
-    helm|kustomize) ;;
-    *) echo "Invalid --mode '$MODE' (expected helm or kustomize)"; usage ;;
-esac
+if [[ "$ENV" == "prod" && "$TAG_EXPLICIT" != "true" ]]; then
+    # Prod references immutable GHCR images (values-prod.yaml / overlays/prod);
+    # skip building or clobbering v1.0.0 with local :latest.
+    SKIP_BUILD=true
+fi
 
 if [[ "$MODE" == "kustomize" ]]; then
     if [[ "$ENV" == "prod" ]]; then
@@ -129,7 +130,7 @@ install_platform_bundles() {
     [[ -f "$metallb_bundle" ]] || fail "missing MetalLB bundle: $metallb_bundle"
 
     kubectl create namespace envoy-gateway-system --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-    kubectl apply --server-side -f "$envoy_bundle" 2>&1 | tail -2
+    kubectl apply --server-side --force-conflicts -f "$envoy_bundle" 2>&1 | tail -2
     ok "Envoy Gateway bundle applied"
 
     kubectl create namespace metallb-system --dry-run=client -o yaml | kubectl apply -f - >/dev/null
@@ -154,6 +155,20 @@ install_platform_bundles() {
     done
     [[ -n "$endpoints" ]] || fail "MetalLB webhook did not become ready within 60s"
     ok "MetalLB webhook endpoint ready ($endpoints)"
+}
+
+wait_envoy_dataplane() {
+    local pod=""
+    for _ in $(seq 1 30); do
+        pod=$(kubectl get pods -n envoy-gateway-system \
+            -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway \
+            -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+        [[ -n "$pod" ]] && break
+        sleep 2
+    done
+    [[ -n "$pod" ]] || fail "Envoy data-plane pod did not appear within 60s"
+    kubectl wait --for=condition=Ready "pod/$pod" -n envoy-gateway-system --timeout=100s >/dev/null || \
+        fail "Envoy data-plane pod did not become ready within 100s"
 }
 
 step "0/8 Checking cluster"
@@ -187,50 +202,7 @@ if [[ "$MODE" == "helm" ]]; then
     # transaction as those custom resources, the API server hasn't
     # registered the CRDs yet and we get "no matches for kind" errors.
     step "2/8 Pre-install: CRD bundle (Envoy Gateway + MetalLB)"
-    # Both bundles use --server-side for the >256KB last-applied-config
-    # workaround. MetalLB needs --force-conflicts because its webhook
-    # manages its own CA.
-    ENVOY_BUNDLE="$CHART_DIR/bundles/envoy-gateway-install.yaml"
-    METALLB_BUNDLE="$CHART_DIR/bundles/metallb-native.yaml"
-    [[ -f "$ENVOY_BUNDLE" ]] || fail "missing Envoy Gateway bundle: $ENVOY_BUNDLE"
-    [[ -f "$METALLB_BUNDLE" ]] || fail "missing MetalLB bundle: $METALLB_BUNDLE"
-
-    kubectl create namespace envoy-gateway-system --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-    kubectl apply --server-side -f "$ENVOY_BUNDLE" 2>&1 | tail -2
-    ok "Envoy Gateway bundle applied"
-
-    kubectl create namespace metallb-system --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-    kubectl apply --server-side --force-conflicts -f "$METALLB_BUNDLE" 2>&1 | tail -2
-    ok "MetalLB bundle applied"
-
-    step "3/8 Wait for CRD registration"
-    # Wait until the API server can see the new CRDs
-    crds_ready=false
-    for _ in 1 2 3 4 5 6 7 8 9 10; do
-        if kubectl get crd gateways.gateway.networking.k8s.io >/dev/null 2>&1 && \
-           kubectl get crd ipaddresspools.metallb.io >/dev/null 2>&1; then
-            ok "CRDs registered"
-            crds_ready=true
-            break
-        fi
-        sleep 3
-    done
-    [[ "$crds_ready" == "true" ]] || fail "Envoy Gateway/MetalLB CRDs did not register within 30s"
-
-    step "4/8 Wait for MetalLB webhook to be ready"
-    # The MetalLB IPAddressPool has a validating webhook. The webhook
-    # service must be up before the chart can create pool resources.
-    endpoints=""
-    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
-        # Webhook endpoints become non-empty when the controller pod is up
-        endpoints=$(kubectl get endpoints metallb-webhook-service -n metallb-system -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null || echo "")
-        if [[ -n "$endpoints" ]]; then
-            ok "MetalLB webhook endpoint ready ($endpoints)"
-            break
-        fi
-        sleep 3
-    done
-    [[ -n "$endpoints" ]] || fail "MetalLB webhook did not become ready within 60s"
+    install_platform_bundles
 
     step "5/8 Helm install (release: $RELEASE_NAME, env: $ENV)"
     # Helm's release namespace is created by --create-namespace. The chart
@@ -242,21 +214,19 @@ if [[ "$MODE" == "helm" ]]; then
     HELM_CMD=(helm upgrade --install "$RELEASE_NAME" "$CHART_DIR"
         --namespace apollo-airlines-apps
         --create-namespace
-        --set image.tag="$TAG"
         --set gateway.envoy.bundleInstall=false
         --set metallb.bundleInstall=false
         --wait --wait-for-jobs --timeout 10m)
+    if [[ "$TAG_EXPLICIT" == "true" || "$ENV" != "prod" ]]; then
+        HELM_CMD+=(--set image.tag="$TAG")
+    fi
 
     # Apply env-specific values file if present (values-dev.yaml,
-    # values-staging.yaml, values-prod.yaml). The env-specific file
-    # overrides values.yaml defaults; --set image.tag still wins for
-    # the tag, so CLI override beats the env file.
-    if [[ "$ENV" != "dev" ]] || [[ -f "$CHART_DIR/values-${ENV}.yaml" ]]; then
-        VALUES_FILE="$CHART_DIR/values-${ENV}.yaml"
-        if [[ -f "$VALUES_FILE" ]]; then
-            HELM_CMD+=(-f "$VALUES_FILE")
-            echo "  using values file: $VALUES_FILE"
-        fi
+    # values-staging.yaml, values-prod.yaml).
+    VALUES_FILE="$CHART_DIR/values-${ENV}.yaml"
+    if [[ -f "$VALUES_FILE" ]]; then
+        HELM_CMD+=(-f "$VALUES_FILE")
+        echo "  using values file: $VALUES_FILE"
     fi
 
     "${HELM_CMD[@]}" 2>&1 | tail -20
@@ -275,12 +245,7 @@ if [[ "$MODE" == "helm" ]]; then
     [[ "$metallb_ready" == "true" ]] || fail "MetalLB controller did not become ready within 75s"
 
     step "7/8 Waiting for Envoy Gateway"
-    # The Envoy data-plane pod has two containers in the bundled release.
-    # Check the Pod Ready condition instead of assuming a literal 1/1 count.
-    kubectl wait --for=condition=Ready pod \
-        -n envoy-gateway-system \
-        -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway \
-        --timeout=100s >/dev/null || fail "Envoy data-plane pod did not become ready within 100s"
+    wait_envoy_dataplane
     ok "Envoy Gateway ready"
 
     step "8/8 Waiting for StatefulSets (3 PG + 1 Redis)"
@@ -381,9 +346,7 @@ EOF
     ok "deployment/frontend ready"
 
     step "8/8 Waiting for Envoy data-plane"
-    kubectl wait --for=condition=Ready pod -n envoy-gateway-system \
-        -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway \
-        --timeout=100s >/dev/null || fail "Envoy data-plane pod did not become ready"
+    wait_envoy_dataplane
     ok "Envoy Gateway ready"
 
     ok "Apollo Airlines installed via kustomize ($ENV)"

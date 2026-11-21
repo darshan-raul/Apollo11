@@ -14,8 +14,9 @@ BAD_TAG=missing-release-lab
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --release) RELEASE="$2"; shift 2 ;;
-    --help) sed -n 2,6p "$0"; exit 0 ;;
+    --release) [[ $# -ge 2 ]] || { echo "--release requires a value" >&2; exit 2; }; RELEASE="$2"; shift 2 ;;
+    --context) [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; exit 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+    --help|-h) sed -n 2,6p "$0"; exit 0 ;;
     *) echo "Unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -28,11 +29,14 @@ PASS=0; FAIL=0
 pass() { echo "PASS: $1"; PASS=$((PASS + 1)); }
 fail() { echo "FAIL: $1"; FAIL=$((FAIL + 1)); }
 step() { printf '\n== %s\n' "$1"; }
-search_ready() {  # call search from inside the cluster, as booking would
-  kubectl -n "$NS" exec deploy/booking -- wget -qO- -T 5 http://search:8083/healthz/ready >/dev/null 2>&1
+search_ready() {  # call search from a Ready booking pod
+  local pod
+  pod=$(kubectl -n "$NS" get pods -l app=booking -o jsonpath='{.items[?(@.status.containerStatuses[0].ready==true)].metadata.name}' 2>/dev/null | awk '{print $1}')
+  [[ -n "$pod" ]] && kubectl -n "$NS" exec "$pod" -- wget -qO- -T 5 http://search:8083/healthz/ready >/dev/null 2>&1
 }
 
 step "Inspect: the release and its history"
+kubectl -n "$NS" rollout status deployment/booking --timeout=60s >/dev/null || { echo "deployment/booking is not ready in $NS" >&2; exit 2; }
 helm status "$RELEASE" -n "$NS" >/dev/null || { echo "No Helm release '$RELEASE' in $NS; run scripts/apply.sh --mode helm first." >&2; exit 2; }
 helm history "$RELEASE" -n "$NS" --max 5
 GOOD_REV=$(helm history "$RELEASE" -n "$NS" -o json | python3 -c 'import json,sys; print([r for r in json.load(sys.stdin) if r["status"]=="deployed"][-1]["revision"])')

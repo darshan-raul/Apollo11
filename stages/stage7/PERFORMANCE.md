@@ -31,7 +31,7 @@ k6 must trust the lab's self-signed edge certificate, which your host does not
 trust by default. Point it at a copy of the certificate for this run only:
 
 ```bash
-kubectl -n apollo-airlines-apps get secret apollo-edge-tls \
+kube -n apollo-airlines-apps get secret apollo-edge-tls \
   -o jsonpath='{.data.tls\.crt}' | base64 -d > /tmp/apollo-edge.crt
 SSL_CERT_FILE=/tmp/apollo-edge.crt BASE_URL=https://search.apollo.local \
   k6 run --summary-export capacity.json k6/capacity.js
@@ -53,7 +53,7 @@ original=$(kube -n apollo-airlines-apps get sts redis -o jsonpath='{.spec.replic
 trap 'kube -n apollo-airlines-apps scale sts/redis --replicas="$original"' EXIT
 kube -n apollo-airlines-apps scale sts/redis --replicas=0
 kube -n apollo-airlines-apps wait --for=delete pod/redis-0 --timeout=120s
-curl --fail -D - "https://search.apollo.local/api/search?origin=BOM&destination=SIN&date=$(date -u +%F)"
+curl --fail --cacert /tmp/apollo-edge.crt -D - "https://search.apollo.local/api/search?origin=BOM&destination=SIN&date=$(date -u +%F)"
 # Require 200, real results, X-Cache: MISS. Record latency and Search logs.
 kube -n apollo-airlines-apps scale sts/redis --replicas="$original"
 kube -n apollo-airlines-apps rollout status sts/redis --timeout=180s

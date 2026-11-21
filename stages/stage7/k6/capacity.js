@@ -10,7 +10,8 @@ export const options = {
   thresholds: {checks: ['rate==1'], http_req_failed: ['rate<0.01'],
     http_req_duration: ['p(95)<200'], dropped_iterations: ['count==0']},
 };
-function request() { return http.get(`${base}/api/search?origin=BOM&destination=SIN&date=${date}`); }
+const hostHeader = __ENV.HOST_HEADER || 'search.apollo.local';
+function request() { return http.get(`${base}/api/search?origin=BOM&destination=SIN&date=${date}`, { headers: { Host: hostHeader } }); }
 function valid(r) { try {return r.status === 200 && r.json().results.length > 0;} catch (_) {return false;} }
 export function setup() { if (!valid(request())) fail('No seeded flights at target'); }
 export default function () { check(request(), {'real flight response': valid}); }

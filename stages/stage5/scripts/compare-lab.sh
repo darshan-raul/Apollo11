@@ -17,7 +17,12 @@ PASS=0; FAIL=0
 pass() { echo "PASS: $1"; PASS=$((PASS + 1)); }
 fail() { echo "FAIL: $1"; FAIL=$((FAIL + 1)); }
 
-helm_render() { helm template apollo11 "$CHART" -f "$CHART/values-$1.yaml" "${@:2}"; }
+helm_render() {
+  helm template apollo11 "$CHART" -f "$CHART/values-$1.yaml" \
+    --set gateway.envoy.bundleInstall=false \
+    --set metallb.bundleInstall=false \
+    "${@:2}"
+}
 summary() {  # replicas, search image and PDB count from a rendered stream
   python3 -c '
 import sys, yaml
@@ -31,8 +36,11 @@ print("search replicas=%s image=%s pdbs=%d" % (s["spec"]["replicas"],
 
 echo "== 1. What each environment changes"
 for env in dev prod; do
-  echo "helm      $env: $(helm_render "$env" | summary)"
-  echo "kustomize $env: $(kubectl kustomize "$STAGE_DIR/overlays/$env" | summary)"
+  h_out=$(helm_render "$env" | summary)
+  k_out=$(kubectl kustomize "$STAGE_DIR/overlays/$env" | summary)
+  echo "helm      $env: $h_out"
+  echo "kustomize $env: $k_out"
+  [[ "$h_out" == "$k_out" ]] && pass "$env Helm and Kustomize match ($h_out)" || fail "$env mismatch: helm=($h_out) kustomize=($k_out)"
 done
 echo "Helm expresses environments as values files; Kustomize as overlays that patch a base."
 

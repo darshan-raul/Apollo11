@@ -113,7 +113,7 @@ helm/apollo11/
 overlays/
 ├── base/
 │   ├── kustomization.yaml
-│   └── generated.yaml   # complete committed 61-resource plain base
+│   └── generated.yaml   # complete committed 63-resource plain base
 ├── dev/                 # 1 replica, tag=latest
 ├── staging/             # 2 replicas, tag=latest
 └── prod/                # 3 replicas, tag=v1.0.0, +PDBs
@@ -357,7 +357,7 @@ stage5/
 │   ├── bundles/                     (Envoy + MetalLB install YAMLs)
 │   └── templates/                   (19 templates)
 ├── overlays/                        # Kustomize overlays
-│   ├── base/                        (complete 61-resource plain manifest base)
+│   ├── base/                        (complete 63-resource plain manifest base)
 │   ├── dev/
 │   ├── staging/
 │   └── prod/

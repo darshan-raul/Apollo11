@@ -22,6 +22,7 @@ import (
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
@@ -85,31 +86,55 @@ func addSSLMode(dsn string) string {
 	if strings.Contains(dsn, "sslmode=") {
 		return dsn
 	}
+	if strings.Contains(dsn, "?") {
+		return dsn + "&sslmode=disable"
+	}
 	return dsn + "?sslmode=disable"
 }
 
+func traceAndSpanFromContext(ctx context.Context) (string, string) {
+	if ctx == nil {
+		return "", ""
+	}
+	sc := trace.SpanFromContext(ctx).SpanContext()
+	if !sc.IsValid() {
+		return "", ""
+	}
+	return sc.TraceID().String(), sc.SpanID().String()
+}
+
 func logJSON(level, service, message, traceID, spanID string, extra ...map[string]interface{}) {
-	// If the caller didn't pass a trace_id explicitly, try to read it from
-	// the active OTEL span. This is the Stage 6 wiring: every log line is
-	// automatically trace-correlated.
-	if traceID == "" {
-		if span := trace.SpanFromContext(context.Background()); span.SpanContext().IsValid() {
-			traceID = span.SpanContext().TraceID().String()
-			if spanID == "" {
-				spanID = span.SpanContext().SpanID().String()
-			}
+	entry := map[string]interface{}{
+		"timestamp":  time.Now().UTC().Format(time.RFC3339),
+		"level":      level,
+		"service":    service,
+		"request_id": "",
+		"trace_id":   traceID,
+		"span_id":    spanID,
+		"message":    message,
+	}
+	for _, m := range extra {
+		for k, v := range m {
+			entry[k] = v
 		}
 	}
+	b, _ := json.Marshal(entry)
+	logger.Println(string(b))
+}
+
+func logContext(ctx context.Context, requestID, level, service, message string, extra ...map[string]interface{}) {
+	traceID, spanID := traceAndSpanFromContext(ctx)
 	entry := map[string]interface{}{
-		"timestamp": time.Now().UTC().Format(time.RFC3339),
-		"level":     level,
-		"service":   service,
-		"trace_id":  traceID,
-		"span_id":   spanID,
-		"message":   message,
+		"timestamp":  time.Now().UTC().Format(time.RFC3339),
+		"level":      level,
+		"service":    service,
+		"request_id": requestID,
+		"trace_id":   traceID,
+		"span_id":    spanID,
+		"message":    message,
 	}
-	if len(extra) > 0 && extra[0] != nil {
-		for k, v := range extra[0] {
+	for _, m := range extra {
+		for k, v := range m {
 			entry[k] = v
 		}
 	}
@@ -192,10 +217,16 @@ func prometheusHandler() http.Handler {
 		httpRequestsTotal,
 		httpRequestDurationMs,
 		dbConnectionsActive,
-		prometheus.NewGoCollector(),
-		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
-	return promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg})
+	h := promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg})
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if db != nil {
+			dbConnectionsActive.Set(float64(db.Stats().OpenConnections))
+		}
+		h.ServeHTTP(w, r)
+	})
 }
 
 // metricsMiddleware records request count + duration for every endpoint.
@@ -212,7 +243,7 @@ func metricsMiddleware(service string) gin.HandlerFunc {
 		}
 		status := fmt.Sprintf("%d", c.Writer.Status())
 		httpRequestsTotal.WithLabelValues(service, c.Request.Method, path, status).Inc()
-		httpRequestDurationMs.WithLabelValues(service, c.Request.Method, path).Observe(float64(time.Since(start).Milliseconds()))
+		httpRequestDurationMs.WithLabelValues(service, c.Request.Method, path).Observe(float64(time.Since(start).Microseconds()) / 1000.0)
 	}
 }
 
@@ -316,7 +347,11 @@ func callService(parent context.Context, url, method, body, requestID string, au
 	)
 	defer span.End()
 
-	req, _ := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer([]byte(body)))
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer([]byte(body)))
+	if err != nil {
+		span.RecordError(err)
+		return 0, nil
+	}
 	req.Header.Set("Content-Type", "application/json")
 	// Backwards-compat: keep X-Request-ID flowing for any service that
 	// hasn't yet been instrumented with OTEL.
@@ -343,9 +378,25 @@ func callService(parent context.Context, url, method, body, requestID string, au
 	return resp.StatusCode, respBody
 }
 
+func extractClaims(c *gin.Context) (jwt.MapClaims, string, string, bool) {
+	claimsVal, ok := c.Get("claims")
+	if !ok {
+		return nil, "", "", false
+	}
+	claims, ok := claimsVal.(jwt.MapClaims)
+	if !ok {
+		return nil, "", "", false
+	}
+	sub, _ := claims["sub"].(string)
+	role, _ := claims["role"].(string)
+	if sub == "" {
+		return nil, "", "", false
+	}
+	return claims, sub, role, true
+}
+
 func main() {
 	initDB()
-	defer db.Close()
 
 	// Stage 6: OpenTelemetry SDK init. Must happen before the HTTP server
 	// starts so otelgin can register its middleware. If init fails, the
@@ -408,6 +459,10 @@ func main() {
 	})
 
 	r.GET("/healthz/ready", func(c *gin.Context) {
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not initialized"})
+			return
+		}
 		if err := db.Ping(); err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not reachable"})
 			return
@@ -416,6 +471,10 @@ func main() {
 	})
 
 	r.GET("/readyz", func(c *gin.Context) {
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not initialized"})
+			return
+		}
 		if err := db.Ping(); err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not reachable"})
 			return
@@ -426,11 +485,16 @@ func main() {
 	r.GET("/metrics", gin.WrapH(prometheusHandler()))
 
 	r.POST("/api/bookings", authRequired(), func(c *gin.Context) {
-		requestID, _ := c.Get("request_id")
-		traceID := traceIDFromContext(c.Request.Context())
-		claimsVal, _ := c.Get("claims")
-		claims := claimsVal.(jwt.MapClaims)
-		userID := claims["sub"].(string)
+		requestID := c.GetString("request_id")
+		claims, userID, _, ok := extractClaims(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			return
+		}
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
+			return
+		}
 
 		var req CreateBookingRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -444,10 +508,10 @@ func main() {
 
 		statusCode, body := callService(c.Request.Context(),
 			fmt.Sprintf("%s/api/users/%s", identityServiceURL, userID),
-			"GET", "", requestID.(string), c.GetHeader("Authorization"),
+			"GET", "", requestID, c.GetHeader("Authorization"),
 		)
 		if statusCode != 200 {
-			logJSON("WARN", "booking-service", "User check failed", traceID, "", nil)
+			logContext(c.Request.Context(), requestID, "WARN", "booking-service", "User check failed")
 			if statusCode == 403 {
 				c.JSON(http.StatusForbidden, gin.H{"error": "Account is inactive"})
 				return
@@ -458,7 +522,7 @@ func main() {
 
 		statusCode, body = callService(c.Request.Context(),
 			fmt.Sprintf("%s/api/flights/%s", flightServiceURL, req.FlightID),
-			"GET", "", requestID.(string),
+			"GET", "", requestID,
 		)
 		if statusCode != 200 {
 			if statusCode == 404 {
@@ -469,18 +533,26 @@ func main() {
 			return
 		}
 		var flight map[string]interface{}
-		json.Unmarshal(body, &flight)
-		if flight["status"] == "CANCELLED" || flight["status"] == "DEPARTED" {
+		if err := json.Unmarshal(body, &flight); err != nil {
+			logContext(c.Request.Context(), requestID, "ERROR", "booking-service", fmt.Sprintf("Invalid flight response: %v", err))
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service returned invalid response"})
+			return
+		}
+		if flight["status"] == "CANCELLED" || flight["status"] == "DEPARTED" || flight["status"] == "ARRIVED" {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Flight is not available for booking"})
 			return
 		}
 
 		statusCode, body = callService(c.Request.Context(),
 			fmt.Sprintf("%s/api/flights/%s/seats", flightServiceURL, req.FlightID),
-			"PATCH", `{"delta": -1}`, requestID.(string), serviceAuthorization(),
+			"PATCH", `{"delta": -1}`, requestID, serviceAuthorization(),
 		)
 		if statusCode != 200 {
-			c.JSON(http.StatusConflict, gin.H{"error": "No seats available"})
+			if statusCode == http.StatusConflict {
+				c.JSON(http.StatusConflict, gin.H{"error": "No seats available"})
+				return
+			}
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to reserve seat"})
 			return
 		}
 
@@ -494,14 +566,14 @@ func main() {
 			ref, userID, req.FlightID,
 		).Scan(&bk.ID, &bk.BookingReference, &bk.UserID, &bk.FlightID, &bk.Status, &createdAt)
 		if err != nil {
-			logJSON("ERROR", "booking-service", fmt.Sprintf("Booking insert failed: %v", err), traceID, "", nil)
+			logContext(c.Request.Context(), requestID, "ERROR", "booking-service", fmt.Sprintf("Booking insert failed: %v", err))
 			// The seat was already taken from Flight; give it back.
 			restoreStatus, _ := callService(context.WithoutCancel(c.Request.Context()),
 				fmt.Sprintf("%s/api/flights/%s/seats", flightServiceURL, req.FlightID),
-				"PATCH", `{"delta": 1}`, traceID, serviceAuthorization(),
+				"PATCH", `{"delta": 1}`, requestID, serviceAuthorization(),
 			)
 			if restoreStatus != 200 {
-				logJSON("ERROR", "booking-service", "Seat restore after failed booking did not succeed", traceID, "", map[string]interface{}{"flight_id": req.FlightID, "status": restoreStatus})
+				logContext(c.Request.Context(), requestID, "ERROR", "booking-service", "Seat restore after failed booking did not succeed", map[string]interface{}{"flight_id": req.FlightID, "status": restoreStatus})
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create booking"})
 			return
@@ -514,18 +586,22 @@ func main() {
 			"recipient": email,
 			"payload":   flight,
 		})
-		go callService(context.WithoutCancel(c.Request.Context()), fmt.Sprintf("%s/api/notify", notificationSvcURL), "POST", string(notifyBody), requestID.(string))
+		go callService(context.WithoutCancel(c.Request.Context()), fmt.Sprintf("%s/api/notify", notificationSvcURL), "POST", string(notifyBody), requestID)
 
-		logJSON("INFO", "booking-service", "Booking created", traceID, "", map[string]interface{}{"ref": bk.BookingReference})
+		logContext(c.Request.Context(), requestID, "INFO", "booking-service", "Booking created", map[string]interface{}{"ref": bk.BookingReference})
 		c.JSON(http.StatusCreated, bk)
 	})
 
 	r.GET("/api/bookings/:id", authRequired(), func(c *gin.Context) {
-		_, _ = c.Get("request_id")
-		claimsVal, _ := c.Get("claims")
-		claims := claimsVal.(jwt.MapClaims)
-		userID := claims["sub"].(string)
-		role := claims["role"].(string)
+		_, userID, role, ok := extractClaims(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			return
+		}
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
+			return
+		}
 		id := c.Param("id")
 		if _, err := uuid.Parse(id); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking ID"})
@@ -557,10 +633,16 @@ func main() {
 	})
 
 	r.GET("/api/bookings", authRequired(), func(c *gin.Context) {
-		traceID := traceIDFromContext(c.Request.Context())
-		claimsVal, _ := c.Get("claims")
-		claims := claimsVal.(jwt.MapClaims)
-		userID := claims["sub"].(string)
+		requestID := c.GetString("request_id")
+		_, userID, _, ok := extractClaims(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			return
+		}
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
+			return
+		}
 
 		rows, err := db.Query(
 			`SELECT id, booking_reference, user_id, flight_id, seat_number, status, created_at FROM bookings WHERE user_id = $1 ORDER BY created_at DESC`,
@@ -585,18 +667,23 @@ func main() {
 			bk.CreatedAt = createdAt.Format(time.RFC3339)
 			bookings = append(bookings, bk)
 		}
-		logJSON("INFO", "booking-service", "My bookings", traceID, "", map[string]interface{}{"count": len(bookings)})
+		logContext(c.Request.Context(), requestID, "INFO", "booking-service", "My bookings", map[string]interface{}{"count": len(bookings)})
 		c.JSON(http.StatusOK, gin.H{"bookings": bookings})
 	})
 
 	r.GET("/api/admin/bookings", adminRequired(), func(c *gin.Context) {
-		requestID, _ := c.Get("request_id")
-		traceID := traceIDFromContext(c.Request.Context())
-		claimsVal, _ := c.Get("claims")
-		claims := claimsVal.(jwt.MapClaims)
-		role := claims["role"].(string)
+		requestID := c.GetString("request_id")
+		_, _, role, ok := extractClaims(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			return
+		}
 		if role != "ADMIN" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+			return
+		}
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
 			return
 		}
 
@@ -624,7 +711,7 @@ func main() {
 		}
 
 		userMap := map[string]string{}
-		statusCode, body := callService(c.Request.Context(), fmt.Sprintf("%s/api/admin/users", identityServiceURL), "GET", "", requestID.(string), c.GetHeader("Authorization"))
+		statusCode, body := callService(c.Request.Context(), fmt.Sprintf("%s/api/admin/users", identityServiceURL), "GET", "", requestID, c.GetHeader("Authorization"))
 		if statusCode == 200 {
 			var result struct {
 				Users []struct {
@@ -663,17 +750,21 @@ func main() {
 			}
 		}
 
-		logJSON("INFO", "booking-service", "Admin fetched all bookings", traceID, "", map[string]interface{}{"count": len(ab)})
+		logContext(c.Request.Context(), requestID, "INFO", "booking-service", "Admin fetched all bookings", map[string]interface{}{"count": len(ab)})
 		c.JSON(http.StatusOK, gin.H{"bookings": ab})
 	})
 
 	r.DELETE("/api/bookings/:id", authRequired(), func(c *gin.Context) {
-		requestID, _ := c.Get("request_id")
-		traceID := traceIDFromContext(c.Request.Context())
-		claimsVal, _ := c.Get("claims")
-		claims := claimsVal.(jwt.MapClaims)
-		userID := claims["sub"].(string)
-		role := claims["role"].(string)
+		requestID := c.GetString("request_id")
+		claims, userID, role, ok := extractClaims(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			return
+		}
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
+			return
+		}
 		id := c.Param("id")
 		if _, err := uuid.Parse(id); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking ID"})
@@ -702,16 +793,31 @@ func main() {
 			return
 		}
 
-		_, err = db.Exec(`UPDATE bookings SET status = 'CANCELLED', updated_at = NOW() WHERE id = $1`, id)
+		res, err := db.Exec(`UPDATE bookings SET status = 'CANCELLED', updated_at = NOW() WHERE id = $1 AND status <> 'CANCELLED'`, id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cancel failed"})
 			return
 		}
+		affected, err := res.RowsAffected()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cancel failed"})
+			return
+		}
+		if affected == 0 {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Booking already cancelled"})
+			return
+		}
 
-		go callService(context.WithoutCancel(c.Request.Context()),
-			fmt.Sprintf("%s/api/flights/%s/seats", flightServiceURL, bk.FlightID),
-			"PATCH", `{"delta": 1}`, requestID.(string), serviceAuthorization(),
-		)
+		parentCtx := context.WithoutCancel(c.Request.Context())
+		go func(ctx context.Context, flightID, reqID string) {
+			restoreStatus, _ := callService(ctx,
+				fmt.Sprintf("%s/api/flights/%s/seats", flightServiceURL, flightID),
+				"PATCH", `{"delta": 1}`, reqID, serviceAuthorization(),
+			)
+			if restoreStatus != 200 {
+				logContext(ctx, reqID, "ERROR", "booking-service", "Seat restore after cancel did not succeed", map[string]interface{}{"flight_id": flightID, "status": restoreStatus})
+			}
+		}(parentCtx, bk.FlightID, requestID)
 
 		email, _ := claims["email"].(string)
 		notifyBody, _ := json.Marshal(map[string]interface{}{
@@ -719,9 +825,9 @@ func main() {
 			"recipient": email,
 			"payload":   map[string]string{"bookingReference": bk.BookingReference},
 		})
-		go callService(context.WithoutCancel(c.Request.Context()), fmt.Sprintf("%s/api/notify", notificationSvcURL), "POST", string(notifyBody), requestID.(string))
+		go callService(parentCtx, fmt.Sprintf("%s/api/notify", notificationSvcURL), "POST", string(notifyBody), requestID)
 
-		logJSON("INFO", "booking-service", "Booking cancelled", traceID, "", map[string]interface{}{"id": id})
+		logContext(c.Request.Context(), requestID, "INFO", "booking-service", "Booking cancelled", map[string]interface{}{"id": id})
 		c.JSON(http.StatusOK, gin.H{"message": "Booking cancelled"})
 	})
 
@@ -730,27 +836,29 @@ func main() {
 	srv := &http.Server{Addr: ":" + port, Handler: r}
 
 	go func() {
-		logJSON("INFO", "booking-service", fmt.Sprintf("Starting on :%s", port), "", "", nil)
+		logJSON("INFO", "booking-service", fmt.Sprintf("Starting on :%s", port), "", "")
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logJSON("ERROR", "booking-service", fmt.Sprintf("Server error: %v", err), "", "", nil)
+			logJSON("ERROR", "booking-service", fmt.Sprintf("Server error: %v", err), "", "")
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	<-quit
-	logJSON("INFO", "booking-service", "Received SIGTERM, shutting down gracefully", "", "", nil)
+	logJSON("INFO", "booking-service", "Received SIGTERM, shutting down gracefully", "", "")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		logJSON("ERROR", "booking-service", fmt.Sprintf("Shutdown error: %v", err), "", "", nil)
+		logJSON("ERROR", "booking-service", fmt.Sprintf("Shutdown error: %v", err), "", "")
 	}
 
-	if err := db.Close(); err != nil {
-		logJSON("ERROR", "booking-service", fmt.Sprintf("DB close error: %v", err), "", "", nil)
+	if db != nil {
+		if err := db.Close(); err != nil {
+			logJSON("ERROR", "booking-service", fmt.Sprintf("DB close error: %v", err), "", "")
+		}
 	}
-	logJSON("INFO", "booking-service", "Server stopped", "", "", nil)
+	logJSON("INFO", "booking-service", "Server stopped", "", "")
 }
 
 func adminRequired() gin.HandlerFunc {
@@ -770,7 +878,7 @@ func adminRequired() gin.HandlerFunc {
 		tokenString := parts[1]
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			return []byte(jwtSecret), nil
-		})
+		}, jwt.WithValidMethods([]string{"HS256"}))
 		if err != nil || !token.Valid {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
@@ -782,14 +890,21 @@ func adminRequired() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		if claims["role"] != "ADMIN" {
+		sub, subOK := claims["sub"].(string)
+		role, roleOK := claims["role"].(string)
+		if !subOK || sub == "" || !roleOK {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			c.Abort()
+			return
+		}
+		if role != "ADMIN" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
 			c.Abort()
 			return
 		}
 		c.Set("claims", claims)
-		c.Set("user_id", claims["sub"])
-		c.Set("role", claims["role"])
+		c.Set("user_id", sub)
+		c.Set("role", role)
 		c.Next()
 	}
 }
@@ -811,7 +926,7 @@ func authRequired() gin.HandlerFunc {
 		tokenString := parts[1]
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			return []byte(jwtSecret), nil
-		})
+		}, jwt.WithValidMethods([]string{"HS256"}))
 		if err != nil || !token.Valid {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
@@ -823,9 +938,16 @@ func authRequired() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		sub, subOK := claims["sub"].(string)
+		role, roleOK := claims["role"].(string)
+		if !subOK || sub == "" || !roleOK {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			c.Abort()
+			return
+		}
 		c.Set("claims", claims)
-		c.Set("user_id", claims["sub"])
-		c.Set("role", claims["role"])
+		c.Set("user_id", sub)
+		c.Set("role", role)
 		c.Next()
 	}
 }

@@ -62,7 +62,7 @@ metadata:
   name: apollo-observability
 rules:
   - apiGroups: [""]
-    resources: ["nodes", "nodes/proxy", "services", "endpoints", "pods", "pods/log", "configmaps"]
+    resources: ["nodes", "nodes/proxy", "services", "endpoints", "pods", "pods/log", "configmaps", "namespaces"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["discovery.k8s.io"]
     resources: ["endpointslices"]
@@ -70,7 +70,7 @@ rules:
   - apiGroups: ["monitoring.coreos.com"]
     resources: ["servicemonitors", "podmonitors", "prometheusrules"]
     verbs: ["get", "list", "watch"]
-  - nonResourceURLs: ["/metrics"]
+  - nonResourceURLs: ["/metrics", "/metrics/*"]
     verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

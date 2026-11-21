@@ -2,6 +2,19 @@
 # Prove that one booking request forms a single cross-service Tempo trace.
 set -euo pipefail
 
+usage() {
+    local code="${1:-2}"
+    echo "Usage: $0 [--context kind-apollo11|kind-apollo11-dev]" >&2
+    exit "$code"
+}
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --context) [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+        --help|-h) usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 ;;
+    esac
+done
+
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context.sh"
 apollo_context_guard
 
@@ -30,13 +43,20 @@ kubectl run "$DEBUG_POD" -n apollo-airlines-apps --image=curlimages/curl:8.10.1 
 kubectl wait --for=condition=Ready pod/"$DEBUG_POD" -n apollo-airlines-apps --timeout=120s >/dev/null || fail "debug pod did not become ready"
 
 step "Authenticating and selecting a seeded flight"
-login=$(kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- curl -fsS \
+login=$(kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- curl --max-time 15 -fsS \
     -H 'Content-Type: application/json' -d '{"email":"passenger@apolloairlines.com","password":"pass123"}' \
     http://identity:8080/api/users/login)
 token=$(sed -n 's/.*"token":"\([^"]*\)".*/\1/p' <<<"$login")
 [[ -n "$token" ]] || fail "login did not return a token"
-flights=$(kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- curl -fsS http://flight:8081/api/flights)
-mapfile -t flight_ids < <(grep -o '"id":"[^"]*"' <<<"$flights" | sed 's/"id":"//;s/"$//')
+flights=$(kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- curl --max-time 15 -fsS http://flight:8081/api/flights)
+mapfile -t flight_ids < <(python3 -c '
+import json, sys
+data = json.load(sys.stdin)
+flights = data["flights"] if "flights" in data else data.get("data", [])
+for f in flights:
+    if f.get("status") == "SCHEDULED" and int(f.get("availableSeats", 0)) > 0:
+        print(f["id"])
+' <<< "$flights")
 [[ "${#flight_ids[@]}" -gt 0 ]] || fail "seeded flight not found"
 
 TRACE_ID=$(openssl rand -hex 16)
@@ -74,25 +94,13 @@ seats_after_create=$(sed -n 's/.*"availableSeats":\([0-9][0-9]*\).*/\1/p' <<<"$f
 [[ "$seats_after_create" -eq $((seats_before - 1)) ]] || fail "seat count did not decrement after booking ($seats_before -> $seats_after_create)"
 
 step "Waiting for Tempo to contain the cross-service span graph"
-trace_json=""
-for _ in $(seq 1 20); do
-    trace_json=$(kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- \
-        curl -fsS "http://tempo.apollo-observability.svc.cluster.local:3100/api/traces/$TRACE_ID" 2>/dev/null || true)
-    if [[ -n "$trace_json" ]] && grep -q 'booking' <<<"$trace_json" && \
-       grep -q 'identity' <<<"$trace_json" && grep -q 'flight' <<<"$trace_json" && \
-       grep -q 'notification' <<<"$trace_json"; then
-        break
-    fi
-    sleep 3
-done
-[[ -n "$trace_json" ]] || fail "Tempo did not return trace $TRACE_ID"
-for service in booking identity flight notification; do
-    grep -q "$service" <<<"$trace_json" || fail "trace $TRACE_ID is missing service $service"
-done
-
-python3 - "$TRACE_ID" "$trace_json" <<'PY'
+trace_services() {
+    python3 - "$1" <<'PY'
 import json, sys
-trace_id, payload = sys.argv[1], json.loads(sys.argv[2])
+try:
+    payload = json.loads(sys.argv[1])
+except Exception:
+    sys.exit(1)
 services = set()
 def visit(value):
     if isinstance(value, dict):
@@ -101,17 +109,35 @@ def visit(value):
             for attr in attrs:
                 if attr.get("key") == "service.name":
                     services.add(str(attr.get("value", {}).get("stringValue", "")))
-        for child in value.values(): visit(child)
+        for child in value.values():
+            visit(child)
     elif isinstance(value, list):
-        for child in value: visit(child)
+        for child in value:
+            visit(child)
 visit(payload)
-print(f"trace_id={trace_id} services={','.join(sorted(filter(None, services)))}")
+required = {"booking", "identity", "flight", "notification"}
+if not required.issubset(services):
+    sys.exit(1)
+print(",".join(sorted(filter(None, services))))
 PY
+}
+trace_json=""
+reported_services=""
+for _ in $(seq 1 20); do
+    trace_json=$(kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- \
+        curl --max-time 15 -fsS "http://tempo.apollo-observability.svc.cluster.local:3100/api/traces/$TRACE_ID" 2>/dev/null || true)
+    if [[ -n "$trace_json" ]] && reported_services=$(trace_services "$trace_json" 2>/dev/null); then
+        break
+    fi
+    sleep 3
+done
+[[ -n "$trace_json" ]] || fail "Tempo did not return trace $TRACE_ID"
+[[ -n "$reported_services" ]] || reported_services=$(trace_services "$trace_json") || fail "trace $TRACE_ID is missing one of booking, identity, flight, notification"
+echo "trace_id=$TRACE_ID services=$reported_services"
 
-booking_id=$(sed -n 's/.*"id":"\([^"]*\)".*/\1/p' <<<"$booking")
 [[ -n "$booking_id" ]] || fail "created booking response did not contain an id"
 step "Cancelling the passenger booking and restoring its seat"
-cancel_response=$(kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- curl -sS -w $'\n%{http_code}' \
+cancel_response=$(kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- curl --max-time 15 -sS -w $'\n%{http_code}' \
     -X DELETE -H "Authorization: Bearer $token" \
     -H "X-Request-ID: $REQUEST_ID-cancel" \
     "http://booking:8082/api/bookings/$booking_id")
@@ -122,7 +148,7 @@ cancel_body=${cancel_response%$'\n'*}
 booking_id=""
 seats_after_cancel=""
 for _ in $(seq 1 20); do
-    flight_after_cancel=$(kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- curl -fsS "http://flight:8081/api/flights/$chosen_flight_id")
+    flight_after_cancel=$(kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- curl --max-time 15 -fsS "http://flight:8081/api/flights/$chosen_flight_id")
     seats_after_cancel=$(sed -n 's/.*"availableSeats":\([0-9][0-9]*\).*/\1/p' <<<"$flight_after_cancel")
     [[ "$seats_after_cancel" == "$seats_before" ]] && break
     sleep 1
@@ -131,11 +157,11 @@ done
 
 ok "passenger booking and cancellation succeeded; one trace contains booking → identity → flight → notification"
 
-# The same trace must also exist in newly collected structured logs.
+# The same trace and request ID must also exist in newly collected structured logs.
 correlated=false
 for _ in $(seq 1 30); do
     logs=$(kubectl exec -n apollo-airlines-apps "$DEBUG_POD" -- curl --max-time 15 -fsS -G \
-        --data-urlencode "query={service=~\".+\"} | json | trace_id=\"$TRACE_ID\"" \
+        --data-urlencode "query={service=~\".+\"} | json | trace_id=\"$TRACE_ID\" | request_id=\"$REQUEST_ID\"" \
         http://loki.apollo-observability:3100/loki/api/v1/query_range)
     if python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(not any(s["values"] for s in d["data"]["result"]))' <<< "$logs"; then
         correlated=true; break

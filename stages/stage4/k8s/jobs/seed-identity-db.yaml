@@ -20,7 +20,16 @@ spec:
             - -c
             - |
               set -e
-              until pg_isready -h identity-db -U postgres; do echo "Waiting for identity-db..."; sleep 2; done
+              attempts=0
+              until pg_isready -h identity-db -U postgres -d identity; do
+                attempts=$((attempts + 1))
+                if [ "$attempts" -ge 30 ]; then
+                  echo "identity-db did not become ready in time" >&2
+                  exit 1
+                fi
+                echo "Waiting for identity-db..."
+                sleep 2
+              done
               psql -h identity-db -U postgres -d identity -v ON_ERROR_STOP=1 -f /init/seed.sql
               echo "identity DB seeded"
           env:

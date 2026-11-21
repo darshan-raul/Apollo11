@@ -28,9 +28,10 @@ Cluster-scoped prerequisites remain platform-owned and are installed by
 
 - Envoy Gateway and Gateway API CRDs;
 - MetalLB and its CRDs;
+- metrics-server and VerticalPodAutoscaler (recommender + updater + CRDs);
 - Prometheus Operator and monitoring CRDs;
 - tenant and observability namespaces; and
-- the shared GatewayClass, address pool, and discovery RBAC.
+- the shared GatewayClass, address pool, PriorityClasses, and discovery RBAC.
 
 The AppProject denies Application-owned cluster-scoped resources and limits
 destinations to the six tenant namespaces plus `apollo-observability`.
@@ -48,15 +49,15 @@ resource boundaries. The verified counts are:
 
 | Source | Resources |
 |---|---:|
-| dev tenant | 58 |
-| staging tenant | 58 |
-| prod tenant | 60 |
-| shared observability | 34 |
+| dev tenant | 59 |
+| staging tenant | 60 |
+| prod tenant | 62 |
+| shared observability | 44 |
 
 ## Live workflow
 
 Argo CD can only reconcile content available at a Git revision. Push the Stage
-6 work to the configured repository first, or point all Applications at an
+7 work to the configured repository first, or point all Applications at an
 authorized test repository containing the same tree.
 
 ```bash

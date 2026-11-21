@@ -49,6 +49,9 @@ func addSSLMode(dsn string) string {
 	if strings.Contains(dsn, "sslmode=") {
 		return dsn
 	}
+	if strings.Contains(dsn, "?") {
+		return dsn + "&sslmode=disable"
+	}
 	return dsn + "?sslmode=disable"
 }
 
@@ -61,8 +64,10 @@ func logJSON(level, service, message, traceID, spanID string, extra ...map[strin
 		"span_id":   spanID,
 		"message":   message,
 	}
-	for k, v := range extra[0] {
-		entry[k] = v
+	for _, m := range extra {
+		for k, v := range m {
+			entry[k] = v
+		}
 	}
 	b, _ := json.Marshal(entry)
 	logger.Println(string(b))
@@ -129,7 +134,11 @@ func serviceAuthorization() string {
 }
 
 func callService(url, method, body, traceID string, authorization ...string) (int, []byte) {
-	req, _ := http.NewRequest(method, url, bytes.NewBuffer([]byte(body)))
+	req, err := http.NewRequest(method, url, bytes.NewBuffer([]byte(body)))
+	if err != nil {
+		logJSON("ERROR", "booking-service", fmt.Sprintf("Failed to build request for %s: %v", url, err), traceID, "")
+		return 0, nil
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Request-ID", traceID)
 	if len(authorization) > 0 && authorization[0] != "" {
@@ -145,9 +154,25 @@ func callService(url, method, body, traceID string, authorization ...string) (in
 	return resp.StatusCode, respBody
 }
 
+func extractClaims(c *gin.Context) (jwt.MapClaims, string, string, bool) {
+	claimsVal, ok := c.Get("claims")
+	if !ok {
+		return nil, "", "", false
+	}
+	claims, ok := claimsVal.(jwt.MapClaims)
+	if !ok {
+		return nil, "", "", false
+	}
+	sub, _ := claims["sub"].(string)
+	role, _ := claims["role"].(string)
+	if sub == "" {
+		return nil, "", "", false
+	}
+	return claims, sub, role, true
+}
+
 func main() {
 	initDB()
-	defer db.Close()
 
 	r := gin.Default()
 
@@ -188,6 +213,10 @@ func main() {
 	})
 
 	r.GET("/healthz/ready", func(c *gin.Context) {
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not initialized"})
+			return
+		}
 		if err := db.Ping(); err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not reachable"})
 			return
@@ -196,6 +225,10 @@ func main() {
 	})
 
 	r.GET("/readyz", func(c *gin.Context) {
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not initialized"})
+			return
+		}
 		if err := db.Ping(); err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "error", "detail": "DB not reachable"})
 			return
@@ -205,7 +238,9 @@ func main() {
 
 	r.GET("/metrics", func(c *gin.Context) {
 		var activeConns int
-		db.QueryRow("SELECT count(*) FROM pg_stat_activity WHERE datname = 'booking'").Scan(&activeConns)
+		if db != nil {
+			db.QueryRow("SELECT count(*) FROM pg_stat_activity WHERE datname = 'booking'").Scan(&activeConns)
+		}
 		metrics := fmt.Sprintf(`# HELP http_requests_total Total HTTP requests observed by the service.
 # TYPE http_requests_total counter
 http_requests_total{service="booking"} 0
@@ -220,11 +255,16 @@ db_connections_active{service="booking"} %d
 	})
 
 	r.POST("/api/bookings", authRequired(), func(c *gin.Context) {
-		requestID, _ := c.Get("request_id")
-		traceID := requestID.(string)
-		claimsVal, _ := c.Get("claims")
-		claims := claimsVal.(jwt.MapClaims)
-		userID := claims["sub"].(string)
+		traceID := c.GetString("request_id")
+		claims, userID, _, ok := extractClaims(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			return
+		}
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
+			return
+		}
 
 		var req CreateBookingRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -241,7 +281,7 @@ db_connections_active{service="booking"} %d
 			"GET", "", traceID, c.GetHeader("Authorization"),
 		)
 		if statusCode != 200 {
-			logJSON("WARN", "booking-service", "User check failed", traceID, "", nil)
+			logJSON("WARN", "booking-service", "User check failed", traceID, "")
 			if statusCode == 403 {
 				c.JSON(http.StatusForbidden, gin.H{"error": "Account is inactive"})
 				return
@@ -263,8 +303,12 @@ db_connections_active{service="booking"} %d
 			return
 		}
 		var flight map[string]interface{}
-		json.Unmarshal(body, &flight)
-		if flight["status"] == "CANCELLED" || flight["status"] == "DEPARTED" {
+		if err := json.Unmarshal(body, &flight); err != nil {
+			logJSON("ERROR", "booking-service", fmt.Sprintf("Invalid flight response: %v", err), traceID, "")
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Flight service returned invalid response"})
+			return
+		}
+		if flight["status"] == "CANCELLED" || flight["status"] == "DEPARTED" || flight["status"] == "ARRIVED" {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Flight is not available for booking"})
 			return
 		}
@@ -274,7 +318,11 @@ db_connections_active{service="booking"} %d
 			"PATCH", `{"delta": -1}`, traceID, serviceAuthorization(),
 		)
 		if statusCode != 200 {
-			c.JSON(http.StatusConflict, gin.H{"error": "No seats available"})
+			if statusCode == http.StatusConflict {
+				c.JSON(http.StatusConflict, gin.H{"error": "No seats available"})
+				return
+			}
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to reserve seat"})
 			return
 		}
 
@@ -315,11 +363,15 @@ db_connections_active{service="booking"} %d
 	})
 
 	r.GET("/api/bookings/:id", authRequired(), func(c *gin.Context) {
-		_, _ = c.Get("request_id")
-		claimsVal, _ := c.Get("claims")
-		claims := claimsVal.(jwt.MapClaims)
-		userID := claims["sub"].(string)
-		role := claims["role"].(string)
+		_, userID, role, ok := extractClaims(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			return
+		}
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
+			return
+		}
 		id := c.Param("id")
 		if _, err := uuid.Parse(id); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking ID"})
@@ -351,11 +403,16 @@ db_connections_active{service="booking"} %d
 	})
 
 	r.GET("/api/bookings", authRequired(), func(c *gin.Context) {
-		requestID, _ := c.Get("request_id")
-		traceID := requestID.(string)
-		claimsVal, _ := c.Get("claims")
-		claims := claimsVal.(jwt.MapClaims)
-		userID := claims["sub"].(string)
+		traceID := c.GetString("request_id")
+		_, userID, _, ok := extractClaims(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			return
+		}
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
+			return
+		}
 
 		rows, err := db.Query(
 			`SELECT id, booking_reference, user_id, flight_id, seat_number, status, created_at FROM bookings WHERE user_id = $1 ORDER BY created_at DESC`,
@@ -385,13 +442,18 @@ db_connections_active{service="booking"} %d
 	})
 
 	r.GET("/api/admin/bookings", adminRequired(), func(c *gin.Context) {
-		requestID, _ := c.Get("request_id")
-		traceID := requestID.(string)
-		claimsVal, _ := c.Get("claims")
-		claims := claimsVal.(jwt.MapClaims)
-		role := claims["role"].(string)
+		traceID := c.GetString("request_id")
+		_, _, role, ok := extractClaims(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			return
+		}
 		if role != "ADMIN" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+			return
+		}
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
 			return
 		}
 
@@ -463,12 +525,16 @@ db_connections_active{service="booking"} %d
 	})
 
 	r.DELETE("/api/bookings/:id", authRequired(), func(c *gin.Context) {
-		requestID, _ := c.Get("request_id")
-		traceID := requestID.(string)
-		claimsVal, _ := c.Get("claims")
-		claims := claimsVal.(jwt.MapClaims)
-		userID := claims["sub"].(string)
-		role := claims["role"].(string)
+		traceID := c.GetString("request_id")
+		claims, userID, role, ok := extractClaims(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			return
+		}
+		if db == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database unavailable"})
+			return
+		}
 		id := c.Param("id")
 		if _, err := uuid.Parse(id); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking ID"})
@@ -497,16 +563,30 @@ db_connections_active{service="booking"} %d
 			return
 		}
 
-		_, err = db.Exec(`UPDATE bookings SET status = 'CANCELLED', updated_at = NOW() WHERE id = $1`, id)
+		res, err := db.Exec(`UPDATE bookings SET status = 'CANCELLED', updated_at = NOW() WHERE id = $1 AND status <> 'CANCELLED'`, id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cancel failed"})
 			return
 		}
+		affected, err := res.RowsAffected()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Cancel failed"})
+			return
+		}
+		if affected == 0 {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Booking already cancelled"})
+			return
+		}
 
-		go callService(
-			fmt.Sprintf("%s/api/flights/%s/seats", flightServiceURL, bk.FlightID),
-			"PATCH", `{"delta": 1}`, traceID, serviceAuthorization(),
-		)
+		go func(flightID, tid string) {
+			restoreStatus, _ := callService(
+				fmt.Sprintf("%s/api/flights/%s/seats", flightServiceURL, flightID),
+				"PATCH", `{"delta": 1}`, tid, serviceAuthorization(),
+			)
+			if restoreStatus != 200 {
+				logJSON("ERROR", "booking-service", "Seat restore after cancel did not succeed", tid, "", map[string]interface{}{"flight_id": flightID, "status": restoreStatus})
+			}
+		}(bk.FlightID, traceID)
 
 		email, _ := claims["email"].(string)
 		notifyBody, _ := json.Marshal(map[string]interface{}{
@@ -525,27 +605,29 @@ db_connections_active{service="booking"} %d
 	srv := &http.Server{Addr: ":" + port, Handler: r}
 
 	go func() {
-		logJSON("INFO", "booking-service", fmt.Sprintf("Starting on :%s", port), "", "", nil)
+		logJSON("INFO", "booking-service", fmt.Sprintf("Starting on :%s", port), "", "")
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logJSON("ERROR", "booking-service", fmt.Sprintf("Server error: %v", err), "", "", nil)
+			logJSON("ERROR", "booking-service", fmt.Sprintf("Server error: %v", err), "", "")
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	<-quit
-	logJSON("INFO", "booking-service", "Received SIGTERM, shutting down gracefully", "", "", nil)
+	logJSON("INFO", "booking-service", "Received SIGTERM, shutting down gracefully", "", "")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		logJSON("ERROR", "booking-service", fmt.Sprintf("Shutdown error: %v", err), "", "", nil)
+		logJSON("ERROR", "booking-service", fmt.Sprintf("Shutdown error: %v", err), "", "")
 	}
 
-	if err := db.Close(); err != nil {
-		logJSON("ERROR", "booking-service", fmt.Sprintf("DB close error: %v", err), "", "", nil)
+	if db != nil {
+		if err := db.Close(); err != nil {
+			logJSON("ERROR", "booking-service", fmt.Sprintf("DB close error: %v", err), "", "")
+		}
 	}
-	logJSON("INFO", "booking-service", "Server stopped", "", "", nil)
+	logJSON("INFO", "booking-service", "Server stopped", "", "")
 }
 
 func adminRequired() gin.HandlerFunc {
@@ -565,7 +647,7 @@ func adminRequired() gin.HandlerFunc {
 		tokenString := parts[1]
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			return []byte(jwtSecret), nil
-		})
+		}, jwt.WithValidMethods([]string{"HS256"}))
 		if err != nil || !token.Valid {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
@@ -577,14 +659,21 @@ func adminRequired() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		if claims["role"] != "ADMIN" {
+		sub, subOK := claims["sub"].(string)
+		role, roleOK := claims["role"].(string)
+		if !subOK || sub == "" || !roleOK {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			c.Abort()
+			return
+		}
+		if role != "ADMIN" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
 			c.Abort()
 			return
 		}
 		c.Set("claims", claims)
-		c.Set("user_id", claims["sub"])
-		c.Set("role", claims["role"])
+		c.Set("user_id", sub)
+		c.Set("role", role)
 		c.Next()
 	}
 }
@@ -606,7 +695,7 @@ func authRequired() gin.HandlerFunc {
 		tokenString := parts[1]
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			return []byte(jwtSecret), nil
-		})
+		}, jwt.WithValidMethods([]string{"HS256"}))
 		if err != nil || !token.Valid {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
@@ -618,9 +707,16 @@ func authRequired() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		sub, subOK := claims["sub"].(string)
+		role, roleOK := claims["role"].(string)
+		if !subOK || sub == "" || !roleOK {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+			c.Abort()
+			return
+		}
 		c.Set("claims", claims)
-		c.Set("user_id", claims["sub"])
-		c.Set("role", claims["role"])
+		c.Set("user_id", sub)
+		c.Set("role", role)
 		c.Next()
 	}
 }

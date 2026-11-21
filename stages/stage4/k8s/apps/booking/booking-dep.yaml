@@ -35,8 +35,13 @@ spec:
           ports:
             - containerPort: 8082
           env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: POSTGRES_PASSWORD
             - name: DATABASE_URL
-              value: "postgresql://postgres:postgres@booking-db:5432/booking?sslmode=disable"
+              value: "postgresql://postgres:$(POSTGRES_PASSWORD)@booking-db:5432/booking?sslmode=disable"
             - name: FLIGHT_SERVICE_URL
               value: "http://flight:8081"
             - name: IDENTITY_SERVICE_URL

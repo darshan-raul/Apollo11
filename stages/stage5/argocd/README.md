@@ -179,7 +179,7 @@ bash scripts/verify.sh
 
 # 5. Open the UI (install.sh prints a command to retrieve the credential)
 kubectl port-forward svc/argocd-server -n argocd 8080:443 &
-open http://localhost:8080
+open https://localhost:8080
 ```
 
 Full walkthrough — including the "Application is OutOfSync because ArgoCD

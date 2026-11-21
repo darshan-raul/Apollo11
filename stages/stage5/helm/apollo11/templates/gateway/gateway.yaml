@@ -45,14 +45,14 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-{{- if .Values.gateway.tls.enabled }}
+{{- if and .Values.gateway.tls .Values.gateway.tls.enabled }}
     - name: https
       port: 443
       protocol: HTTPS
       tls:
         mode: Terminate
         certificateRefs:
-          - name: {{ (index .Values.gateway "tls" "secretName") | default "apollo-edge-tls" }}
+          - name: {{ .Values.gateway.tls.secretName | default "apollo-edge-tls" }}
       allowedRoutes:
         namespaces:
           from: All

@@ -34,8 +34,13 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: POSTGRES_PASSWORD
             - name: DATABASE_URL
-              value: "postgresql://postgres:postgres@identity-db:5432/identity?sslmode=disable"
+              value: "postgresql://postgres:$(POSTGRES_PASSWORD)@identity-db:5432/identity?sslmode=disable"
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:

@@ -23,9 +23,8 @@ brings Prometheus metrics, Tempo traces, and Loki logs together.
 |---|---|
 | Helm/dev | **212/212** checks passed, followed by a clean purge |
 | Kustomize/dev | **201/201** checks passed, followed by a clean purge |
-| Argo CD | Four-Application layout statically validated: dev 58, staging 58, prod 60, shared observability 34 resources |
+| Argo CD | Four-Application layout statically validated: dev 58, staging 58, prod 60, shared observability 44 resources |
 
-Hosted CI has not passed yet (tracker G2a, G15), so no images are published.
 Live Argo CD reconciliation has not passed (G1d).
 
 ## What changed from Stage 5
@@ -38,7 +37,7 @@ The identity, flight, booking, search, and notification services now provide:
   `/metrics`;
 - OpenTelemetry server spans and instrumented outbound HTTP calls;
 - W3C `traceparent` propagation across service boundaries;
-- `trace_id` and `span_id` correlation in structured JSON logs; and
+- `request_id`, `trace_id`, and `span_id` correlation in structured JSON logs; and
 - OTLP export to the collector at
   `otel-collector.apollo-observability.svc.cluster.local:4317`.
 
@@ -55,7 +54,7 @@ The `apollo-observability` namespace contains:
 |---|---|---|
 | Prometheus | `quay.io/prometheus/prometheus:v3.13.1` | Scrapes five ServiceMonitors and evaluates Apollo alert rules |
 | Alertmanager | `quay.io/prometheus/alertmanager:v0.28.1` | Alert routing, grouping, silences, and local webhook notification delivery |
-| Blackbox Exporter | `quay.io/prometheus/blackbox-exporter:v0.25.0` | Probes internal services and edge HTTPS ingress through the Envoy Gateway |
+| Blackbox Exporter | `quay.io/prometheus/blackbox-exporter:v0.26.0` | Probes internal services and edge HTTPS ingress through the Envoy Gateway |
 | Grafana | `grafana/grafana:10.4.2` | Five provisioned dashboards and Prometheus/Loki/Tempo datasources |
 | OpenTelemetry Collector | `otel/opentelemetry-collector-contrib:0.99.0` | Per-node OTLP receiver and trace pipeline |
 | Tempo | `grafana/tempo:2.3.1` | Trace storage and query API |
@@ -68,8 +67,10 @@ chart. Keeping the large operator bundle outside the chart prevents Helm's
 release Secret from exceeding Kubernetes' 1 MiB object limit.
 
 Grafana is available through the existing Envoy Gateway at
-`grafana.apollo.local`. The cross-namespace HTTPRoute is authorized by a
-ReferenceGrant.
+`grafana.apollo.local`. Because the Grafana HTTPRoute in `apollo-observability`
+targets the same-namespace `grafana` Service, cross-namespace attachment to
+`apollo-gateway` is authorized by the Gateway's `allowedRoutes.namespaces.from: All`
+policy rather than a `ReferenceGrant`.
 
 ## Packaging
 

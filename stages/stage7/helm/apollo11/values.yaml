@@ -1,7 +1,6 @@
 ---
-# Stage 5: Apollo Airlines — flight management system.
-# All workloads are derived from Stage 4 (probes + Guaranteed QoS + graceful
-# SIGTERM) and packaged as a single Helm chart.
+# Stage 7: Apollo Airlines — autoscaling, Redis search caching, priority,
+# and scheduling policy built on top of the Stage 6 observable chart.
 
 # ----------------------------------------------------------------------------
 # Image configuration
@@ -168,7 +167,8 @@ postgres:
           ('AA301', 'BOM', 'LHR', '01:00:00'::time, '10:00:00'::time, 300),
           ('AA401', 'DEL', 'JFK', '02:00:00'::time, '14:00:00'::time, 280)
       ) AS f(flight_number, origin, destination, dep_time, arr_time, total_capacity)
-      CROSS JOIN generate_series(0, 30) AS n;
+      CROSS JOIN generate_series(0, 30) AS n
+      ON CONFLICT (flight_number, departure_time) DO NOTHING;
     booking: |
       -- Bookings are created at runtime; seed is empty but kept for symmetry.
       SELECT 1;
@@ -374,11 +374,6 @@ metallb:
 # Image pull secrets (for GHCR / private registries in prod)
 # ----------------------------------------------------------------------------
 imagePullSecrets: []
-
-# ----------------------------------------------------------------------------
-# Pod priority (reserved for Stage 7+ when we add PriorityClasses)
-# ----------------------------------------------------------------------------
-priorityClassName: ""
 
 # ----------------------------------------------------------------------------
 # Stage 7: PriorityClass definitions

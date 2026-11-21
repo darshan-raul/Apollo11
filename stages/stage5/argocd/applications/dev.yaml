@@ -17,8 +17,8 @@
 #   repoURL at the GitHub repo. For a fully offline demo, you can
 #   1) `kind create cluster` with extraMounts to share stages/stage5/ into
 #      the container, 2) patch argocd-repo-server to mount that volume,
-#      3) set repoURL to file:///workspace/stages/stage5/helm/apollo11.
-#   We default to the GitHub URL — set the env var GITOPS_REPO to override
+#      3) pass `--repo-url file:///workspace` to scripts/bootstrap.sh.
+#   We default to the GitHub URL — pass `--repo-url` to scripts/bootstrap.sh to override
 #   for your fork or local setup.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -38,8 +38,7 @@ spec:
   project: apollo-airlines
 
   source:
-    # Override at apply time with: --set source.repoURL=...
-    # or via the env file in scripts/bootstrap.sh.
+    # Override at apply time with: bash scripts/bootstrap.sh --repo-url ...
     repoURL: https://github.com/darshan-raul/Apollo11.git
     targetRevision: HEAD
     # Path within the repo containing the Helm chart

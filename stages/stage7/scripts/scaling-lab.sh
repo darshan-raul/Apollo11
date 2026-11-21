@@ -15,6 +15,33 @@
 #   bash scripts/scaling-lab.sh cleanup
 set -euo pipefail
 
+usage() {
+    local code="${1:-2}"
+    cat <<EOF
+Usage: $0 [--context CTX] [run|cleanup]
+
+Options:
+  --context CTX  Kubernetes context (kind-apollo11 or kind-apollo11-dev)
+  --help         Show this help
+EOF
+    exit "$code"
+}
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --context) [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+        --help|-h) usage 0 ;;
+        -*) echo "Unknown option: $1" >&2; usage 2 ;;
+        *) POSITIONAL+=("$1"); shift ;;
+    esac
+done
+if [[ ${#POSITIONAL[@]} -gt 0 ]]; then
+    set -- "${POSITIONAL[@]}"
+else
+    set --
+fi
+
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context.sh"
 apollo_context_guard
 
@@ -56,7 +83,7 @@ remove_lab_node_state() {
 }
 
 restore_hpa() {
-    if [[ -n "$ORIGINAL_CPU_TARGET" && -n "$ORIGINAL_SCALE_DOWN_WINDOW" ]] && \
+    if [[ "$ORIGINAL_CPU_TARGET" =~ ^[0-9]+$ && "$ORIGINAL_SCALE_DOWN_WINDOW" =~ ^[0-9]+$ ]] && \
        kubectl get hpa "$HPA_NAME" -n "$NAMESPACE" >/dev/null 2>&1; then
         if ! kubectl patch hpa "$HPA_NAME" -n "$NAMESPACE" --type merge \
             -p "{\"spec\":{\"metrics\":[{\"type\":\"Resource\",\"resource\":{\"name\":\"cpu\",\"target\":{\"type\":\"Utilization\",\"averageUtilization\":${ORIGINAL_CPU_TARGET}}}}],\"behavior\":{\"scaleDown\":{\"stabilizationWindowSeconds\":${ORIGINAL_SCALE_DOWN_WINDOW},\"policies\":[{\"type\":\"Percent\",\"value\":50,\"periodSeconds\":60}]}}}}" \
@@ -112,9 +139,9 @@ wait_for_replica_count() {
 
 if [[ "$ACTION" == "cleanup" ]]; then
     ORIGINAL_CPU_TARGET=$(kubectl get hpa "$HPA_NAME" -n "$NAMESPACE" \
-        -o go-template='{{index .metadata.annotations "apollo11.io/scaling-lab-original-cpu"}}' 2>/dev/null || true)
+        -o jsonpath='{.metadata.annotations.apollo11\.io/scaling-lab-original-cpu}' 2>/dev/null || true)
     ORIGINAL_SCALE_DOWN_WINDOW=$(kubectl get hpa "$HPA_NAME" -n "$NAMESPACE" \
-        -o go-template='{{index .metadata.annotations "apollo11.io/scaling-lab-original-window"}}' 2>/dev/null || true)
+        -o jsonpath='{.metadata.annotations.apollo11\.io/scaling-lab-original-window}' 2>/dev/null || true)
     if ! restore_hpa; then
         printf 'WARNING: could not restore the recorded HPA settings.\n' >&2
     fi
@@ -135,10 +162,19 @@ mapfile -t WORKERS < <(worker_nodes)
 [[ "${#WORKERS[@]}" -ge 2 ]] || die "this lab requires at least two nodes labeled node-role=worker"
 DEDICATED_NODE="${WORKERS[0]}"
 
-ORIGINAL_CPU_TARGET=$(kubectl get hpa "$HPA_NAME" -n "$NAMESPACE" \
-    -o jsonpath='{.spec.metrics[0].resource.target.averageUtilization}')
-ORIGINAL_SCALE_DOWN_WINDOW=$(kubectl get hpa "$HPA_NAME" -n "$NAMESPACE" \
-    -o jsonpath='{.spec.behavior.scaleDown.stabilizationWindowSeconds}')
+SAVED_CPU_TARGET=$(kubectl get hpa "$HPA_NAME" -n "$NAMESPACE" \
+    -o jsonpath='{.metadata.annotations.apollo11\.io/scaling-lab-original-cpu}' 2>/dev/null || true)
+SAVED_SCALE_DOWN_WINDOW=$(kubectl get hpa "$HPA_NAME" -n "$NAMESPACE" \
+    -o jsonpath='{.metadata.annotations.apollo11\.io/scaling-lab-original-window}' 2>/dev/null || true)
+if [[ "$SAVED_CPU_TARGET" =~ ^[1-9][0-9]*$ && "$SAVED_SCALE_DOWN_WINDOW" =~ ^[0-9]+$ ]]; then
+    ORIGINAL_CPU_TARGET="$SAVED_CPU_TARGET"
+    ORIGINAL_SCALE_DOWN_WINDOW="$SAVED_SCALE_DOWN_WINDOW"
+else
+    ORIGINAL_CPU_TARGET=$(kubectl get hpa "$HPA_NAME" -n "$NAMESPACE" \
+        -o jsonpath='{.spec.metrics[0].resource.target.averageUtilization}')
+    ORIGINAL_SCALE_DOWN_WINDOW=$(kubectl get hpa "$HPA_NAME" -n "$NAMESPACE" \
+        -o jsonpath='{.spec.behavior.scaleDown.stabilizationWindowSeconds}')
+fi
 MIN_REPLICAS=$(kubectl get hpa "$HPA_NAME" -n "$NAMESPACE" -o jsonpath='{.spec.minReplicas}')
 SEARCH_IMAGE=$(kubectl get deployment "$SEARCH_DEPLOYMENT" -n "$NAMESPACE" \
     -o jsonpath='{.spec.template.spec.containers[0].image}')
@@ -150,7 +186,7 @@ log "Designating $DEDICATED_NODE as the preferred search worker"
 remove_lab_node_state
 kubectl label node "$DEDICATED_NODE" "${POOL_LABEL}=${POOL_VALUE}" --overwrite
 kubectl taint node "$DEDICATED_NODE" "${TAINT_KEY}=${TAINT_VALUE}:${TAINT_EFFECT}" --overwrite
-kubectl delete pod -n "$NAMESPACE" -l app=search --wait=false >/dev/null
+kubectl rollout restart deployment "$SEARCH_DEPLOYMENT" -n "$NAMESPACE" >/dev/null
 kubectl rollout status deployment "$SEARCH_DEPLOYMENT" -n "$NAMESPACE" --timeout=120s
 kubectl get pods -n "$NAMESPACE" -l app=search -o wide
 
@@ -168,6 +204,7 @@ kubectl patch hpa "$HPA_NAME" -n "$NAMESPACE" --type merge \
     >/dev/null
 
 log "Starting bounded in-cluster HTTP load"
+SEARCH_DATE=$(date -u +%F)
 cat <<EOF | kubectl apply -f - >/dev/null
 apiVersion: apps/v1
 kind: Deployment
@@ -199,7 +236,7 @@ spec:
               i=0
               while [ \$i -lt 12 ]; do
                 while true; do
-                  wget -q -O /dev/null 'http://search:8083/api/search?origin=BOM&destination=SIN&date=2026-06-17' || true
+                  wget -q -O /dev/null 'http://search:8083/api/search?origin=BOM&destination=SIN&date=${SEARCH_DATE}' || true
                 done &
                 i=\$((i + 1))
               done

@@ -10,33 +10,37 @@
 # --full` so tenant resources are pruned first.
 
 set -euo pipefail
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../scripts/context.sh"
-apollo_context_guard
 
 ARGOCD_NS="argocd"
 PURGE=false
 
 usage() {
+    local code="${1:-1}"
     cat <<EOF
-Usage: $0 [--purge]
+Usage: $0 [--purge] [--context CTX]
 
 Options:
-  --purge   Also delete cluster-scoped resources that ArgoCD creates:
-             - CustomResourceDefinitions (applications, appprojects, applicationsets)
-             - ClusterRoles / ClusterRoleBindings
-             - ValidatingWebhookConfigurations / MutatingWebhookConfigurations
-  --help    Show this help
+  --purge        Also delete cluster-scoped resources that ArgoCD creates:
+                  - CustomResourceDefinitions (applications, appprojects, applicationsets)
+                  - ClusterRoles / ClusterRoleBindings
+                  - ValidatingWebhookConfigurations / MutatingWebhookConfigurations
+  --context CTX  Kubernetes context (kind-apollo11 or kind-apollo11-dev)
+  --help         Show this help
 EOF
-    exit 1
+    exit "$code"
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --purge) PURGE=true; shift ;;
-        --help)  usage ;;
-        *) echo "Unknown option: $1"; usage ;;
+        --purge)   PURGE=true; shift ;;
+        --context) [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+        --help|-h) usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 ;;
     esac
 done
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../scripts/context.sh"
+apollo_context_guard
 
 GREEN='\033[0;32m'; CYAN='\033[0;36m'; RED='\033[0;31m'; NC='\033[0m'
 step() { echo -e "${CYAN}▶ $1${NC}"; }
@@ -56,12 +60,19 @@ if ! kubectl get ns "$ARGOCD_NS" >/dev/null 2>&1; then
 fi
 ok "namespace $ARGOCD_NS present"
 
+remaining_apps=$(kubectl get applications.argoproj.io -n "$ARGOCD_NS" -o name 2>/dev/null || true)
+if [[ -n "$remaining_apps" ]]; then
+    fail "Refusing to delete namespace '$ARGOCD_NS' while Applications still exist (run 'bash scripts/teardown.sh --full' first): $(tr '\n' ' ' <<<"$remaining_apps")"
+fi
+
 step "2/3 Deleting namespace $ARGOCD_NS"
 # ArgoCD has a finalizer on the namespace? No, it doesn't, but the
 # argocd-redis pod has a PV that may block. We force-delete stuck pods
 # then the namespace with a timeout.
-kubectl get pods -n "$ARGOCD_NS" -o name 2>/dev/null | \
-    xargs -r -I{} kubectl --context "$APOLLO_CONTEXT" delete {} -n "$ARGOCD_NS" --force --grace-period=0 2>/dev/null || true
+while IFS= read -r pod; do
+    [[ -n "$pod" ]] || continue
+    kubectl delete "$pod" -n "$ARGOCD_NS" --force --grace-period=0 2>/dev/null || true
+done < <(kubectl get pods -n "$ARGOCD_NS" -o name 2>/dev/null || true)
 kubectl delete ns "$ARGOCD_NS" --ignore-not-found --timeout 120s 2>&1 | tail -3
 ok "namespace $ARGOCD_NS removed"
 

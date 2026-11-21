@@ -38,7 +38,7 @@ is a service that can ride out traffic spikes without manual intervention.
 |---|---|
 | **New concept** | HPA, VPA in `Off` mode, cache-aside, PriorityClass, taint/toleration, node affinity, topology spread, `X-Cache` |
 | **Workloads changed** | search — Redis cache, metrics, priority, toleration, affinity, topology spread. Booking + notification — priority only. |
-| **Workloads unchanged** | identity, flight, frontend, all StatefulSets, seed Jobs, NetworkPolicies, ServiceAccounts, ConfigMap, Secret, observability stack |
+| **Workloads unchanged** | identity, flight, frontend, all StatefulSets, seed Jobs, ServiceAccounts, ConfigMap, Secret, observability stack |
 | **New cluster resources** | 2 PriorityClasses, 1 HPA, metrics-server, and—outside dev—1 recommendation-only VPA with recommender/updater controllers |
 | **Code changes** | search service: Redis client with bounded startup and lazy recovery, cache GET/SET, cache metrics, `X-Cache: HIT/MISS`, OTEL child spans, and clean shutdown |
 | **Verification** | Helm/dev **227/227** + scale 1→3→1 across 2 workers; Kustomize/dev **216/216** |
@@ -55,7 +55,7 @@ Stage 7 adds a cache-aside layer in front:
 ```
 GET /api/search?origin=BOM&destination=SIN&date=...
     │
-    ├─ cache.get  search:BOM:SIN:2026-06-17   ──► Redis (5min TTL)
+    ├─ cache.get  search:BOM:SIN:<YYYY-MM-DD>   ──► Redis (5min TTL)
     │     │
     │     ├── HIT  → return cached body, set X-Cache: HIT
     │     │          increment cache_hits_total
@@ -310,24 +310,25 @@ bash scripts/verify.sh --mode helm --env dev
 bash scripts/teardown.sh --purge    # cleans up
 ```
 
-To exercise the cache:
+To exercise the cache (default TTL is 300s, configurable via `CACHE_TTL_SECONDS` / `redis.cache.ttlSeconds`):
 
 ```bash
+SEARCH_DATE=$(date -u +%F)
 # In-cluster exec (uses Kubernetes DNS)
 kubectl exec -n apollo-airlines-apps deploy/search -- \
-  wget -qO- 'http://localhost:8083/api/search?origin=BOM&destination=SIN&date=2026-06-17'
+  wget -qO- "http://localhost:8083/api/search?origin=BOM&destination=SIN&date=${SEARCH_DATE}"
 # First call: X-Cache: MISS, cache_misses_total += 1
 kubectl exec -n apollo-airlines-apps deploy/search -- \
-  wget -qO- 'http://localhost:8083/api/search?origin=BOM&destination=SIN&date=2026-06-17'
+  wget -qO- "http://localhost:8083/api/search?origin=BOM&destination=SIN&date=${SEARCH_DATE}"
 # Second call: X-Cache: HIT, cache_hits_total += 1
 
 # Inspect the redis key
 kubectl exec -n apollo-airlines-apps redis-0 -- \
-  sh -c "redis-cli KEYS 'search:*'"
-# => search:BOM:SIN:2026-06-17
+  redis-cli KEYS 'search:*'
+# => search:BOM:SIN:<YYYY-MM-DD>
 
 kubectl exec -n apollo-airlines-apps redis-0 -- \
-  sh -c "redis-cli TTL 'search:BOM:SIN:2026-06-17'"
+  redis-cli TTL "search:BOM:SIN:${SEARCH_DATE}"
 # => ~290 (decreasing toward 0; 300 = original TTL)
 ```
 
@@ -335,8 +336,8 @@ To inspect autoscaling:
 
 ```bash
 kubectl get hpa -n apollo-airlines-apps
-# NAME        REFERENCE      TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
-# search-hpa  Deployment/search  0%/70%   2         10        2          3m
+# In dev (values-dev.yaml): minReplicas=1, maxReplicas=3, targetCPU=70%
+# (chart defaults / staging: min=2, max=10, targetCPU=70%; prod: min=3, max=20, targetCPU=60%)
 
 kubectl describe vpa search-vpa -n apollo-airlines-apps
 # VPA is disabled in dev; use staging/prod to create this resource.
@@ -348,7 +349,15 @@ kubectl describe vpa search-vpa -n apollo-airlines-apps
 #         Uncapped Target: ...
 ```
 
-Run the practical scaling and scheduling exercise after the normal verifier:
+### Recommended exercise order
+
+Follow the Stage 7 verification and labs in order so single-replica baselines do
+not collide with HPA/VPA or observability state:
+
+1. **Install and verify dev:** `bash scripts/apply.sh --env dev && bash scripts/verify.sh --mode helm --env dev`
+2. **Repeatable cache benchmark (isolates 1 replica):** follow [the repeatable cache benchmark](k6/README.md) before changing normal scaling or running HPA load.
+3. **Normal-policy capacity, cache outage recovery, and VPA exercise (uses staging for VPA):** follow [performance, correctness and normal-policy scaling](PERFORMANCE.md).
+4. **Practical HPA + scheduling lab:** with an installed stack and at least two workers (`node-role=worker`), run:
 
 ```bash
 bash scripts/scaling-lab.sh
@@ -367,6 +376,8 @@ If a previous run was forcibly terminated before its trap ran:
 ```bash
 bash scripts/scaling-lab.sh cleanup
 ```
+
+5. **Observability exercises & clean teardown:** follow [alert delivery, edge probes and correlation](OBSERVABILITY.md), then finish with `bash scripts/teardown.sh --purge`.
 
 ---
 
@@ -410,12 +421,14 @@ bash scripts/scaling-lab.sh cleanup
    ratio is the operator's signal — if it drops below 50%, consider
    raising the TTL or the cache size.
 
-8. **Teardown order matters (VPA webhooks).** The teardown script
+8. **Teardown order matters (CRDs and APIServices).** The teardown script
    removes workload resources before VPA and metrics-server, with `--purge`
    handling cluster-scoped cleanup using the
    same force-delete + finalizer-patch pattern that stage 5/6 used for
-   Envoy + MetalLB. Without this, deletion hangs on VPA's
-   ValidatingWebhookConfiguration.
+   Envoy + MetalLB. Removing workloads first prevents dangling VPA custom
+   resources and stale `metrics.k8s.io` APIService discovery errors during
+   cluster cleanup. (`bundles/vpa-install.yaml` omits the admission webhook
+   because `updateMode: Off` is recommendation-only.)
 
 ## Local HTTPS and certificate ownership
 

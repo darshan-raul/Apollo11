@@ -91,9 +91,10 @@ spec:
     syncOptions:
       - CreateNamespace=true   # create the dev apps namespace when needed
       - PrunePropagationPolicy=foreground
-      - PruneLast=true         # prune BEFORE create so we don't strand resources
+      - PruneLast=true         # prune AFTER sync completes so replacement resources come up first
       - ServerSideApply=true   # use server-side apply (required for chart's large CRDs)
       - ApplyOutOfSyncOnly=true
+      - RespectIgnoreDifferences=true
     retry:
       limit: 5
       backoff:
@@ -101,8 +102,13 @@ spec:
         factor: 2
         maxDuration: 3m
 
-  # Ignore differences ArgoCD can't help with (kube-state noise).
+  # Ignore differences ArgoCD can't help with (kube-state noise + HPA replica drift).
   ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: search
+      jsonPointers:
+        - /spec/replicas
     - group: apps
       kind: StatefulSet
       jsonPointers:

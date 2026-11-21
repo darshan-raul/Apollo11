@@ -282,6 +282,59 @@ esac
         self.assertIn('Data survival skipped: booking creation failed', result.stdout)
         self.assertNotIn('Data survival proven', result.stdout)
 
+    def test_stage4_to_7_scripts_support_help_and_reject_foreign_context(self):
+        self.tool('kubectl', 'echo "$*" >> "$CALL_LOG"\n')
+        paths = [
+            f'stages/stage{stage}/scripts/{script}'
+            for stage in (4, 5, 6, 7)
+            for script in ('apply.sh', 'verify.sh', 'teardown.sh')
+        ] + [
+            f'stages/stage{stage}/argocd/scripts/teardown.sh'
+            for stage in (5, 6, 7)
+        ]
+        for path in paths:
+            with self.subTest(path=path, mode='help'):
+                self.log.unlink(missing_ok=True)
+                res = self.run_script(path, '--help')
+                self.assertEqual(res.returncode, 0, res.stderr)
+                self.assertEqual(self.calls(), '')
+            with self.subTest(path=path, mode='foreign-context'):
+                self.log.unlink(missing_ok=True)
+                res = self.run_script(path, '--context', 'arn:aws:eks:unsafe')
+                self.assertEqual(res.returncode, 2)
+                self.assertRegex(res.stderr, r'Refusing .*context')
+                self.assertEqual(self.calls(), '')
+
+    def test_stage5_to_7_argocd_full_teardown_refuses_when_application_remains(self):
+        self.env['KUBE_CONTEXT'] = 'kind-apollo11'
+        self.tool('kubectl', """echo "$*" >> "$CALL_LOG"
+case "$*" in
+  *"get application "*) exit 1 ;;
+  *"get applications.argoproj.io"*) echo application.argoproj.io/other-team-app ;;
+esac
+""")
+        for stage in (5, 6, 7):
+            with self.subTest(stage=stage):
+                self.log.unlink(missing_ok=True)
+                res = self.run_script(f'stages/stage{stage}/argocd/scripts/teardown.sh', '--full')
+                self.assertNotEqual(res.returncode, 0)
+                self.assertIn('Applications still exist', res.stderr + res.stdout)
+                self.assertNotIn('delete appproject', self.calls())
+                self.assertNotIn('delete namespace', self.calls())
+                self.assertNotIn('delete ns', self.calls())
+
+    def test_stage7_scaling_lab_cleanup_handles_absent_annotations(self):
+        self.env['KUBE_CONTEXT'] = 'kind-apollo11'
+        self.tool('kubectl', """echo "$*" >> "$CALL_LOG"
+case "$*" in
+  *"get nodes"*) echo worker-1 ;;
+esac
+""")
+        res = self.run_script('stages/stage7/scripts/scaling-lab.sh', 'cleanup', '--context', 'kind-apollo11')
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertNotIn('patch hpa', self.calls())
+        self.assertIn('taint node worker-1', self.calls())
+
 
 if __name__ == '__main__':
     unittest.main()

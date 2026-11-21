@@ -85,6 +85,8 @@ spec:
             # Stage 7: Redis cache backing
             - name: REDIS_URL
               value: {{ .Values.redis.url | quote }}
+            - name: CACHE_TTL_SECONDS
+              value: {{ .Values.redis.cache.ttlSeconds | quote }}
           {{- with .Values.probes.startup }}
           startupProbe:
             httpGet:

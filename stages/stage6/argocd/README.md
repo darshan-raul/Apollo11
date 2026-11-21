@@ -51,7 +51,7 @@ resource boundaries. The verified counts are:
 | dev tenant | 58 |
 | staging tenant | 58 |
 | prod tenant | 60 |
-| shared observability | 34 |
+| shared observability | 44 |
 
 ## Live workflow
 

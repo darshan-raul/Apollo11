@@ -1,7 +1,7 @@
-{{- if .Values.observability.enabled }}
+{{- if and .Values.observability.enabled .Values.gateway.enabled }}
 # Cross-namespace HTTPRoute: Grafana in apollo-observability, served via
-# the Envoy Gateway in apollo-airlines-apps. The Gateway listener permits
-# routes from all namespaces, and the backend Service is local to this route.
+# the Envoy Gateway. The Gateway listener permits routes from all namespaces,
+# and the backend Service is local to this route.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -12,10 +12,10 @@ metadata:
     app.kubernetes.io/part-of: apollo-airlines
 spec:
   parentRefs:
-    - name: apollo-gateway
-      namespace: {{ .Values.namespaces.apps }}
+    - name: {{ .Values.gateway.gatewayName }}
+      namespace: {{ .Values.observability.grafana.gatewayNamespace | default .Values.namespaces.apps }}
   hostnames:
-    - "grafana.apollo.local"
+    - {{ printf "grafana.%s" .Values.gateway.hostSuffix | quote }}
   rules:
     - matches:
         - path:

@@ -87,7 +87,7 @@ spec:
     syncOptions:
       - CreateNamespace=true   # create the dev apps namespace when needed
       - PrunePropagationPolicy=foreground
-      - PruneLast=true         # prune BEFORE create so we don't strand resources
+      - PruneLast=true         # prune AFTER sync completes so replacement resources come up first
       - ServerSideApply=true   # use server-side apply (required for chart's large CRDs)
       - ApplyOutOfSyncOnly=true
     retry:

@@ -25,8 +25,6 @@
 #   ./scripts/teardown.sh --purge          # --full + cluster-scoped CRDs
 
 set -euo pipefail
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/context.sh"
-apollo_context_guard
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ARGOCD_DIR="$(dirname "$SCRIPT_DIR")"
@@ -37,8 +35,9 @@ ARGOCD_NS="argocd"
 MODE="apps"   # apps | full | purge
 
 usage() {
+    local code="${1:-1}"
     cat <<EOF
-Usage: $0 [--full | --purge]
+Usage: $0 [--full | --purge] [--context CTX]
 
 Options:
   (default)     Delete all Applications. ArgoCD prunes the resources
@@ -47,19 +46,24 @@ Options:
                 Envoy/MetalLB platform, and the argocd system namespace.
   --purge       Same as --full, plus delete cluster-scoped CRDs
                 (applications.argoproj.io, appprojects.argoproj.io, etc.)
+  --context CTX Kubernetes context (kind-apollo11 or kind-apollo11-dev)
   --help        Show this help
 EOF
-    exit 1
+    exit "$code"
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --full)  MODE="full"; shift ;;
-        --purge) MODE="purge"; shift ;;
-        --help)  usage ;;
-        *) echo "Unknown option: $1"; usage ;;
+        --full)    MODE="full"; shift ;;
+        --purge)   MODE="purge"; shift ;;
+        --context) [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+        --help|-h) usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 ;;
     esac
 done
+
+source "${SCRIPT_DIR}/../../scripts/context.sh"
+apollo_context_guard
 
 GREEN='\033[0;32m'; CYAN='\033[0;36m'; RED='\033[0;31m'; NC='\033[0m'
 step() { echo -e "${CYAN}▶ $1${NC}"; }
@@ -114,6 +118,10 @@ ok "$DELETED application(s) deleted"
 # Step 2 (full/purge only): AppProject + isolated tenant platform
 # ---------------------------------------------------------------------------
 if [[ "$MODE" == "full" || "$MODE" == "purge" ]]; then
+    remaining_apps=$(kubectl get applications.argoproj.io -n "$ARGOCD_NS" -o name 2>/dev/null || true)
+    if [[ -n "$remaining_apps" ]]; then
+        fail "Refusing to tear down platform or namespace '$ARGOCD_NS' while Applications still exist: $(tr '\n' ' ' <<<"$remaining_apps")"
+    fi
     step "2/3 Deleting AppProject + isolated tenant platform"
     if kubectl get appproject apollo-airlines -n "$TENANT_NS" >/dev/null 2>&1; then
         kubectl delete appproject apollo-airlines -n "$TENANT_NS" 2>&1 | tail -1
@@ -144,8 +152,10 @@ if [[ "$MODE" == "full" || "$MODE" == "purge" ]]; then
     if kubectl get ns "$ARGOCD_NS" >/dev/null 2>&1; then
         # Force-delete stuck pods (the argocd-redis pod's PVC can block
         # namespace deletion)
-        kubectl get pods -n "$ARGOCD_NS" -o name 2>/dev/null | \
-            xargs -r -I{} kubectl --context "$APOLLO_CONTEXT" delete {} -n "$ARGOCD_NS" --force --grace-period=0 2>/dev/null || true
+        while IFS= read -r pod; do
+            [[ -n "$pod" ]] || continue
+            kubectl delete "$pod" -n "$ARGOCD_NS" --force --grace-period=0 2>/dev/null || true
+        done < <(kubectl get pods -n "$ARGOCD_NS" -o name 2>/dev/null || true)
         kubectl delete ns "$ARGOCD_NS" --ignore-not-found --timeout 120s 2>&1 | tail -1
         ok "namespace $ARGOCD_NS deleted"
     else

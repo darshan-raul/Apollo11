@@ -7,6 +7,8 @@ import (
 )
 
 func TestCacheDisabledSkipsInvalidRedisConfiguration(t *testing.T) {
+	resetRedisClient()
+	t.Cleanup(resetRedisClient)
 	t.Setenv("CACHE_ENABLED", "false")
 	t.Setenv("REDIS_URL", "this is not a redis URL")
 	client, err := getRedisClient(context.Background(), time.Second)
@@ -16,6 +18,8 @@ func TestCacheDisabledSkipsInvalidRedisConfiguration(t *testing.T) {
 }
 
 func TestCacheEnabledRejectsInvalidRedisConfiguration(t *testing.T) {
+	resetRedisClient()
+	t.Cleanup(resetRedisClient)
 	t.Setenv("CACHE_ENABLED", "true")
 	t.Setenv("REDIS_URL", "this is not a redis URL")
 	client, err := getRedisClient(context.Background(), time.Second)

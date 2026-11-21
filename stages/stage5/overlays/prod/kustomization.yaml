@@ -47,3 +47,12 @@ images:
   - name: apollo11/frontend
     newName: ghcr.io/darshan-raul/apollo11/stage5/frontend
     newTag: v1.0.0
+
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+    target:
+      kind: Deployment
+      name: (identity|flight|booking|search|notification|frontend)

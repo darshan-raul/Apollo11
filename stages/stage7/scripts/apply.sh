@@ -44,8 +44,9 @@ RELEASE_NAME="apollo11"
 OBSERVABILITY_ENABLED=true
 
 usage() {
+    local code="${1:-1}"
     cat <<EOF
-Usage: $0 [--mode MODE] [--env ENV] [--tag TAG] [--skip-build] [--without-observability] [--release NAME]
+Usage: $0 [--mode MODE] [--env ENV] [--tag TAG] [--skip-build] [--without-observability] [--release NAME] [--cluster NAME] [--context CTX]
 
 Options:
   --mode MODE       helm (default) | kustomize
@@ -57,6 +58,8 @@ Options:
   --skip-build      Reuse pre-built images; skip the docker build step
   --without-observability  Install only the trusted Stage 5-compatible baseline
   --release NAME    Helm release name (default: apollo11)
+  --cluster NAME    kind cluster name (must match --context)
+  --context CTX     Kubernetes context (kind-apollo11 or kind-apollo11-dev)
   --help            Show this help
 
 Examples:
@@ -66,22 +69,33 @@ Examples:
   $0 --env prod --tag v1.2.3                  # helm with values-prod.yaml
   $0 --mode kustomize --env dev               # kustomize overlays/dev/
 EOF
-    exit 1
+    exit "$code"
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --mode)        MODE="$2"; shift 2 ;;
-        --env)         ENV="$2"; shift 2 ;;
-        --tag)         TAG="$2"; TAG_EXPLICIT=true; shift 2 ;;
+        --mode)        [[ $# -ge 2 ]] || { echo "--mode requires a value" >&2; usage 2; }; MODE="$2"; shift 2 ;;
+        --env)         [[ $# -ge 2 ]] || { echo "--env requires a value" >&2; usage 2; }; ENV="$2"; shift 2 ;;
+        --tag)         [[ $# -ge 2 ]] || { echo "--tag requires a value" >&2; usage 2; }; TAG="$2"; TAG_EXPLICIT=true; shift 2 ;;
         --skip-build)  SKIP_BUILD=true; shift ;;
         --without-observability) OBSERVABILITY_ENABLED=false; shift ;;
-        --release)     RELEASE_NAME="$2"; shift 2 ;;
-        --cluster)     CLUSTER="$2"; shift 2 ;;
-        --help)        usage ;;
-        *) echo "Unknown option: $1"; usage ;;
+        --release)     [[ $# -ge 2 ]] || { echo "--release requires a value" >&2; usage 2; }; RELEASE_NAME="$2"; shift 2 ;;
+        --cluster)     [[ $# -ge 2 ]] || { echo "--cluster requires a value" >&2; usage 2; }; CLUSTER="$2"; shift 2 ;;
+        --context)     [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+        --help|-h)     usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 ;;
     esac
 done
+
+# Validate env and mode early before touching any cluster context
+case "$ENV" in
+    dev|staging|prod) ;;
+    *) echo "Invalid --env '$ENV' (expected dev, staging, or prod)" >&2; usage 2 ;;
+esac
+case "$MODE" in
+    helm|kustomize) ;;
+    *) echo "Invalid --mode '$MODE' (expected helm or kustomize)" >&2; usage 2 ;;
+esac
 
 source "${SCRIPT_DIR}/context.sh"
 apollo_context_guard
@@ -91,16 +105,9 @@ if [[ -n "$CLUSTER" && "kind-$CLUSTER" != "$APOLLO_CONTEXT" ]]; then
 fi
 CLUSTER="${APOLLO_CONTEXT#kind-}"
 
-
-# Validate env early so a typo doesn't surface mid-install
-case "$ENV" in
-    dev|staging|prod) ;;
-    *) echo "Invalid --env '$ENV' (expected dev, staging, or prod)"; usage ;;
-esac
-case "$MODE" in
-    helm|kustomize) ;;
-    *) echo "Invalid --mode '$MODE' (expected helm or kustomize)"; usage ;;
-esac
+if [[ "$ENV" == "prod" && "$TAG_EXPLICIT" != "true" ]]; then
+    SKIP_BUILD=true
+fi
 
 if [[ "$MODE" == "kustomize" ]]; then
     if [[ "$ENV" == "prod" ]]; then
@@ -178,7 +185,7 @@ install_stage7_dependencies() {
     local vpa_bundle="$CHART_DIR/bundles/vpa-install.yaml"
 
     [[ -f "$metrics_bundle" ]] || fail "missing metrics-server bundle: $metrics_bundle"
-    kubectl apply -f "$metrics_bundle" >/dev/null
+    kubectl apply --server-side --force-conflicts -f "$metrics_bundle" >/dev/null
     kubectl rollout status deployment/metrics-server -n kube-system --timeout=180s >/dev/null || \
         fail "metrics-server did not become ready"
     ok "metrics-server ready"
@@ -188,7 +195,7 @@ install_stage7_dependencies() {
     # so API discovery is complete when Helm/Kustomize applies it.
     if [[ "$ENV" != "dev" ]]; then
         [[ -f "$vpa_bundle" ]] || fail "missing VPA bundle: $vpa_bundle"
-        kubectl apply --server-side -f "$vpa_bundle" >/dev/null
+        kubectl apply --server-side --force-conflicts -f "$vpa_bundle" >/dev/null
         kubectl wait --for=condition=Established \
             crd/verticalpodautoscalers.autoscaling.k8s.io --timeout=90s >/dev/null || \
             fail "VPA CRD did not become Established"
@@ -239,7 +246,7 @@ wait_stage7() {
 wait_observability() {
     [[ "$OBSERVABILITY_ENABLED" == "true" ]] || return 0
     step "Waiting for Stage 6 observability workloads"
-    for dep in grafana loki tempo; do
+    for dep in grafana loki tempo alertmanager alert-receiver blackbox; do
         kubectl rollout status -n apollo-observability "deployment/$dep" --timeout=240s >/dev/null || \
             fail "deployment/$dep did not become ready"
         ok "deployment/$dep ready"
@@ -252,6 +259,20 @@ wait_observability() {
     kubectl rollout status -n apollo-observability statefulset/prometheus-apollo --timeout=240s >/dev/null || \
         fail "Prometheus StatefulSet did not become ready"
     ok "statefulset/prometheus-apollo ready"
+}
+
+wait_envoy_dataplane() {
+    local pod=""
+    for _ in $(seq 1 30); do
+        pod=$(kubectl get pods -n envoy-gateway-system \
+            -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway \
+            -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+        [[ -n "$pod" ]] && break
+        sleep 2
+    done
+    [[ -n "$pod" ]] || fail "Envoy data-plane pod did not appear within 60s"
+    kubectl wait --for=condition=Ready "pod/$pod" -n envoy-gateway-system --timeout=100s >/dev/null || \
+        fail "Envoy data-plane pod did not become ready within 100s"
 }
 
 step "0/9 Checking cluster"
@@ -345,13 +366,15 @@ if [[ "$MODE" == "helm" ]]; then
     HELM_CMD=(helm upgrade --install "$RELEASE_NAME" "$CHART_DIR"
         --namespace apollo-airlines-apps
         --create-namespace
-        --set image.tag="$TAG"
         --set gateway.envoy.bundleInstall=false
         --set metallb.bundleInstall=false
         --set autoscaling.metricsServer.bundleInstall=false
         --set vpa.bundleInstall=false
         --set observability.enabled="$OBSERVABILITY_ENABLED"
         --wait --wait-for-jobs --timeout 10m)
+    if [[ "$TAG_EXPLICIT" == "true" || "$ENV" != "prod" ]]; then
+        HELM_CMD+=(--set image.tag="$TAG")
+    fi
 
     # Apply env-specific values file if present (values-dev.yaml,
     # values-staging.yaml, values-prod.yaml). The env-specific file
@@ -381,12 +404,7 @@ if [[ "$MODE" == "helm" ]]; then
     [[ "$metallb_ready" == "true" ]] || fail "MetalLB controller did not become ready within 75s"
 
     step "7/8 Waiting for Envoy Gateway"
-    # The Envoy data-plane pod has two containers in the bundled release.
-    # Check the Pod Ready condition instead of assuming a literal 1/1 count.
-    kubectl wait --for=condition=Ready pod \
-        -n envoy-gateway-system \
-        -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway \
-        --timeout=100s >/dev/null || fail "Envoy data-plane pod did not become ready within 100s"
+    wait_envoy_dataplane
     ok "Envoy Gateway ready"
 
     step "8/8 Waiting for StatefulSets (3 PG + 1 Redis)"
@@ -495,9 +513,7 @@ EOF
     ok "deployment/frontend ready"
 
     step "8/8 Waiting for Envoy data-plane"
-    kubectl wait --for=condition=Ready pod -n envoy-gateway-system \
-        -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway \
-        --timeout=100s >/dev/null || fail "Envoy data-plane pod did not become ready"
+    wait_envoy_dataplane
     ok "Envoy Gateway ready"
 
     wait_stage7

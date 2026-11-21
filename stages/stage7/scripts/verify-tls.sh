@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
 # Validate certificate trust/hostname, HTTPS API workflow, and reversible booking.
 set -euo pipefail
-CONTEXT="${KUBE_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"
+usage() {
+  local code="${1:-2}"
+  echo "Usage: $0 [--context kind-apollo11|kind-apollo11-dev]" >&2
+  exit "$code"
+}
+CONTEXT="${KUBE_CONTEXT:-}"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --context) [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; CONTEXT="$2"; shift 2 ;;
+    --help|-h) usage 0 ;;
+    *) echo "Unknown option: $1" >&2; usage 2 ;;
+  esac
+done
+CONTEXT="${CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"
 case "$CONTEXT" in
   kind-apollo11|kind-apollo11-dev) ;;
   *) echo "Refusing HTTPS workflow in context '${CONTEXT:-<none>}'" >&2; exit 2 ;;

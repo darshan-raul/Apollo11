@@ -93,12 +93,12 @@ deployment.apps/argocd-server created
 ✓ argocd-server Ready
 ▶ 5/6 Waiting for argocd-application-controller
 ✓ argocd-application-controller Ready
-▶ 6/6 Fetching initial admin password
-✓ initial admin password: <random 16 chars>
+▶ 6/6 Checking initial admin credential Secret
+✓ initial admin credential Secret is ready
 ```
 
-> **Save the password** — it's only shown once. It's the name of the
-> `argocd-server` pod.
+> Retrieve the initial `admin` password explicitly from `argocd-initial-admin-secret`
+> using `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo`.
 
 **Sanity check:**
 
@@ -441,8 +441,8 @@ kubectl get ns | grep -E 'argocd|apollo-airlines'
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `argocd-server` CrashLoopBackOff | cert-manager / webhook race | `kubectl logs -n argocd argocd-server-0 -c argocd-server` for the actual error |
-| `application/apoll11-dev` shows `Unknown` source | GitHub rate-limited the repoServer | `argocd app get apollo11-dev` and check `status.conditions` |
+| `argocd-server` CrashLoopBackOff | TLS / Redis init race | `kubectl logs -n argocd -l app.kubernetes.io/name=argocd-server -c argocd-server` for the actual error |
+| `application/apollo11-dev` shows `Unknown` source | GitHub rate-limited the repoServer | `argocd app get apollo11-dev` and check `status.conditions` |
 | `OutOfSync` after `bootstrap.sh --sync` finished | drift introduced between sync and observe (e.g. controller updated something) | `argocd app sync apollo11-dev --grpc-web` |
 | `Prune` deleted too much | Application's valueFiles was widened, ArgoCD pruned the old set | `argocd app history apollo11-dev --grpc-web` → rollback |
 | Helm template render fails | chart's CRDs not yet installed | wait 30s, or `argocd app sync apollo11-dev --retry` |

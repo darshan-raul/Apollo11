@@ -168,7 +168,8 @@ postgres:
           ('AA301', 'BOM', 'LHR', '01:00:00'::time, '10:00:00'::time, 300),
           ('AA401', 'DEL', 'JFK', '02:00:00'::time, '14:00:00'::time, 280)
       ) AS f(flight_number, origin, destination, dep_time, arr_time, total_capacity)
-      CROSS JOIN generate_series(0, 30) AS n;
+      CROSS JOIN generate_series(0, 30) AS n
+      ON CONFLICT (flight_number, departure_time) DO NOTHING;
     booking: |
       -- Bookings are created at runtime; seed is empty but kept for symmetry.
       SELECT 1;

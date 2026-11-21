@@ -15,9 +15,6 @@
 #   ./scripts/verify.sh --mode kustomize --env prod
 set -euo pipefail
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context.sh"
-apollo_context_guard
-
 GREEN='\033[0;32m'; RED='\033[0;31m'; CYAN='\033[0;36m'; NC='\033[0m'
 PASS=0; FAIL=0
 pass() { echo -e "${GREEN}[PASS]${NC} $1"; PASS=$((PASS+1)); }
@@ -26,43 +23,68 @@ step() { echo -e "${CYAN}▶ $1${NC}"; }
 
 MODE="auto"
 ENV="dev"
+RELEASE_NAME="apollo11"
 GATEWAY_EXPECTED=true
 OBSERVABILITY_EXPECTED=true
 
 usage() {
+    local code="${1:-1}"
     cat <<EOF
-Usage: $0 [--mode MODE] [--env ENV] [--skip-observability]
+Usage: $0 [--mode MODE] [--env ENV] [--release NAME] [--skip-observability] [--context CTX]
 
 Options:
-  --mode MODE   helm | kustomize | auto (default)
-  --env ENV     env for kustomize mode (default: dev)
+  --mode MODE           helm | kustomize | auto (default)
+  --env ENV             env for kustomize mode (default: dev)
+  --release NAME        Helm release name (default: apollo11)
   --skip-observability  Verify only the Stage 5-compatible baseline
+  --context CTX         Kubernetes context (kind-apollo11 or kind-apollo11-dev)
 EOF
-    exit 1
+    exit "$code"
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --mode) MODE="$2"; shift 2 ;;
-        --env)  ENV="$2"; shift 2 ;;
+        --mode)               [[ $# -ge 2 ]] || { echo "--mode requires a value" >&2; usage 2; }; MODE="$2"; shift 2 ;;
+        --env)                [[ $# -ge 2 ]] || { echo "--env requires a value" >&2; usage 2; }; ENV="$2"; shift 2 ;;
+        --release)            [[ $# -ge 2 ]] || { echo "--release requires a value" >&2; usage 2; }; RELEASE_NAME="$2"; shift 2 ;;
         --skip-observability) OBSERVABILITY_EXPECTED=false; shift ;;
-        --help) usage ;;
-        *) echo "Unknown option: $1"; usage ;;
+        --context)            [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
+        --help|-h)            usage 0 ;;
+        *) echo "Unknown option: $1" >&2; usage 2 ;;
     esac
 done
 
 case "$MODE" in
     auto|helm|kustomize) ;;
-    *) echo -e "${RED}Invalid mode '$MODE' (expected auto, helm, or kustomize).${NC}"; exit 1 ;;
+    *) echo -e "${RED}Invalid mode '$MODE' (expected auto, helm, or kustomize).${NC}" >&2; exit 2 ;;
 esac
 case "$ENV" in
     dev|staging|prod) ;;
-    *) echo -e "${RED}Invalid environment '$ENV' (expected dev, staging, or prod).${NC}"; exit 1 ;;
+    *) echo -e "${RED}Invalid environment '$ENV' (expected dev, staging, or prod).${NC}" >&2; exit 2 ;;
 esac
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/context.sh"
+apollo_context_guard
+
+VERIFY_TMP=$(mktemp -d)
+PF_PIDS=()
+cleanup_pf() {
+    local code=$?
+    local pid
+    for pid in "${PF_PIDS[@]}"; do
+        kill "$pid" >/dev/null 2>&1 || true
+        wait "$pid" 2>/dev/null || true
+    done
+    rm -rf "$VERIFY_TMP"
+    exit "$code"
+}
+trap cleanup_pf EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # Auto-detect mode
 if [[ "$MODE" == "auto" ]]; then
-    if helm list -n apollo-airlines-apps 2>/dev/null | grep -q apollo11; then
+    if helm list -n apollo-airlines-apps 2>/dev/null | grep -qw "$RELEASE_NAME"; then
         MODE="helm"
     elif kubectl get deployment -n apollo-airlines-apps identity >/dev/null 2>&1; then
         MODE="kustomize"
@@ -107,7 +129,7 @@ if [[ "$OBSERVABILITY_EXPECTED" == "true" ]]; then
     done
 
     step "Stage 6 observability workloads"
-    for dep in grafana loki tempo; do
+    for dep in grafana loki tempo alertmanager alert-receiver blackbox; do
         kubectl rollout status "deployment/$dep" -n apollo-observability --timeout=30s >/dev/null 2>&1 && pass "$dep ready" || fail "$dep not ready"
     done
     for ds in otel-collector alloy; do
@@ -116,59 +138,87 @@ if [[ "$OBSERVABILITY_EXPECTED" == "true" ]]; then
         [[ "$desired" -gt 0 && "$ready" == "$desired" ]] && pass "$ds DaemonSet $ready/$desired ready" || fail "$ds DaemonSet $ready/$desired ready"
     done
 
-    step "Prometheus discovery, rules, Grafana, Tempo, and Loki APIs"
-    pf_log=$(mktemp)
+    step "Prometheus discovery, rules, Grafana, Tempo, Alertmanager, and Loki APIs"
+    pf_log="$VERIFY_TMP/prometheus-pf.log"
     command kubectl --context "$APOLLO_CONTEXT" port-forward -n apollo-observability service/prometheus 19090:9090 >"$pf_log" 2>&1 &
-    pf_pid=$!
-    for _ in $(seq 1 20); do curl -fsS http://127.0.0.1:19090/-/ready >/dev/null 2>&1 && break; sleep 1; done
+    pf_pid=$!; PF_PIDS+=("$pf_pid")
+    for _ in $(seq 1 20); do curl --max-time 15 -fsS http://127.0.0.1:19090/-/ready >/dev/null 2>&1 && break; sleep 1; done
     active_targets=0
     for _ in $(seq 1 20); do
-        targets=$(curl -fsS http://127.0.0.1:19090/api/v1/targets 2>/dev/null || true)
+        targets=$(curl --max-time 15 -fsS http://127.0.0.1:19090/api/v1/targets 2>/dev/null || true)
         active_targets=$(grep -o '"health":"up"' <<<"$targets" | wc -l | tr -d ' ' || true)
         [[ "$active_targets" -ge 5 ]] && break
         sleep 3
     done
     [[ "$active_targets" -ge 5 ]] && pass "Prometheus has at least 5 healthy backend targets" || fail "Prometheus healthy targets=$active_targets"
-    rules=$(curl -fsS http://127.0.0.1:19090/api/v1/rules 2>/dev/null || true)
+    rules=$(curl --max-time 15 -fsS http://127.0.0.1:19090/api/v1/rules 2>/dev/null || true)
     grep -q 'ApolloServiceDown' <<<"$rules" && pass "Prometheus loaded Apollo rules" || fail "Prometheus did not load Apollo rules"
     kill "$pf_pid" >/dev/null 2>&1 || true
     wait "$pf_pid" 2>/dev/null || true
-    rm -f "$pf_log"
 
-    command kubectl --context "$APOLLO_CONTEXT" port-forward -n apollo-observability service/grafana 13000:3000 >/tmp/stage6-grafana-pf.log 2>&1 & grafana_pf=$!
-    for _ in $(seq 1 20); do grafana_health=$(curl -fsS http://127.0.0.1:13000/api/health 2>/dev/null || true); [[ -n "$grafana_health" ]] && break; sleep 1; done
+    command kubectl --context "$APOLLO_CONTEXT" port-forward -n apollo-observability service/grafana 13000:3000 >"$VERIFY_TMP/grafana-pf.log" 2>&1 &
+    grafana_pf=$!; PF_PIDS+=("$grafana_pf")
+    grafana_health=""
+    for _ in $(seq 1 20); do grafana_health=$(curl --max-time 15 -fsS http://127.0.0.1:13000/api/health 2>/dev/null || true); [[ -n "$grafana_health" ]] && break; sleep 1; done
     grep -q '"database": "ok"' <<<"$grafana_health" && pass "Grafana API healthy" || fail "Grafana API unhealthy"
     kill "$grafana_pf" >/dev/null 2>&1 || true; wait "$grafana_pf" 2>/dev/null || true
     dashboard_count=$(kubectl get configmap -n apollo-observability -l app.kubernetes.io/name=grafana -o name | grep -c 'dashboard-' || true)
     [[ "$dashboard_count" -ge 5 ]] && pass "5 Grafana dashboards provisioned" || fail "Grafana dashboard ConfigMaps=$dashboard_count"
-    command kubectl --context "$APOLLO_CONTEXT" port-forward -n apollo-observability service/tempo 13100:3100 >/tmp/stage6-tempo-pf.log 2>&1 & tempo_pf=$!
-    for _ in $(seq 1 20); do curl -fsS http://127.0.0.1:13100/ready >/dev/null 2>&1 && break; sleep 1; done
-    curl -fsS http://127.0.0.1:13100/ready >/dev/null 2>&1 && pass "Tempo API ready" || fail "Tempo API not ready"
+    command kubectl --context "$APOLLO_CONTEXT" port-forward -n apollo-observability service/tempo 13100:3100 >"$VERIFY_TMP/tempo-pf.log" 2>&1 &
+    tempo_pf=$!; PF_PIDS+=("$tempo_pf")
+    for _ in $(seq 1 20); do curl --max-time 15 -fsS http://127.0.0.1:13100/ready >/dev/null 2>&1 && break; sleep 1; done
+    curl --max-time 15 -fsS http://127.0.0.1:13100/ready >/dev/null 2>&1 && pass "Tempo API ready" || fail "Tempo API not ready"
     kill "$tempo_pf" >/dev/null 2>&1 || true; wait "$tempo_pf" 2>/dev/null || true
-    command kubectl --context "$APOLLO_CONTEXT" port-forward -n apollo-observability service/loki 13101:3100 >/tmp/stage6-loki-pf.log 2>&1 & loki_pf=$!
-    for _ in $(seq 1 20); do curl -fsS http://127.0.0.1:13101/ready >/dev/null 2>&1 && break; sleep 1; done
-    curl -fsS http://127.0.0.1:13101/ready >/dev/null 2>&1 && pass "Loki API ready" || fail "Loki API not ready"
+
+    command kubectl --context "$APOLLO_CONTEXT" port-forward -n apollo-observability service/alertmanager 19093:9093 >"$VERIFY_TMP/alertmanager-pf.log" 2>&1 &
+    am_pf=$!; PF_PIDS+=("$am_pf")
+    for _ in $(seq 1 20); do curl --max-time 15 -fsS http://127.0.0.1:19093/api/v2/status >/dev/null 2>&1 && break; sleep 1; done
+    curl --max-time 15 -fsS http://127.0.0.1:19093/api/v2/status >/dev/null 2>&1 && pass "Alertmanager API ready" || fail "Alertmanager API not ready"
+    kill "$am_pf" >/dev/null 2>&1 || true; wait "$am_pf" 2>/dev/null || true
+
+    command kubectl --context "$APOLLO_CONTEXT" port-forward -n apollo-observability service/loki 13101:3100 >"$VERIFY_TMP/loki-pf.log" 2>&1 &
+    loki_pf=$!; PF_PIDS+=("$loki_pf")
+    for _ in $(seq 1 20); do curl --max-time 15 -fsS http://127.0.0.1:13101/ready >/dev/null 2>&1 && break; sleep 1; done
+    curl --max-time 15 -fsS http://127.0.0.1:13101/ready >/dev/null 2>&1 && pass "Loki API ready" || fail "Loki API not ready"
 
     grafana_envoy_ip=$(kubectl get service -n envoy-gateway-system \
         -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway \
         -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
     if [[ -n "$grafana_envoy_ip" ]]; then
-        grafana_code=$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: grafana.apollo.local' "http://$grafana_envoy_ip/api/health" 2>/dev/null || echo 000)
+        grafana_code=$(curl --max-time 15 -s -o /dev/null -w '%{http_code}' -H 'Host: grafana.apollo.local' "http://$grafana_envoy_ip/api/health" 2>/dev/null || echo 000)
         [[ "$grafana_code" == "200" ]] && pass "Envoy -> Grafana /api/health -> 200" || fail "Envoy -> Grafana /api/health -> $grafana_code"
     else
         fail "Envoy LoadBalancer IP unavailable for Grafana route check"
     fi
 
-    if bash "$(dirname "$0")/trace-test.sh" >/tmp/stage6-trace-test.log 2>&1; then
+    if bash "$(dirname "$0")/trace-test.sh" --context "$APOLLO_CONTEXT" >"$VERIFY_TMP/trace-test.log" 2>&1; then
         pass "cross-service booking trace reached Tempo"
     else
-        fail "cross-service trace test failed (see /tmp/stage6-trace-test.log)"
+        tail -n 30 "$VERIFY_TMP/trace-test.log" >&2 || true
+        fail "cross-service trace test failed"
     fi
 
     step "Alloy log delivery and trace/log correlation"
     sleep 5
-    loki_query=$(curl -fsS 'http://127.0.0.1:13101/loki/api/v1/query_range?query=%7Bnamespace%3D%22apollo-airlines-apps%22%7D&limit=20' 2>/dev/null || true)
-    grep -q '"status":"success"' <<<"$loki_query" && pass "Loki query API returned Kubernetes logs" || fail "Loki query did not return logs"
+    loki_query=$(curl --max-time 15 -fsS -G --data-urlencode 'query={namespace="apollo-airlines-apps"}' --data-urlencode 'limit=20' \
+        'http://127.0.0.1:13101/loki/api/v1/query_range' 2>/dev/null || true)
+    if python3 -c 'import json,sys
+try: d = json.load(sys.stdin)
+except Exception: sys.exit(1)
+sys.exit(0 if d.get("status") == "success" and any(s.get("values") for s in d.get("data", {}).get("result", [])) else 1)' <<<"$loki_query"; then
+        pass "Loki query API returned Kubernetes logs"
+    else
+        fail "Loki query did not return logs"
+    fi
+    loki_labels=$(curl --max-time 15 -fsS 'http://127.0.0.1:13101/loki/api/v1/label/service/values' 2>/dev/null || true)
+    if python3 -c 'import json,sys
+try: d = json.load(sys.stdin)
+except Exception: sys.exit(1)
+sys.exit(0 if d.get("status") == "success" and bool(d.get("data")) else 1)' <<<"$loki_labels"; then
+        pass "Loki service label values populated"
+    else
+        fail "Loki service label values empty"
+    fi
     kill "$loki_pf" >/dev/null 2>&1 || true; wait "$loki_pf" 2>/dev/null || true
 fi
 
@@ -293,9 +343,10 @@ for dep in identity flight booking search notification; do
         fail "deployment/$dep not ready (ready=$ready)"
     fi
 done
-for probe in startupProbe livenessProbe readinessProbe; do
+for entry in "startupProbe:/healthz/startup" "livenessProbe:/healthz/live" "readinessProbe:/healthz/ready"; do
+    probe="${entry%%:*}"; expected_path="${entry#*:}"
     path=$(kubectl get deployment frontend -n apollo-airlines-ui -o jsonpath="{.spec.template.spec.containers[0].$probe.httpGet.path}" 2>/dev/null || echo "")
-    if [[ -n "$path" && "$path" == "/healthz/"* ]]; then
+    if [[ "$path" == "$expected_path" ]]; then
         pass "deployment/frontend $probe path=$path"
     else
         fail "deployment/frontend $probe missing or wrong path ($path)"
@@ -336,9 +387,10 @@ fi
 # ---------------------------------------------------------------------------
 step "Probes on 6 app Deployments (startup/live/ready, all 3 distinct)"
 for dep in identity flight booking search notification; do
-    for probe in startupProbe livenessProbe readinessProbe; do
+    for entry in "startupProbe:/healthz/startup" "livenessProbe:/healthz/live" "readinessProbe:/healthz/ready"; do
+        probe="${entry%%:*}"; expected_path="${entry#*:}"
         path=$(kubectl get deployment "$dep" -n apollo-airlines-apps -o jsonpath="{.spec.template.spec.containers[0].$probe.httpGet.path}" 2>/dev/null || echo "")
-        if [[ -n "$path" && "$path" == "/healthz/"* ]]; then
+        if [[ "$path" == "$expected_path" ]]; then
             pass "deployment/$dep $probe path=$path"
         else
             fail "deployment/$dep $probe missing or wrong path ($path)"
@@ -549,8 +601,10 @@ fi
 
 if [[ "$MODE" == "helm" ]]; then
     step "Helm release and workload ownership metadata"
-    release_status=$(helm status apollo11 -n apollo-airlines-apps -o json 2>/dev/null | jq -r '.info.status // empty' || echo "")
-    if [[ "$release_status" == "deployed" ]]; then pass "Helm release apollo11 status=deployed"; else fail "Helm release apollo11 status=$release_status"; fi
+    release_status=$(helm status "$RELEASE_NAME" -n apollo-airlines-apps -o json 2>/dev/null | python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("info",{}).get("status",""))
+except Exception: print("")' || echo "")
+    if [[ "$release_status" == "deployed" ]]; then pass "Helm release $RELEASE_NAME status=deployed"; else fail "Helm release $RELEASE_NAME status=$release_status"; fi
     for entry in \
         "deployment:apollo-airlines-apps:identity" "deployment:apollo-airlines-apps:flight" \
         "deployment:apollo-airlines-apps:booking" "deployment:apollo-airlines-apps:search" \
@@ -637,25 +691,32 @@ if [[ "$GATEWAY_EXPECTED" == "true" ]]; then
         -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway \
         -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
     if [[ -n "$envoy_ip" ]]; then pass "Envoy LoadBalancer address=$envoy_ip"; else fail "Envoy LoadBalancer has no address"; fi
-    parent_count=$(kubectl get httproute -A -o custom-columns='P:.status.parents[*].controllerName' --no-headers 2>/dev/null | grep -c gateway.envoyproxy.io || true)
+    parent_count=0
+    for ns_r in "apollo-airlines-apps:identity" "apollo-airlines-apps:flight" "apollo-airlines-apps:booking" \
+                "apollo-airlines-apps:search" "apollo-airlines-apps:notification" "apollo-airlines-ui:frontend"; do
+        r_ns="${ns_r%%:*}"; r_name="${ns_r##*:}"
+        if kubectl get httproute "$r_name" -n "$r_ns" -o jsonpath='{.status.parents[*].controllerName}' 2>/dev/null | grep -q 'gateway.envoyproxy.io'; then
+            parent_count=$((parent_count + 1))
+        fi
+    done
     if [[ "$parent_count" -ge 6 ]]; then pass "all 6 HTTPRoutes report an Envoy parent"; else fail "only $parent_count/6 HTTPRoutes report an Envoy parent"; fi
     if [[ -n "$envoy_ip" ]]; then
         for route in identity flight booking search notification; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $route.apollo.local" "http://$envoy_ip/healthz" 2>/dev/null || echo 000)
+            code=$(curl --max-time 15 -s -o /dev/null -w '%{http_code}' -H "Host: $route.apollo.local" "http://$envoy_ip/healthz" 2>/dev/null || echo 000)
             if [[ "$code" == "200" ]]; then pass "Envoy -> $route /healthz -> 200"; else fail "Envoy -> $route /healthz -> $code"; fi
         done
-        code=$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: frontend.apollo.local' "http://$envoy_ip/" 2>/dev/null || echo 000)
+        code=$(curl --max-time 15 -s -o /dev/null -w '%{http_code}' -H 'Host: frontend.apollo.local' "http://$envoy_ip/" 2>/dev/null || echo 000)
         if [[ "$code" == "200" ]]; then pass "Envoy -> frontend / -> 200"; else fail "Envoy -> frontend / -> $code"; fi
-        login=$(curl -s -X POST -H 'Host: identity.apollo.local' -H 'Content-Type: application/json' \
+        login=$(curl --max-time 15 -s -X POST -H 'Host: identity.apollo.local' -H 'Content-Type: application/json' \
             -d '{"email":"admin@apolloairlines.com","password":"admin123"}' \
             "http://$envoy_ip/api/users/login" 2>/dev/null || echo "")
         if grep -q '"token":"[^"]' <<<"$login"; then pass "login flow through Envoy returned a token"; else fail "login flow through Envoy did not return a token"; fi
         for host in identity.apollo.local booking.apollo.local frontend.apollo.local; do
-            code=$(curl -k -s -o /dev/null -w "%{http_code}" --resolve "$host:443:$envoy_ip" "https://$host/healthz" 2>/dev/null || echo 000)
+            code=$(curl --max-time 15 -k -s -o /dev/null -w "%{http_code}" --resolve "$host:443:$envoy_ip" "https://$host/healthz" 2>/dev/null || echo 000)
             if [[ "$code" == "200" ]]; then
                 pass "Envoy HTTPS -> $host /healthz -> 200"
             elif [[ "$host" == "frontend.apollo.local" ]]; then
-                code=$(curl -k -s -o /dev/null -w "%{http_code}" --resolve "$host:443:$envoy_ip" "https://$host/" 2>/dev/null || echo 000)
+                code=$(curl --max-time 15 -k -s -o /dev/null -w "%{http_code}" --resolve "$host:443:$envoy_ip" "https://$host/" 2>/dev/null || echo 000)
                 if [[ "$code" == "200" ]]; then pass "Envoy HTTPS -> $host / -> 200"; else fail "Envoy HTTPS -> $host / -> $code"; fi
             else
                 fail "Envoy HTTPS -> $host /healthz -> $code"
@@ -665,7 +726,7 @@ if [[ "$GATEWAY_EXPECTED" == "true" ]]; then
 fi
 
 if [[ "$GATEWAY_EXPECTED" == true ]]; then
-    if bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then
+    if bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh" --context "$APOLLO_CONTEXT"; then
         pass "trusted HTTPS API workflow and hostname rejection"
     else
         fail "trusted HTTPS API workflow or hostname rejection failed"

@@ -6,9 +6,10 @@ UI_NAMESPACE=apollo-airlines-ui
 ROTATE=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --context) CONTEXT="$2"; shift 2 ;;
-    --apps-namespace) APPS_NAMESPACE="$2"; shift 2 ;;
-    --ui-namespace) UI_NAMESPACE="$2"; shift 2 ;;
+    --help|-h) echo "Usage: $0 [--context kind-apollo11|kind-apollo11-dev] [--apps-namespace NS] [--ui-namespace NS] [--rotate]"; exit 0 ;;
+    --context) [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; exit 2; }; CONTEXT="$2"; shift 2 ;;
+    --apps-namespace) [[ $# -ge 2 ]] || { echo "--apps-namespace requires a value" >&2; exit 2; }; APPS_NAMESPACE="$2"; shift 2 ;;
+    --ui-namespace) [[ $# -ge 2 ]] || { echo "--ui-namespace requires a value" >&2; exit 2; }; UI_NAMESPACE="$2"; shift 2 ;;
     --rotate) ROTATE=true; shift ;;
     *) echo "Usage: $0 [--context kind-apollo11|kind-apollo11-dev] [--rotate]" >&2; exit 2 ;;
   esac
