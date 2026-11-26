@@ -1,0 +1,10 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: booking-pdb
+  namespace: apollo-airlines-apps
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: booking

@@ -37,7 +37,7 @@ kind: Namespace
 metadata:
   name: apollo-observability
 ---
-# Stage 7 scheduling policy is cluster-scoped and shared by all tenants.
+# Cluster-scoped PriorityClass baseline (introduced in Stage 4), shared by all tenants.
 apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass
 metadata:

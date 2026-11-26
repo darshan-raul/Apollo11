@@ -4,6 +4,7 @@ metadata:
   name: redis
   namespace: apollo-airlines
 spec:
+  type: ClusterIP
   selector:
     app: redis
   ports:

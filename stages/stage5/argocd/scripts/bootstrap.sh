@@ -15,6 +15,7 @@
 #   ./scripts/bootstrap.sh --sync                # also force-sync dev + staging
 #   ./scripts/bootstrap.sh --sync --include-prod # also force-sync prod (NOT recommended)
 #   ./scripts/bootstrap.sh --repo-url URL        # override source.repoURL on all apps
+#   ./scripts/bootstrap.sh --revision REV        # override source.targetRevision on all apps
 #
 # Prerequisites:
 #   - kubectl cluster-info works
@@ -37,11 +38,12 @@ SYNC=false
 INCLUDE_PROD=false
 REPO_URL_OVERRIDE=""
 IMAGE_REPOSITORY_OVERRIDE=""
+REVISION_OVERRIDE=""
 
 usage() {
     local code="${1:-1}"
     cat <<EOF
-Usage: $0 [--sync] [--include-prod] [--repo-url URL] [--image-repository REPO] [--context CTX]
+Usage: $0 [--sync] [--include-prod] [--repo-url URL] [--revision REV] [--image-repository REPO] [--context CTX]
 
 Options:
   --sync            After registering the Applications, force-sync dev
@@ -51,6 +53,8 @@ Options:
                     prod is meant to be human-gated.
   --repo-url URL    Override source.repoURL on all 3 Applications.
                     Default: https://github.com/darshan-raul/Apollo11.git
+  --revision REV    Override source.targetRevision on all 3 Applications
+                    (useful when running from a fork branch).
   --image-repository REPO
                     Override the shared image repository (for example
                     apollo11 when images are preloaded into kind).
@@ -65,6 +69,7 @@ while [[ $# -gt 0 ]]; do
         --sync)             SYNC=true; shift ;;
         --include-prod)     INCLUDE_PROD=true; shift ;;
         --repo-url)         [[ $# -ge 2 ]] || { echo "--repo-url requires a value" >&2; usage 2; }; REPO_URL_OVERRIDE="$2"; shift 2 ;;
+        --revision)         [[ $# -ge 2 ]] || { echo "--revision requires a value" >&2; usage 2; }; REVISION_OVERRIDE="$2"; shift 2 ;;
         --image-repository) [[ $# -ge 2 ]] || { echo "--image-repository requires a value" >&2; usage 2; }; IMAGE_REPOSITORY_OVERRIDE="$2"; shift 2 ;;
         --context)          [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
         --help|-h)          usage 0 ;;
@@ -133,7 +138,7 @@ ok "AppProject apollo-airlines"
 step "3/6 Registering Applications"
 for app_yaml in "$APPS_DIR"/*.yaml; do
     name=$(basename "$app_yaml" .yaml)
-    if [[ -n "$REPO_URL_OVERRIDE" || -n "$IMAGE_REPOSITORY_OVERRIDE" ]]; then
+    if [[ -n "$REPO_URL_OVERRIDE" || -n "$IMAGE_REPOSITORY_OVERRIDE" || -n "$REVISION_OVERRIDE" ]]; then
         tmp=$(mktemp)
         cp "$app_yaml" "$tmp"
         if [[ -n "$REPO_URL_OVERRIDE" ]]; then
@@ -141,6 +146,9 @@ for app_yaml in "$APPS_DIR"/*.yaml; do
         fi
         if [[ -n "$IMAGE_REPOSITORY_OVERRIDE" ]]; then
             sed -i -E "s|value: ghcr\\.io/darshan-raul/apollo11(/stage[0-9]+)?|value: $IMAGE_REPOSITORY_OVERRIDE|" "$tmp"
+        fi
+        if [[ -n "$REVISION_OVERRIDE" ]]; then
+            sed -i -E "s|^([[:space:]]*targetRevision:[[:space:]]*).*|\\1$REVISION_OVERRIDE|" "$tmp"
         fi
         kubectl apply -f "$tmp" 2>&1 | tail -1
         rm -f "$tmp"

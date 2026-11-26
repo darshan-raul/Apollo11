@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: booking-config
+  namespace: apollo-airlines
+data:
+  PORT: "8082"
+  FLIGHT_SERVICE_URL: "http://flight:8081"
+  IDENTITY_SERVICE_URL: "http://identity:8080"
+  NOTIFICATION_SERVICE_URL: "http://notification:8084"

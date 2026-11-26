@@ -1,5 +1,5 @@
 {{- /*
-Stage 7: PriorityClass.
+PriorityClass definitions (baseline from Stage 4).
 
 Two priorities:
   * apollo-airlines-app-critical (value 1_000_000) — booking + search.

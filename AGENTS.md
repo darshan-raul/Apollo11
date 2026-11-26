@@ -42,7 +42,7 @@ stage where the effect can be demonstrated.
 ## Open gaps
 
 Open gaps and the multi-session plan to close them live in
-[`GAPS_TRACKER.md`](GAPS_TRACKER.md). Read it at the start of every session and
+[`docs/maintainers/GAPS_TRACKER.md`](docs/maintainers/GAPS_TRACKER.md). Read it at the start of every session and
 update row status and evidence when work lands.
 
 ## Verification status
@@ -51,8 +51,8 @@ Launchpad through Stage 7 were verified live on 2026-10-24 (Stage 2
 substages 3–5 and Stage 3 on 2026-10-19), and hosted CI with GHCR publication
 passed the same day. The latest evidence for each path, and what is still
 unproven (Argo CD for Stages 5–7, staging), is tracked per task in
-[`GAPS_TRACKER.md`](GAPS_TRACKER.md). Counts in
-this file are corrected under tracker G11.
+[`docs/maintainers/GAPS_TRACKER.md`](docs/maintainers/GAPS_TRACKER.md). Counts in
+this file are reconciled against verified logs.
 
 ## Current Implementation Map
 
@@ -130,9 +130,14 @@ in the roadmap.
 ```
 Apollo11/
 ├── SPEC.md                   # Full API contracts, DB schemas, endpoints (Apollo Airlines)
-├── README.md                 # Top-level stage map
+├── README.md                 # Top-level stage map, hardware matrix & OS fallbacks
 ├── ROADMAP.md                # Approved target curriculum + migration matrix
 ├── AGENTS.md                 # This file
+├── docs/
+│   ├── local-https.md        # Shared local HTTPS, TLS Secret ownership & verification guide
+│   ├── ci-images.md          # Shared GHCR images, CI pins, build-images.sh & UID contract
+│   └── maintainers/          # Internal gap trackers, audits, archived handoffs & verification logs
+├── learner-work/             # EVIDENCE_TEMPLATE.md & per-stage Author-Before-Bootstrap labs
 │
 ├── stages/
 │   ├── launchpad/            # Docker Compose — 10 components, stub code
@@ -169,9 +174,9 @@ Apollo11/
 │   ├── stage6/              # OTEL SDK + real /metrics + Prometheus + Grafana + Tempo + Loki + Alloy
 │   ├── stage7/              # HPA/VPA, Redis cache, practical scheduling lab
 │   ├── stage8/              # PLANNED CLEAN REBUILD; current tree is not trusted input
-│   ├── stage9/              # PLANNED; current code/k8s/terraform are untrusted legacy scaffolding
-│   ├── stage10/             # PLANNED optional missions; current files are untrusted legacy scaffolding
-│   ├── stage11/             # PLANNED specializations; current files are untrusted legacy scaffolding
+│   ├── stage9/              # PLANNED; README only (legacy code/k8s/terraform removed)
+│   ├── stage10/             # PLANNED optional missions; README + missions/ (cloudnativepg, falco)
+│   ├── stage11/             # PLANNED specializations; README only (legacy code/k8s removed)
 │   └── eks/                 # Stage 2 set 5 + Stage 3 workloads on AWS EKS (NLB + EBS CSI)
 │       ├── README.md
 │       ├── terraform/       # vpc/, cluster/, storage/, gateway/, network/, ecr.tf
@@ -640,7 +645,7 @@ drain needed.
 
 **Location:** `stages/stage5/`
 
-**Status:** ✅ Implementation complete and locally verified (2026-08-22). Helm/dev passed **174/174** and Kustomize/dev **163/163** (re-run 2026-10-19; earlier 153/142), and Argo CD passed **74/74** (re-run 2026-10-19) using a temporary local Git fixture. Every path completed a clean purge with zero namespace/PVC/related-CRD residue. Hosted CI passed on 2026-10-24 (run 40009537140) and published all 18 Stage 5–7 images to GHCR (tracker G15).
+**Status:** ✅ Implementation complete and locally verified (2026-08-22). Helm/dev passed **174/174** and Kustomize/dev **163/163** (re-run 2026-10-19; earlier 153/142), and Argo CD passed **74/74** (re-run 2026-10-19) using a temporary local Git fixture. Every path completed a clean purge with zero namespace/PVC/related-CRD residue. Hosted CI passed on 2026-10-24 (run 40009537140) and published all 18 Stage 5–7 images to GHCR.
 
 **k8s manifest changes:** None at the workload level (Stage 5 is a packaging layer). The chart's `templates/` produce the same Deployments/StatefulSets/Services that Stage 4's `k8s/` tree contains.
 
@@ -677,7 +682,7 @@ drain needed.
 
 Dev and staging auto-converge on git push; prod is human-gated and pins the image to `v1.0.0`. Its source revision remains `main` until that release tag actually exists; pin `targetRevision` as part of the release transaction.
 
-**Code changes vs stage4:** Same application behavior as Stage 4, on newer base images and dependencies (2026-10-22 upgrade). Stage 4's non-root users, `.dockerignore` files and Prometheus-text `/metrics` were restored on 2026-10-24 (tracker G17).
+**Code changes vs stage4:** Same application behavior as Stage 4, on newer base images and dependencies (2026-10-22 upgrade). Stage 4's non-root users, `.dockerignore` files and Prometheus-text `/metrics` were restored on 2026-10-24.
 
 ---
 
@@ -826,9 +831,9 @@ for Stage 9 rather than promoted in place.
 
 **Location:** `stages/stage9/`
 
-**Status:** ⚠️ Planned, not implemented. Current files are unverified legacy
-scaffolding. The standalone `stages/eks/` tree is a structural prototype, not
-real-account evidence.
+**Status:** ⚠️ Planned, not implemented. Legacy scaffolding has been removed
+(only `README.md` remains). The standalone `stages/eks/` tree is a structural
+prototype, not real-account evidence.
 
 **Implementation boundary:** AWS/EKS is the primary lifecycle. Build incremental
 Terraform modules, identify billable resources, deploy the latest hardened Helm
@@ -843,8 +848,8 @@ optional. Do not build two clouds simultaneously or claim HA without evidence.
 
 **Location:** `stages/stage10/`
 
-**Status:** ⚠️ Planned optional missions. Current files are unverified legacy
-scaffolding.
+**Status:** ⚠️ Planned optional missions (`missions/cloudnativepg/` and
+`missions/falco/` implemented; legacy `code/` and `k8s/` scaffolding removed).
 
 Build Linkerd, Argo Rollouts, live debugging/traffic inspection, Chaos Mesh, and
 advanced disaster recovery as independent labs. Each must start from a known-good baseline,
@@ -857,8 +862,8 @@ baseline. They are not a mandatory linear prerequisite chain.
 
 **Location:** `stages/stage11/`
 
-**Status:** ⚠️ Planned optional specializations. Current files are unverified
-legacy scaffolding.
+**Status:** ⚠️ Planned optional specializations. Legacy scaffolding has been
+removed (only `README.md` remains).
 
 Treat the flight-status CRD/operator, KEDA, k3s, Backstage, Kubecost, and
 Cluster API as independent specializations with their own prerequisites,
@@ -904,8 +909,9 @@ resource/cost budget, failure exercise, verification, and cleanup.
 
 ## mise Tools
 
-Currently in `mise.toml`: kubectl, kind, Helm, jq, Kustomize, Argo CD, k6,
-Trivy, task, k3d, and minikube. Docker is a prerequisite that `prep.sh`
+Currently in `mise.toml`: kubectl, kind, Helm, jq, Kustomize, k9s, Argo CD, k6,
+Trivy, task, k3d, minikube, go (`1.27.3`), promtool (`3.15.0`), shellcheck
+(`0.11.0`), and yq (`4.54.1`). Docker is a prerequisite that `prep.sh`
 checks but does not install. `./prep.sh --verify` checks the whole toolchain.
 
 Add future-stage tools only when their lab is implemented and verified; do not
@@ -923,11 +929,11 @@ advertise an uninstalled tool as part of the current learner environment.
 | Stage 2 | ✅ Complete | 5-substage progressive access ladder: 01-internal-dns 46/46, 02-nodeport 48/48, 03-traefik-ingress-tls 49/49, 04-metallb 46/46, 05-envoy-gateway 61/61. Envoy Gateway v1.5.0 + MetalLB carries forward. |
 | Stage 3 | ✅ Complete | 4 StatefulSets + PVCs + entrypoint-hook schema + seed jobs, 69/69 verify (Envoy+MetalLB access stack persists for stages 4–11) |
 | Stage 4 | ✅ Complete | Probes (startup/live/ready) on 6 apps, Guaranteed QoS on all 10 pods, PDBs for booking + frontend, graceful SIGTERM on all backends, topology spread, PriorityClasses, Eviction API proof, 149/149 verify |
-| Stage 5 | ✅ Complete locally | Helm 174/174, Kustomize 163/163 (re-run 2026-10-22 on upgraded images), Argo CD 74/74 (re-run 2026-10-19); all clean lifecycle tests passed. Hosted CI green and GHCR published 2026-10-24 (G15). |
+| Stage 5 | ✅ Complete locally | Helm 174/174, Kustomize 163/163 (re-run 2026-10-22 on upgraded images), Argo CD 74/74 (re-run 2026-10-19); all clean lifecycle tests passed. Hosted CI green and GHCR published 2026-10-24. |
 | Stage 6 | ✅ Complete locally | Helm 212/212 and Kustomize dev 201/201 (re-run 2026-10-22 on upgraded images); full metrics/traces/logs behavior, Alertmanager delivery, Blackbox edge probe, trace↔log correlation and clean purges verified. Identity uses the `python` tier (200m/256Mi); 128Mi stalled it. Argo CD's 4-Application layout validates statically; live reconciliation awaits the next explicitly authorized Git revision. |
 | Stage 7 | ✅ Complete locally | Helm/dev 227/227 + practical scale 1→3→1 across 2 workers; Kustomize/dev 216/216 (re-run 2026-10-22); k6 capacity profile scaled Search 1→2→3 under normal HPA policy after the `nodeTaintsPolicy: Honor` fix; clean purges and zero lab residue. Earlier Helm/staging 211/211 proved live VPA; current renders validate statically. |
 | Stage 8 | ⚠️ Clean rebuild pending | Current worktree is not a trusted input; replacement starts from verified Stage 7 Helm. |
-| Stage 9–11 | ⚠️ Pending | Prototype or legacy scaffolding exists, but none is a trusted implementation boundary yet. |
+| Stage 9–11 | ⚠️ Pending | Legacy scaffolding removed; `stages/eks/` prototype and `stages/stage10/missions/` (`cloudnativepg`, `falco`) exist, remaining stages pending full build-out. |
 
 ---
 

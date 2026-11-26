@@ -34,12 +34,12 @@ echo "=== Building Apollo Airlines service images ==="
 
 for svc in "${SERVICES[@]}"; do
     if [[ "$svc" == "frontend" ]]; then
-        echo "Building $svc (NodePort URLs for kind)..."
+        echo "Building $svc (ClusterIP + port-forward URLs)..."
         docker build -t "${REGISTRY}/${svc}:latest" \
-            --build-arg VITE_IDENTITY_URL=http://localhost:30083 \
-            --build-arg VITE_FLIGHT_URL=http://localhost:30081 \
-            --build-arg VITE_BOOKING_URL=http://localhost:30082 \
-            --build-arg VITE_SEARCH_URL=http://localhost:30084 \
+            --build-arg VITE_IDENTITY_URL=http://localhost:8080 \
+            --build-arg VITE_FLIGHT_URL=http://localhost:8081 \
+            --build-arg VITE_BOOKING_URL=http://localhost:8082 \
+            --build-arg VITE_SEARCH_URL=http://localhost:8083 \
             -f "${PROJECT_ROOT}/code/${svc}/Dockerfile" \
             "${PROJECT_ROOT}/code/${svc}/"
     else

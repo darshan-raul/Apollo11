@@ -1,0 +1,55 @@
+rule_files: [rules.yaml]
+evaluation_interval: 30s
+fuzzy_compare: true
+tests:
+  - name: ten percent flight 5xx triggers high error rate alert
+    interval: 1m
+    input_series:
+      - series: 'http_requests_total{service="flight",method="GET",path="/api/flights",status="200"}'
+        values: '0+90x10'
+      - series: 'http_requests_total{service="flight",method="GET",path="/api/flights",status="500"}'
+        values: '0+10x10'
+      - series: 'http_requests_total{service="flight",method="GET",path="/api/flights",status="404"}'
+        values: '0+200x10'
+    promql_expr_test:
+      - expr: apollo:flight_error_ratio:5m
+        eval_time: 10m
+        exp_samples:
+          - labels: 'apollo:flight_error_ratio:5m'
+            value: 0.1
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ApolloFlightErrorRateHigh
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: flight
+            exp_annotations:
+              summary: Flight 5xx error ratio exceeds 5 percent
+
+  - name: slow flight requests trigger p95 millisecond latency alert
+    interval: 1m
+    input_series:
+      - series: 'http_request_duration_ms_bucket{service="flight",method="GET",path="/api/flights",le="100"}'
+        values: '0+10x10'
+      - series: 'http_request_duration_ms_bucket{service="flight",method="GET",path="/api/flights",le="250"}'
+        values: '0+50x10'
+      - series: 'http_request_duration_ms_bucket{service="flight",method="GET",path="/api/flights",le="500"}'
+        values: '0+95x10'
+      - series: 'http_request_duration_ms_bucket{service="flight",method="GET",path="/api/flights",le="+Inf"}'
+        values: '0+100x10'
+    promql_expr_test:
+      - expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_ms_bucket{service="flight"}[5m])))
+        eval_time: 10m
+        exp_samples:
+          - labels: '{}'
+            value: 500
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ApolloFlightLatencyP95High
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              service: flight
+            exp_annotations:
+              summary: Flight p95 latency exceeds 250 milliseconds

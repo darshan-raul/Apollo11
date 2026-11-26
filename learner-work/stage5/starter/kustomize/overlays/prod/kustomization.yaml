@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - includeSelectors: false
+    pairs:
+      environment: prod
+
+resources:
+  - ../../base
+
+replicas:
+  - name: booking
+    count: 3
+
+# TODO (4): Wire `booking-patch.yaml` here under `patches:` so prod sets
+# spec.template.metadata.annotations["apollo.airlines/release-channel"] to "lts".

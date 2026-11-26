@@ -15,6 +15,18 @@ spec:
         tier: public
     spec:
       serviceAccountName: booking
+      initContainers:
+        - name: wait-for-booking-db
+          image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h booking-db -p 5432 -U postgres; do
+                echo "Waiting for booking-db:5432..."
+                sleep 2
+              done
       containers:
         - name: booking
           image: apollo11/booking:latest

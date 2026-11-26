@@ -4,10 +4,9 @@ metadata:
   name: flight
   namespace: apollo-airlines
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: flight
   ports:
     - port: 8081
       targetPort: 8081
-      nodePort: 30081

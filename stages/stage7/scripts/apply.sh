@@ -1,6 +1,6 @@
 #!/bin/bash
-# Apply Stage 7: Apollo Airlines observability plus autoscaling, scheduling,
-# and Redis-backed search caching. Supports Helm and Kustomize delivery paths.
+# Apply Stage 7: Apollo Airlines observability plus autoscaling
+# and Redis-backed search caching (preserving Stage 4 scheduling baseline). Supports Helm and Kustomize delivery paths.
 #
 # Modes:
 #   helm      — single `helm install` provisions the full cluster:
@@ -42,11 +42,12 @@ TAG_EXPLICIT=false
 SKIP_BUILD=false
 RELEASE_NAME="apollo11"
 OBSERVABILITY_ENABLED=true
+WITH_VPA=false
 
 usage() {
     local code="${1:-1}"
     cat <<EOF
-Usage: $0 [--mode MODE] [--env ENV] [--tag TAG] [--skip-build] [--without-observability] [--release NAME] [--cluster NAME] [--context CTX]
+Usage: $0 [--mode MODE] [--env ENV] [--tag TAG] [--skip-build] [--without-observability] [--with-vpa] [--release NAME] [--cluster NAME] [--context CTX]
 
 Options:
   --mode MODE       helm (default) | kustomize
@@ -57,6 +58,7 @@ Options:
                     are declared by the selected overlay and must match.
   --skip-build      Reuse pre-built images; skip the docker build step
   --without-observability  Install only the trusted Stage 5-compatible baseline
+  --with-vpa        Enable recommendation-only VPA (search-vpa) on dev
   --release NAME    Helm release name (default: apollo11)
   --cluster NAME    kind cluster name (must match --context)
   --context CTX     Kubernetes context (kind-apollo11 or kind-apollo11-dev)
@@ -65,6 +67,7 @@ Options:
 Examples:
   $0                                          # helm install (defaults: tag=latest, no env file)
   $0 --env dev                                # helm with values-dev.yaml (1 replica, tag=latest)
+  $0 --env dev --with-vpa                     # helm dev with Off-mode VPA recommendations enabled
   $0 --env staging --tag latest               # helm with values-staging.yaml
   $0 --env prod --tag v1.2.3                  # helm with values-prod.yaml
   $0 --mode kustomize --env dev               # kustomize overlays/dev/
@@ -79,6 +82,7 @@ while [[ $# -gt 0 ]]; do
         --tag)         [[ $# -ge 2 ]] || { echo "--tag requires a value" >&2; usage 2; }; TAG="$2"; TAG_EXPLICIT=true; shift 2 ;;
         --skip-build)  SKIP_BUILD=true; shift ;;
         --without-observability) OBSERVABILITY_ENABLED=false; shift ;;
+        --with-vpa)    WITH_VPA=true; shift ;;
         --release)     [[ $# -ge 2 ]] || { echo "--release requires a value" >&2; usage 2; }; RELEASE_NAME="$2"; shift 2 ;;
         --cluster)     [[ $# -ge 2 ]] || { echo "--cluster requires a value" >&2; usage 2; }; CLUSTER="$2"; shift 2 ;;
         --context)     [[ $# -ge 2 ]] || { echo "--context requires a value" >&2; usage 2; }; export KUBE_CONTEXT="$2"; shift 2 ;;
@@ -190,10 +194,10 @@ install_stage7_dependencies() {
         fail "metrics-server did not become ready"
     ok "metrics-server ready"
 
-    # Dev intentionally omits VPA's three control-plane pods. Staging and
-    # production install VPA before the chart submits the search VPA resource,
-    # so API discovery is complete when Helm/Kustomize applies it.
-    if [[ "$ENV" != "dev" ]]; then
+    # Dev omits VPA controllers by default; pass --with-vpa to install them
+    # on dev. Staging and production always install VPA before the chart
+    # submits search-vpa so API discovery is complete.
+    if [[ "$ENV" != "dev" || "$WITH_VPA" == "true" ]]; then
         [[ -f "$vpa_bundle" ]] || fail "missing VPA bundle: $vpa_bundle"
         kubectl apply --server-side --force-conflicts -f "$vpa_bundle" >/dev/null
         kubectl wait --for=condition=Established \
@@ -236,7 +240,7 @@ wait_stage7() {
     [[ "$hpa_ready" == "true" ]] || fail "search HPA did not populate its CPU target within 60s"
     ok "search HPA reports current CPU utilization"
 
-    if [[ "$ENV" != "dev" ]]; then
+    if [[ "$ENV" != "dev" || "$WITH_VPA" == "true" ]]; then
         kubectl get vpa search-vpa -n apollo-airlines-apps >/dev/null 2>&1 || \
             fail "vpa/search-vpa is missing"
         ok "search VPA exists in recommendation-only mode"
@@ -275,7 +279,7 @@ wait_envoy_dataplane() {
         fail "Envoy data-plane pod did not become ready within 100s"
 }
 
-step "0/9 Checking cluster"
+step "0/8 Checking cluster"
 if ! kubectl cluster-info >/dev/null 2>&1; then
     fail "kubectl cannot reach a cluster. Did you 'kind create cluster'?"
 fi
@@ -305,7 +309,7 @@ if [[ "$MODE" == "helm" ]]; then
     # resources that depend on the CRDs. If we install them in the same
     # transaction as those custom resources, the API server hasn't
     # registered the CRDs yet and we get "no matches for kind" errors.
-    step "2/9 Pre-install: CRD bundles and Stage 7 metrics dependencies"
+    step "2/8 Pre-install: CRD bundles and Stage 7 metrics dependencies"
     # Both bundles use --server-side for the >256KB last-applied-config
     # workaround. MetalLB needs --force-conflicts because its webhook
     # manages its own CA.
@@ -387,6 +391,9 @@ if [[ "$MODE" == "helm" ]]; then
             echo "  using values file: $VALUES_FILE"
         fi
     fi
+    if [[ "$WITH_VPA" == "true" ]]; then
+        HELM_CMD+=(--set vpa.search.enabled=true)
+    fi
 
     "${HELM_CMD[@]}" 2>&1 | tail -20
     ok "helm install complete"
@@ -437,7 +444,7 @@ if [[ "$MODE" == "helm" ]]; then
     step "8/8 Summary"
     ok "Apollo Airlines Stage 7 installed via Helm"
     echo "  Run 'bash scripts/verify.sh --mode helm' to run the verify suite"
-    echo "  Run 'bash scripts/scaling-lab.sh' for the practical HPA + scheduling lab"
+    echo "  Run 'bash scripts/scaling-lab.sh' for the practical HPA scaling lab"
     echo "  Run 'bash scripts/teardown.sh --mode helm' to uninstall"
 
 elif [[ "$MODE" == "kustomize" ]]; then
@@ -492,6 +499,26 @@ EOF
     step "5/8 Applying complete plain-manifest overlay"
     kubectl apply -f "$rendered_manifest"
     rm -f "$rendered_manifest"
+    if [[ "$ENV" == "dev" && "$WITH_VPA" == "true" ]]; then
+        python3 - "$STAGE_DIR/overlays/base/generated.yaml" <<'PY' | kubectl apply -f -
+import sys
+import yaml
+
+with open(sys.argv[1], encoding="utf-8") as fh:
+    docs = [d for d in yaml.safe_load_all(fh) if isinstance(d, dict)]
+
+vpa_docs = [
+    d for d in docs
+    if d.get("kind") == "VerticalPodAutoscaler"
+    and (d.get("metadata") or {}).get("name") == "search-vpa"
+]
+if not vpa_docs:
+    sys.stderr.write("search-vpa missing from overlays/base/generated.yaml\n")
+    sys.exit(1)
+
+print(yaml.safe_dump(vpa_docs[0], sort_keys=False))
+PY
+    fi
     ok "kustomize overlay applied"
 
     step "6/8 Waiting for StatefulSets + seed Jobs"
@@ -521,7 +548,7 @@ EOF
 
     ok "Apollo Airlines Stage 7 installed via kustomize ($ENV)"
     echo "  Run 'bash scripts/verify.sh --mode kustomize' to run the verify suite"
-    echo "  Run 'bash scripts/scaling-lab.sh' for the practical HPA + scheduling lab"
+    echo "  Run 'bash scripts/scaling-lab.sh' for the practical HPA scaling lab"
     echo "  Run 'bash scripts/teardown.sh --mode kustomize' to remove"
 else
     fail "unknown mode: $MODE (expected helm or kustomize)"

@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking
+  namespace: apollo-airlines
+spec:
+  # TODO: Set replicas to 2
+  replicas: 1
+  selector:
+    matchLabels:
+      app: CHANGE_ME
+  template:
+    metadata:
+      labels:
+        # TODO: Must match spec.selector.matchLabels and the Service selector
+        app: CHANGE_ME
+    spec:
+      # TODO: Set serviceAccountName to booking
+      containers:
+        - name: booking
+          # TODO: Use apollo11/booking:latest with IfNotPresent pull policy
+          image: apollo11/booking:CHANGE_ME
+          ports:
+            # TODO: Booking listens on port 8082
+            - containerPort: 8080
+          # TODO: Load booking-config via envFrom (configMapRef)
+          # TODO: Add livenessProbe (/healthz on 8082) and readinessProbe (/readyz on 8082)

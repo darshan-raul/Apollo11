@@ -1,13 +1,12 @@
 #!/bin/bash
-# Observable Stage 7 scheduling + HPA exercise.
+# Observable Stage 7 HPA load-scaling exercise.
 #
 # The default `run` path is reversible:
-#   1. label + taint one worker as a preferred search pool;
-#   2. recreate search Pods so the scheduler evaluates the policy;
-#   3. temporarily lower the HPA CPU target and scale-down window;
-#   4. generate real HTTP traffic from short-lived in-cluster clients;
-#   5. prove scale-out, cross-worker placement, and scale-in;
-#   6. restore the HPA and remove all lab-created cluster state.
+#   1. verify at least two workers exist (Stage 4 DoNotSchedule spread);
+#   2. temporarily lower the HPA CPU target and scale-down window;
+#   3. generate real HTTP traffic from short-lived in-cluster clients;
+#   4. prove HPA scale-out and scale-in;
+#   5. restore the HPA and remove all lab-created cluster state.
 #
 # Usage:
 #   bash scripts/scaling-lab.sh
@@ -62,7 +61,6 @@ ACTION="${1:-run}"
 
 ORIGINAL_CPU_TARGET=""
 ORIGINAL_SCALE_DOWN_WINDOW=""
-DEDICATED_NODE=""
 CLEANED_UP=false
 
 log() { printf '\n==> %s\n' "$1"; }
@@ -159,8 +157,7 @@ done
 kubectl top nodes >/dev/null 2>&1 || die "metrics-server is not returning data yet"
 
 mapfile -t WORKERS < <(worker_nodes)
-[[ "${#WORKERS[@]}" -ge 2 ]] || die "this lab requires at least two nodes labeled node-role=worker"
-DEDICATED_NODE="${WORKERS[0]}"
+[[ "${#WORKERS[@]}" -ge 2 ]] || die "this lab requires at least two nodes labeled node-role=worker (Stage 4 DoNotSchedule topology spread requires >= 2 workers to schedule scaled-out search replicas)"
 
 SAVED_CPU_TARGET=$(kubectl get hpa "$HPA_NAME" -n "$NAMESPACE" \
     -o jsonpath='{.metadata.annotations.apollo11\.io/scaling-lab-original-cpu}' 2>/dev/null || true)
@@ -181,14 +178,6 @@ SEARCH_IMAGE=$(kubectl get deployment "$SEARCH_DEPLOYMENT" -n "$NAMESPACE" \
 
 trap cleanup EXIT
 trap on_signal INT TERM
-
-log "Designating $DEDICATED_NODE as the preferred search worker"
-remove_lab_node_state
-kubectl label node "$DEDICATED_NODE" "${POOL_LABEL}=${POOL_VALUE}" --overwrite
-kubectl taint node "$DEDICATED_NODE" "${TAINT_KEY}=${TAINT_VALUE}:${TAINT_EFFECT}" --overwrite
-kubectl rollout restart deployment "$SEARCH_DEPLOYMENT" -n "$NAMESPACE" >/dev/null
-kubectl rollout status deployment "$SEARCH_DEPLOYMENT" -n "$NAMESPACE" --timeout=120s
-kubectl get pods -n "$NAMESPACE" -l app=search -o wide
 
 log "Temporarily tuning the HPA for a short local demonstration"
 printf 'Production values: CPU target=%s%%, scale-down window=%ss\n' \
@@ -254,10 +243,6 @@ fi
 
 log "Search replicas after scale-out"
 kubectl get pods -n "$NAMESPACE" -l app=search -o wide
-DISTINCT_NODES=$(kubectl get pods -n "$NAMESPACE" -l app=search \
-    -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort -u | sed '/^$/d' | wc -l | tr -d ' ')
-[[ "$DISTINCT_NODES" -ge 2 ]] || die "search replicas used only $DISTINCT_NODES worker; expected at least 2"
-printf 'Observed search replicas across %s workers.\n' "$DISTINCT_NODES"
 
 log "Stopping load and watching scale-in to minReplicas=$MIN_REPLICAS"
 kubectl delete deployment "$LOAD_DEPLOYMENT" -n "$NAMESPACE" --wait=false >/dev/null
@@ -266,4 +251,4 @@ if ! wait_for_replica_count eq "$MIN_REPLICAS" "$SCALE_IN_TIMEOUT"; then
 fi
 
 log "Lab complete"
-printf 'Observed real HTTP load, HPA scale-out, cross-worker placement, and scale-in.\n'
+printf 'Observed real HTTP load, HPA scale-out, and scale-in.\n'

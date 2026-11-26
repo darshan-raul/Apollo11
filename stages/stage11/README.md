@@ -5,13 +5,13 @@ description: "Status and intended modular shape for advanced Kubernetes speciali
 
 # Stage 11: Towards Mars
 
-> **Status: not implemented. Do not apply the files currently in this directory.**
+> **Status: not implemented. Catalog only — no runnable manifests exist in this directory yet.**
 
 The approved specialization catalog is defined in
 [`ROADMAP.md`](../../ROADMAP.md).
 
-The existing files contain unverified legacy library-management scaffolding.
-They are not compatible with the trusted Apollo Airlines stages.
+Legacy scaffolding has been removed. Future specializations will be built
+against the trusted Apollo Airlines stages.
 
 Stage 11 will be a menu of advanced specializations rather than a single final
 deployment:

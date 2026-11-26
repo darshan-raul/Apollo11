@@ -1,0 +1,19 @@
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: search-hpa
+  # TODO: Set namespace to apollo-airlines-apps
+  namespace: CHANGE_ME
+  labels:
+    app: search
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    # TODO: Target the search Deployment
+    name: CHANGE_ME
+  # TODO: Set minReplicas (e.g., 2) and maxReplicas (e.g., 10) with maxReplicas > minReplicas
+  minReplicas: 1
+  maxReplicas: 1
+  # TODO: Switch apiVersion to autoscaling/v2 and add spec.metrics for CPU Utilization (e.g., 70%)
+  # TODO: Add spec.behavior (scaleDown stabilizationWindowSeconds: 300, scaleUp fast policies)

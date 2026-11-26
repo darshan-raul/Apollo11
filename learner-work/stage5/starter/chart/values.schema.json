@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "image",
+    "namespaces",
+    "apps",
+    "tiers",
+    "probes",
+    "terminationGracePeriod"
+  ],
+  "properties": {
+    "image": {
+      "type": "object",
+      "required": ["repository", "pullPolicy", "tag"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "pullPolicy": { "enum": ["Always", "IfNotPresent", "Never"] },
+        "tag": { "type": "string", "minLength": 1 }
+      }
+    },
+    "namespaces": {
+      "type": "object",
+      "required": ["apps"],
+      "properties": {
+        "apps": { "type": "string", "minLength": 1 }
+      }
+    },
+    "apps": {
+      "type": "object",
+      "required": ["booking"],
+      "properties": {
+        "booking": { "$ref": "#/definitions/app" }
+      }
+    },
+    "tiers": { "type": "object" },
+    "probes": {
+      "type": "object",
+      "required": ["startup", "liveness", "readiness"]
+    },
+    "terminationGracePeriod": {
+      "type": "object",
+      "required": ["apps"],
+      "properties": {
+        "apps": { "type": "integer", "minimum": 1 }
+      }
+    }
+  },
+  "definitions": {
+    "app": {
+      "type": "object",
+      "required": [
+        "tier",
+        "port",
+        "replicas"
+      ],
+      "properties": {
+        "tier": {
+          "enum": ["default", "flagship", "low", "edge"]
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "replicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "priorityClassName": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -185,6 +185,8 @@ case "${SUBSTAGE}" in
     kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/05-httproute-search.yaml"
     kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/06-httproute-notification.yaml"
     kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/07-httproute-frontend.yaml"
+    kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/08-httproute-cross-ns-refgrant.yaml"
+    kube apply -f "${STAGE_DIR}/k8s/substages/05-envoy-gateway/09-httproute-https-redirect.yaml"
 
     printf 'Waiting for Envoy Proxy and Gateway programming...\n'
     for _ in {1..30}; do

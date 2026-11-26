@@ -1,0 +1,11 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking
+  namespace: apollo-airlines-apps
+spec:
+  template:
+    metadata:
+      annotations:
+        # TODO (4): Change "stable" to "lts" and wire this file in overlays/prod/kustomization.yaml.
+        apollo.airlines/release-channel: stable

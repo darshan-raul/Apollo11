@@ -1,0 +1,27 @@
+# TODO: Point rule_files to extracted [rules.yaml] and complete expectations
+rule_files: [CHANGE_ME.yaml]
+evaluation_interval: 30s
+fuzzy_compare: true
+tests:
+  - name: ten percent flight 5xx triggers high error rate alert
+    interval: 1m
+    input_series:
+      - series: 'http_requests_total{service="flight",method="GET",path="/api/flights",status="200"}'
+        values: '0+90x10'
+      - series: 'http_requests_total{service="flight",method="GET",path="/api/flights",status="500"}'
+        values: '0+10x10'
+    promql_expr_test:
+      - expr: apollo:flight_error_ratio:5m
+        eval_time: 10m
+        exp_samples:
+          - labels: 'apollo:flight_error_ratio:5m'
+            value: 999
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ApolloFlightErrorRateHigh
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: flight
+            exp_annotations:
+              summary: Flight 5xx error ratio exceeds 5 percent

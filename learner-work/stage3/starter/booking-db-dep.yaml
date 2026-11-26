@@ -1,0 +1,58 @@
+# Starter manifest for Stage 3 Author-Before-Bootstrap exercise.
+# TODO:
+#   1. Convert kind: Deployment -> kind: StatefulSet (and remove any Deployment manifest).
+#   2. Add spec.serviceName: booking-db-headless.
+#   3. Add env PGDATA=/var/lib/postgresql/data/pgdata so Postgres initializes a subdirectory.
+#   4. Add ConfigMap volume init-script (name: booking-db-init-script) mounted at /docker-entrypoint-initdb.d.
+#   5. Remove emptyDir and replace it with spec.volumeClaimTemplates for pg-data
+#      (accessModes: ["ReadWriteOnce"], resources.requests.storage: 1Gi).
+#   6. Create booking-db-svc-headless.yaml with kind: Service, name: booking-db-headless,
+#      clusterIP: None, selector app: booking-db, and port 5432 -> targetPort 5432.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-db
+  namespace: apollo-airlines-apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking-db
+  template:
+    metadata:
+      labels:
+        app: booking-db
+        tier: data
+    spec:
+      serviceAccountName: booking-db
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "booking"
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "booking"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "booking"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: pg-data
+          emptyDir: {}

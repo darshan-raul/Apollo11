@@ -1,0 +1,25 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: flight
+  # TODO: Place this ServiceMonitor in the observability namespace watched by Prometheus
+  namespace: CHANGE_ME
+  labels:
+    app.kubernetes.io/name: flight
+    # TODO: Match Prometheus serviceMonitorSelector (app.kubernetes.io/part-of: apollo-airlines)
+    app.kubernetes.io/part-of: CHANGE_ME
+spec:
+  selector:
+    matchLabels:
+      app: CHANGE_ME
+  namespaceSelector:
+    matchNames:
+      # TODO: Target the namespace running the flight Service
+      - CHANGE_ME
+  endpoints:
+    - port: CHANGE_ME
+      path: /CHANGE_ME
+      scheme: http
+      interval: 30s
+      scrapeTimeout: 10s
+  jobLabel: app

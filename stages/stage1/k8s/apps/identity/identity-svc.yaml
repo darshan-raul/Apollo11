@@ -4,10 +4,9 @@ metadata:
   name: identity
   namespace: apollo-airlines
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: identity
   ports:
     - port: 8080
       targetPort: 8080
-      nodePort: 30083

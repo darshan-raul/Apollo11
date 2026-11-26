@@ -4,6 +4,7 @@ metadata:
   name: booking-db
   namespace: apollo-airlines
 spec:
+  type: ClusterIP
   selector:
     app: booking-db
   ports:

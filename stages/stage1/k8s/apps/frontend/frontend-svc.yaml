@@ -4,10 +4,9 @@ metadata:
   name: frontend
   namespace: apollo-airlines
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: frontend
   ports:
     - port: 3000
       targetPort: 3000
-      nodePort: 30080

@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STAGE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 usage() {
   printf 'Usage: %s [--context kind-apollo11|kind-apollo11-dev] [kind-apollo11|kind-apollo11-dev]\n' "$0"
   printf '  --context CTX  Kubernetes context (or set KUBE_CONTEXT)\n'
@@ -276,7 +279,7 @@ case "$DETECTED_STACK" in
       fail "Gateway apollo-gateway status invalid (Accepted=$gw_acc, Programmed=$gw_prog)"
     fi
 
-    for route in identity flight booking search notification; do
+    for route in identity flight booking search notification frontend-cross-ns https-redirect; do
       route_acc=$(kube get httproute "$route" -n apollo-airlines-apps -o jsonpath='{.status.parents[*].conditions[?(@.type=="Accepted")].status}' 2>/dev/null || echo "False")
       if [[ "$route_acc" == *"True"* && "$route_acc" != *"False"* ]]; then
         pass "HTTPRoute apollo-airlines-apps/$route accepted"
@@ -284,6 +287,13 @@ case "$DETECTED_STACK" in
         fail "HTTPRoute apollo-airlines-apps/$route not accepted"
       fi
     done
+
+    cross_ns_res=$(kube get httproute frontend-cross-ns -n apollo-airlines-apps -o jsonpath='{.status.parents[*].conditions[?(@.type=="ResolvedRefs")].status}' 2>/dev/null || echo "False")
+    if [[ "$cross_ns_res" == *"True"* && "$cross_ns_res" != *"False"* ]]; then
+      pass "HTTPRoute apollo-airlines-apps/frontend-cross-ns ResolvedRefs=True (ReferenceGrant active)"
+    else
+      fail "HTTPRoute apollo-airlines-apps/frontend-cross-ns ResolvedRefs invalid ($cross_ns_res)"
+    fi
 
     frontend_route_acc=$(kube get httproute frontend -n apollo-airlines-ui -o jsonpath='{.status.parents[*].conditions[?(@.type=="Accepted")].status}' 2>/dev/null || echo "False")
     if [[ "$frontend_route_acc" == *"True"* && "$frontend_route_acc" != *"False"* ]]; then
@@ -330,6 +340,68 @@ case "$DETECTED_STACK" in
         pass "Envoy Gateway HTTPS listener (port 443 TLS) to frontend returned HTTP $fe_https_code"
       else
         fail "Envoy Gateway HTTPS listener to frontend failed (HTTP $fe_https_code)"
+      fi
+
+      cross_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: cross-ns.apollo.local" --connect-timeout 2 "http://${eg_ip}/" 2>/dev/null || echo "000")
+      if [[ "$cross_code" == "200" ]]; then
+        pass "Envoy Gateway cross-namespace ReferenceGrant route (cross-ns.apollo.local) returned HTTP $cross_code"
+      else
+        fail "Envoy Gateway cross-namespace ReferenceGrant route failed (HTTP $cross_code)"
+      fi
+
+      redir_headers=$(curl -s -D - -o /dev/null -H "Host: redirect.apollo.local" --connect-timeout 2 "http://${eg_ip}/" 2>/dev/null || echo "")
+      redir_code=$(printf '%s\n' "$redir_headers" | awk 'toupper($1) ~ /^HTTP\// { code=$2 } END { print code }')
+      redir_loc=$(printf '%s\n' "$redir_headers" | tr -d '\r' | awk 'tolower($1)=="location:" { print $2; exit }')
+      if [[ "$redir_code" == "301" && "$redir_loc" == https://redirect.apollo.local* ]]; then
+        pass "Envoy Gateway RequestRedirect route returned HTTP $redir_code -> $redir_loc"
+      else
+        fail "Envoy Gateway RequestRedirect route invalid (HTTP ${redir_code:-000}, Location=${redir_loc:-<none>})"
+      fi
+
+      # Reversible ReferenceGrant break/recover proof
+      refgrant_manifest="${STAGE_DIR}/k8s/substages/05-envoy-gateway/01a-referencegrant.yaml"
+      if [[ -f "$refgrant_manifest" ]]; then
+        REFGRANT_NEEDS_RESTORE=true
+        restore_refgrant() {
+          if [[ "${REFGRANT_NEEDS_RESTORE:-false}" == true ]]; then
+            kube apply -f "${refgrant_manifest}" >/dev/null 2>&1 || true
+          fi
+        }
+        trap restore_refgrant EXIT
+
+        kube delete referencegrant apollo-gateway-grant -n apollo-airlines-ui --ignore-not-found >/dev/null 2>&1 || true
+        ref_reason=""
+        for _ in {1..20}; do
+          ref_reason=$(kube get httproute frontend-cross-ns -n apollo-airlines-apps -o jsonpath='{.status.parents[*].conditions[?(@.type=="ResolvedRefs")].reason}' 2>/dev/null || echo "")
+          if [[ "$ref_reason" == *"RefNotPermitted"* ]]; then
+            break
+          fi
+          sleep 1
+        done
+        if [[ "$ref_reason" == *"RefNotPermitted"* ]]; then
+          pass "Deleting ReferenceGrant caused HTTPRoute/frontend-cross-ns ResolvedRefs reason RefNotPermitted"
+        else
+          fail "Deleting ReferenceGrant did not report RefNotPermitted (got: ${ref_reason:-<none>})"
+        fi
+
+        kube apply -f "${refgrant_manifest}" >/dev/null 2>&1 || true
+        REFGRANT_NEEDS_RESTORE=false
+        trap - EXIT
+
+        ref_status=""
+        for _ in {1..20}; do
+          ref_status=$(kube get httproute frontend-cross-ns -n apollo-airlines-apps -o jsonpath='{.status.parents[*].conditions[?(@.type=="ResolvedRefs")].status}' 2>/dev/null || echo "")
+          if [[ "$ref_status" == *"True"* && "$ref_status" != *"False"* ]]; then
+            break
+          fi
+          sleep 1
+        done
+        cross_rec_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: cross-ns.apollo.local" --connect-timeout 2 "http://${eg_ip}/" 2>/dev/null || echo "000")
+        if [[ "$ref_status" == *"True"* && "$ref_status" != *"False"* && "$cross_rec_code" == "200" ]]; then
+          pass "Re-applying ReferenceGrant restored ResolvedRefs=True and HTTP $cross_rec_code"
+        else
+          fail "ReferenceGrant recovery incomplete (ResolvedRefs=${ref_status:-<none>}, HTTP $cross_rec_code)"
+        fi
       fi
     fi
     ;;

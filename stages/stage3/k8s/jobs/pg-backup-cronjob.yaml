@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pg-backups
+  namespace: apollo-airlines-apps
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pg-backup
+  namespace: apollo-airlines-apps
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  startingDeadlineSeconds: 300
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: pg-backup
+        spec:
+          serviceAccountName: pg-backup
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-backup
+              image: postgres:15-alpine
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: apollo-airlines-secrets
+                      key: POSTGRES_PASSWORD
+                - name: RETENTION_DAYS
+                  value: "7"
+                - name: KEEP_LAST
+                  value: "5"
+              command:
+                - sh
+                - -c
+                - |
+                  set -eu
+                  ts="$(date -u +%Y%m%dT%H%M%SZ)"
+                  for target in identity-db:identity flight-db:flight booking-db:booking; do
+                    host="${target%%:*}"
+                    db="${target#*:}"
+                    tmpfile="/backups/${db}-${ts}.sql.tmp"
+                    outfile="/backups/${db}-${ts}.sql.gz"
+                    pg_isready -h "$host" -p 5432 -U postgres
+                    pg_dump -h "$host" -U postgres -d "$db" -f "$tmpfile"
+                    test -s "$tmpfile"
+                    gzip -c "$tmpfile" > "$outfile"
+                    rm -f "$tmpfile"
+                    test -s "$outfile"
+                    echo "Backed up ${db} from ${host} -> ${outfile}"
+                  done
+                  find /backups -type f -name '*.sql.gz' -mtime +"${RETENTION_DAYS}" -delete
+                  for db in identity flight booking; do
+                    ls -1t "/backups/${db}-"*.sql.gz 2>/dev/null | awk -v keep="${KEEP_LAST}" 'NR > keep' | while IFS= read -r old; do
+                      rm -f "$old"
+                    done
+                  done
+                  ls -lh /backups
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backups
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: pg-backups

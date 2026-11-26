@@ -61,6 +61,23 @@ kube() {
   kubectl --context "${CONTEXT}" "$@"
 }
 
+CORDONED_NODE=""
+MANUAL_BACKUP_JOB=""
+
+cleanup() {
+  if [[ -n "${CORDONED_NODE}" ]]; then
+    kube uncordon "${CORDONED_NODE}" >/dev/null 2>&1 || true
+    CORDONED_NODE=""
+  fi
+  if [[ -n "${MANUAL_BACKUP_JOB}" ]]; then
+    kube delete job "${MANUAL_BACKUP_JOB}" -n apollo-airlines-apps --ignore-not-found --wait=false >/dev/null 2>&1 || true
+    MANUAL_BACKUP_JOB=""
+  fi
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 step "1. Core Namespaces"
 for ns in apollo-airlines-apps apollo-airlines-ui envoy-gateway-system metallb-system; do
   if kube get namespace "$ns" >/dev/null 2>&1; then
@@ -71,7 +88,7 @@ for ns in apollo-airlines-apps apollo-airlines-ui envoy-gateway-system metallb-s
 done
 
 step "2. ServiceAccounts (Token Automount Security)"
-EXPECTED_SAS=(identity-db flight-db booking-db redis identity flight booking search notification init-identity-db init-flight-db init-booking-db)
+EXPECTED_SAS=(identity-db flight-db booking-db redis identity flight booking search notification init-identity-db init-flight-db init-booking-db pg-backup)
 for sa in "${EXPECTED_SAS[@]}"; do
   automount=$(kube get sa "$sa" -n apollo-airlines-apps -o jsonpath='{.automountServiceAccountToken}' 2>/dev/null || echo "not-found")
   if [[ "$automount" == "false" ]]; then
@@ -117,6 +134,13 @@ for pvc in "${EXPECTED_PVCS[@]}"; do
     pass "PVC $pvc is Bound (ReadWriteOnce, 1Gi)"
   else
     fail "PVC $pvc invalid: phase=$phase mode=$mode size=$size"
+  fi
+  pv_name=$(kube get pvc "$pvc" -n apollo-airlines-apps -o jsonpath='{.spec.volumeName}' 2>/dev/null || echo "")
+  pv_affinity=$(kube get pv "$pv_name" -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[*].matchExpressions[*].values[*]}' 2>/dev/null || echo "")
+  if [[ -n "$pv_name" && -n "$pv_affinity" ]]; then
+    pass "PV $pv_name (backing $pvc) defines spec.nodeAffinity pinning to node: $pv_affinity"
+  else
+    fail "PV for $pvc missing spec.nodeAffinity (pv=$pv_name affinity=$pv_affinity)"
   fi
 done
 
@@ -325,6 +349,129 @@ if kube exec -n apollo-airlines-apps redis-0 -- redis-cli SET stage3:persist "$r
   kube exec -n apollo-airlines-apps redis-0 -- redis-cli DEL stage3:persist >/dev/null 2>&1 || true
 else
   fail "Failed to write Redis persistence marker to redis-0"
+fi
+
+step "10. Working initContainer (booking -> booking-db readiness)"
+init_names=$(kube get deploy booking -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.initContainers[*].name}' 2>/dev/null || echo "")
+if grep -qw "wait-for-booking-db" <<<"$init_names"; then
+  pass "Deployment apollo-airlines-apps/booking declares initContainer wait-for-booking-db"
+else
+  fail "Deployment apollo-airlines-apps/booking missing initContainer wait-for-booking-db (got '$init_names')"
+fi
+
+booking_pods=$(kube get pods -n apollo-airlines-apps -l app=booking -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || echo "")
+if [[ -z "$booking_pods" ]]; then
+  fail "No booking Pods found to verify initContainer status"
+else
+  for bpod in $booking_pods; do
+    init_ready=$(kube get pod "$bpod" -n apollo-airlines-apps -o jsonpath='{.status.initContainerStatuses[?(@.name=="wait-for-booking-db")].ready}' 2>/dev/null || echo "")
+    init_exit=$(kube get pod "$bpod" -n apollo-airlines-apps -o jsonpath='{.status.initContainerStatuses[?(@.name=="wait-for-booking-db")].state.terminated.exitCode}' 2>/dev/null || echo "")
+    if [[ "$init_ready" == "true" && "$init_exit" == "0" ]]; then
+      pass "Pod $bpod initContainer wait-for-booking-db completed cleanly (ready=true, exitCode=0)"
+    else
+      fail "Pod $bpod initContainer wait-for-booking-db invalid state (ready=${init_ready:-<none>}, exitCode=${init_exit:-<none>})"
+    fi
+  done
+fi
+
+step "11. Scheduled Backup CronJob & pg-backups PVC"
+cj_schedule=$(kube get cronjob pg-backup -n apollo-airlines-apps -o jsonpath='{.spec.schedule}' 2>/dev/null || echo "")
+cj_sa=$(kube get cronjob pg-backup -n apollo-airlines-apps -o jsonpath='{.spec.jobTemplate.spec.template.spec.serviceAccountName}' 2>/dev/null || echo "")
+cj_policy=$(kube get cronjob pg-backup -n apollo-airlines-apps -o jsonpath='{.spec.concurrencyPolicy}' 2>/dev/null || echo "")
+if [[ -n "$cj_schedule" && "$cj_sa" == "pg-backup" && "$cj_policy" == "Forbid" ]]; then
+  pass "CronJob apollo-airlines-apps/pg-backup configured (schedule='$cj_schedule', sa=$cj_sa, concurrencyPolicy=$cj_policy)"
+else
+  fail "CronJob apollo-airlines-apps/pg-backup missing or invalid (schedule='$cj_schedule', sa='$cj_sa', policy='$cj_policy')"
+fi
+
+MANUAL_BACKUP_JOB="pg-backup-verify-${RANDOM}"
+if kube create job --from=cronjob/pg-backup "${MANUAL_BACKUP_JOB}" -n apollo-airlines-apps >/dev/null 2>&1; then
+  if kube wait --for=condition=Complete "job/${MANUAL_BACKUP_JOB}" -n apollo-airlines-apps --timeout=120s >/dev/null 2>&1; then
+    pass "Triggered backup job ${MANUAL_BACKUP_JOB} (from cronjob/pg-backup) completed"
+
+    b_phase=$(kube get pvc pg-backups -n apollo-airlines-apps -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+    b_mode=$(kube get pvc pg-backups -n apollo-airlines-apps -o jsonpath='{.spec.accessModes[0]}' 2>/dev/null || echo "")
+    b_size=$(kube get pvc pg-backups -n apollo-airlines-apps -o jsonpath='{.spec.resources.requests.storage}' 2>/dev/null || echo "")
+    if [[ "$b_phase" == "Bound" && "$b_mode" == "ReadWriteOnce" && "$b_size" == "1Gi" ]]; then
+      pass "PVC pg-backups bound after backup Job scheduling (Bound, ReadWriteOnce, 1Gi)"
+    else
+      fail "PVC pg-backups invalid after backup Job: phase=$b_phase mode=$b_mode size=$b_size"
+    fi
+
+    backup_logs=$(kube logs "job/${MANUAL_BACKUP_JOB}" -n apollo-airlines-apps 2>/dev/null || echo "")
+    if grep -qE 'identity-[0-9T]+Z\.sql\.gz' <<<"$backup_logs" \
+      && grep -qE 'flight-[0-9T]+Z\.sql\.gz' <<<"$backup_logs" \
+      && grep -qE 'booking-[0-9T]+Z\.sql\.gz' <<<"$backup_logs"; then
+      pass "Backup job generated compressed .sql.gz dumps for identity, flight, and booking"
+    else
+      fail "Backup job logs missing expected .sql.gz dump entries"
+    fi
+  else
+    fail "Triggered backup job ${MANUAL_BACKUP_JOB} did not complete within 120s"
+  fi
+  kube delete job "${MANUAL_BACKUP_JOB}" -n apollo-airlines-apps --ignore-not-found --wait=false >/dev/null 2>&1 || true
+  MANUAL_BACKUP_JOB=""
+else
+  fail "Failed to create manual backup job from cronjob/pg-backup"
+  MANUAL_BACKUP_JOB=""
+fi
+
+step "12. Local-Path PV Node-Pinning Proof"
+id_pv=$(kube get pvc pg-data-identity-db-0 -n apollo-airlines-apps -o jsonpath='{.spec.volumeName}' 2>/dev/null || echo "")
+id_pv_node=$(kube get pv "$id_pv" -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[*].matchExpressions[*].values[0]}' 2>/dev/null || echo "")
+id_pod_node=$(kube get pod identity-db-0 -n apollo-airlines-apps -o jsonpath='{.spec.nodeName}' 2>/dev/null || echo "")
+if [[ -n "$id_pv_node" && "$id_pv_node" == "$id_pod_node" ]]; then
+  pass "identity-db-0 is scheduled on its PV nodeAffinity-pinned node: $id_pod_node"
+else
+  fail "identity-db-0 node (${id_pod_node:-<none>}) does not match PV nodeAffinity (${id_pv_node:-<none>})"
+fi
+
+worker_nodes_total=$(kube get nodes -l '!node-role.kubernetes.io/control-plane' --no-headers 2>/dev/null | wc -l | tr -d ' ')
+if [[ "${worker_nodes_total:-0}" -ge 2 && -n "$id_pod_node" ]]; then
+  info "Multi-worker cluster ($worker_nodes_total workers): cordoning $id_pod_node and deleting identity-db-0..."
+  CORDONED_NODE="$id_pod_node"
+  if kube cordon "$CORDONED_NODE" >/dev/null 2>&1; then
+    kube delete pod identity-db-0 -n apollo-airlines-apps --wait=true >/dev/null 2>&1 || true
+
+    pending_seen=false
+    pod_phase=""
+    pending_reason=""
+    pending_msg=""
+    for _ in $(seq 1 20); do
+      pod_phase=$(kube get pod identity-db-0 -n apollo-airlines-apps -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+      pending_reason=$(kube get pod identity-db-0 -n apollo-airlines-apps -o jsonpath='{.status.conditions[?(@.type=="PodScheduled")].reason}' 2>/dev/null || echo "")
+      pending_msg=$(kube get pod identity-db-0 -n apollo-airlines-apps -o jsonpath='{.status.conditions[?(@.type=="PodScheduled")].message}' 2>/dev/null || echo "")
+      if [[ "$pod_phase" == "Pending" && "$pending_reason" == "Unschedulable" ]]; then
+        pending_seen=true
+        break
+      fi
+      sleep 1
+    done
+
+    if [[ "$pending_seen" == true ]]; then
+      pass "PV nodeAffinity pinning proven: identity-db-0 remained Pending ($pending_reason) while $CORDONED_NODE was cordoned"
+    else
+      fail "Expected identity-db-0 to remain Pending/Unschedulable while $CORDONED_NODE was cordoned (phase=${pod_phase:-<none>} reason=${pending_reason:-<none>} msg=${pending_msg:-<none>})"
+    fi
+
+    kube uncordon "$CORDONED_NODE" >/dev/null 2>&1 || true
+    CORDONED_NODE=""
+
+    kube rollout status statefulset/identity-db -n apollo-airlines-apps --timeout=120s >/dev/null 2>&1 || true
+    kube wait --for=condition=Ready pod/identity-db-0 -n apollo-airlines-apps --timeout=60s >/dev/null 2>&1 || true
+    restored_node=$(kube get pod identity-db-0 -n apollo-airlines-apps -o jsonpath='{.spec.nodeName}' 2>/dev/null || echo "")
+    restored_ready=$(kube get pod identity-db-0 -n apollo-airlines-apps -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "")
+    if [[ "$restored_ready" == "True" && "$restored_node" == "$id_pod_node" ]]; then
+      pass "Recovery proven: after uncordon, identity-db-0 became Ready back on pinned node $restored_node"
+    else
+      fail "identity-db-0 failed to recover on pinned node $id_pod_node (ready=${restored_ready:-<none>}, node=${restored_node:-<none>})"
+    fi
+  else
+    fail "Failed to cordon node $id_pod_node"
+    CORDONED_NODE=""
+  fi
+else
+  info "Single-worker cluster detected (${worker_nodes_total:-0} non-control-plane workers); skipping multi-worker cordon proof (PV nodeAffinity already verified)"
 fi
 
 if KUBE_CONTEXT="${CONTEXT}" bash "$(dirname "${BASH_SOURCE[0]}")/verify-tls.sh"; then

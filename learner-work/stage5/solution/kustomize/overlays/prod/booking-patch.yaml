@@ -1,0 +1,10 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking
+  namespace: apollo-airlines-apps
+spec:
+  template:
+    metadata:
+      annotations:
+        apollo.airlines/release-channel: lts

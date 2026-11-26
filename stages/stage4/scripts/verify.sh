@@ -52,6 +52,9 @@ kube() {
 TARGET_NODE=""
 SIGTERM_LOG=""
 LOG_PID=""
+ROLL_LOAD_PID=""
+ROLL_LOAD_LOG=""
+ROLL_STOP_FILE=""
 BOOKING_ID=""
 TOKEN=""
 GATEWAY_IP=""
@@ -61,8 +64,16 @@ restore_stage4_lab() {
         kill "$LOG_PID" 2>/dev/null || true
         wait "$LOG_PID" 2>/dev/null || true
     fi
+    if [[ -n "$ROLL_LOAD_PID" ]]; then
+        [[ -n "$ROLL_STOP_FILE" ]] && touch "$ROLL_STOP_FILE" 2>/dev/null || true
+        kill "$ROLL_LOAD_PID" 2>/dev/null || true
+        wait "$ROLL_LOAD_PID" 2>/dev/null || true
+    fi
     [[ -n "$SIGTERM_LOG" ]] && rm -f "$SIGTERM_LOG"
-    kube delete pod g20-taint-probe -n apollo-airlines-apps --ignore-not-found --wait=false >/dev/null 2>&1 || true
+    [[ -n "$ROLL_LOAD_LOG" ]] && rm -f "$ROLL_LOAD_LOG"
+    [[ -n "$ROLL_STOP_FILE" ]] && rm -f "$ROLL_STOP_FILE"
+    kube delete pod stage4-taint-probe stage4-probe-lab stage4-oom-probe stage4-cpu-probe -n apollo-airlines-apps --ignore-not-found --wait=false >/dev/null 2>&1 || true
+    kube delete service stage4-probe-lab -n apollo-airlines-apps --ignore-not-found >/dev/null 2>&1 || true
     if [[ -n "$TARGET_NODE" ]]; then
         kube taint node "$TARGET_NODE" apollo11.io/maintenance=true:NoSchedule- >/dev/null 2>&1 || true
     fi
@@ -415,6 +426,57 @@ for dep_entry in "apollo-airlines-apps:booking" "apollo-airlines-apps:flight" "a
     fi
 done
 
+search_tol_key=$(kube get deploy search -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.tolerations[0].key}' 2>/dev/null || echo "")
+search_tol_val=$(kube get deploy search -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.tolerations[0].value}' 2>/dev/null || echo "")
+search_tol_eff=$(kube get deploy search -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.tolerations[0].effect}' 2>/dev/null || echo "")
+if [[ "$search_tol_key" == "workload" && "$search_tol_val" == "search" && "$search_tol_eff" == "NoSchedule" ]]; then
+    pass "deploy/search has toleration workload=search:NoSchedule"
+else
+    fail "deploy/search missing expected toleration (got key=$search_tol_key value=$search_tol_val effect=$search_tol_eff)"
+fi
+
+search_aff_key=$(kube get deploy search -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.affinity.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].preference.matchExpressions[0].key}' 2>/dev/null || echo "")
+if [[ "$search_aff_key" == "apollo11.io/search-pool" ]]; then
+    pass "deploy/search has preferred nodeAffinity for apollo11.io/search-pool"
+else
+    fail "deploy/search missing nodeAffinity for apollo11.io/search-pool (got '$search_aff_key')"
+fi
+
+search_tsc_taint_pol=$(kube get deploy search -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.topologySpreadConstraints[0].nodeTaintsPolicy}' 2>/dev/null || echo "")
+search_tsc_unsat=$(kube get deploy search -n apollo-airlines-apps -o jsonpath='{.spec.template.spec.topologySpreadConstraints[0].whenUnsatisfiable}' 2>/dev/null || echo "")
+if [[ "$search_tsc_taint_pol" == "Honor" && "$search_tsc_unsat" == "DoNotSchedule" ]]; then
+    pass "deploy/search topologySpreadConstraints sets whenUnsatisfiable=DoNotSchedule and nodeTaintsPolicy=Honor"
+else
+    fail "deploy/search topologySpreadConstraints unexpected (whenUnsatisfiable=$search_tsc_unsat, nodeTaintsPolicy=$search_tsc_taint_pol)"
+fi
+
+header "12b. Stage 4: LimitRanges & ResourceQuotas"
+for lr_entry in "apollo-airlines-apps:apollo-airlines-limits" "apollo-airlines-ui:apollo-ui-limits"; do
+    ns="${lr_entry%%:*}"
+    lr="${lr_entry##*:}"
+    def_cpu=$(kube get limitrange "$lr" -n "$ns" -o jsonpath='{.spec.limits[0].default.cpu}' 2>/dev/null || echo "")
+    min_mem=$(kube get limitrange "$lr" -n "$ns" -o jsonpath='{.spec.limits[0].min.memory}' 2>/dev/null || echo "")
+    if [[ -n "$def_cpu" && -n "$min_mem" ]]; then
+        pass "LimitRange $ns/$lr active (default.cpu=$def_cpu, min.memory=$min_mem)"
+    else
+        fail "LimitRange $ns/$lr missing or incomplete"
+    fi
+done
+
+for rq_entry in "apollo-airlines-apps:apollo-airlines-quota:30" "apollo-airlines-ui:apollo-ui-quota:10"; do
+    ns="${rq_entry%%:*}"
+    rem="${rq_entry#*:}"
+    rq="${rem%%:*}"
+    expected_pods="${rem##*:}"
+    hard_pods=$(kube get resourcequota "$rq" -n "$ns" -o jsonpath='{.spec.hard.pods}' 2>/dev/null || echo "")
+    used_pods=$(kube get resourcequota "$rq" -n "$ns" -o jsonpath='{.status.used.pods}' 2>/dev/null || echo "")
+    if [[ "$hard_pods" == "$expected_pods" && -n "$used_pods" ]]; then
+        pass "ResourceQuota $ns/$rq active (pods used=${used_pods}/${hard_pods})"
+    else
+        fail "ResourceQuota $ns/$rq missing or unexpected (hard.pods=$hard_pods, used.pods=$used_pods)"
+    fi
+done
+
 header "13. Stage 4: PodDisruptionBudgets (PDB)"
 for pdb_entry in "apollo-airlines-apps:booking-pdb" "apollo-airlines-ui:frontend-pdb"; do
     ns="${pdb_entry%%:*}"
@@ -612,15 +674,15 @@ if [[ -n "$TARGET_NODE" ]]; then
         fail "Failed to apply taint to $TARGET_NODE"
     fi
 
-    # Prove G20b: an untolerated pod pinned to TARGET_NODE stays Pending/Unschedulable
+    # Prove reversible taint scheduling gate: an untolerated pod pinned to TARGET_NODE stays Pending/Unschedulable
     kube apply -f - >/dev/null <<EOF
 apiVersion: v1
 kind: Pod
 metadata:
-  name: g20-taint-probe
+  name: stage4-taint-probe
   namespace: apollo-airlines-apps
   labels:
-    apollo11.io/lab: g20
+    apollo11.io/lab: stage4-taint
 spec:
   restartPolicy: Never
   priorityClassName: apollo-airlines-app-low
@@ -636,7 +698,7 @@ spec:
 EOF
     probe_reason=""
     for _ in $(seq 1 10); do
-        probe_reason=$(kube get pod g20-taint-probe -n apollo-airlines-apps -o jsonpath='{.status.conditions[?(@.type=="PodScheduled")].reason}' 2>/dev/null || echo "")
+        probe_reason=$(kube get pod stage4-taint-probe -n apollo-airlines-apps -o jsonpath='{.status.conditions[?(@.type=="PodScheduled")].reason}' 2>/dev/null || echo "")
         if [[ "$probe_reason" == "Unschedulable" ]]; then
             break
         fi
@@ -647,7 +709,7 @@ EOF
     else
         fail "Expected untolerated pod on tainted node $TARGET_NODE to be Unschedulable (got '${probe_reason:-none}')"
     fi
-    kube delete pod g20-taint-probe -n apollo-airlines-apps --ignore-not-found --wait=false >/dev/null 2>&1 || true
+    kube delete pod stage4-taint-probe -n apollo-airlines-apps --ignore-not-found --wait=false >/dev/null 2>&1 || true
 
     # Remove taint and restore node state
     kube taint node "$TARGET_NODE" apollo11.io/maintenance=true:NoSchedule- >/dev/null 2>&1
@@ -659,6 +721,254 @@ EOF
     fi
 else
     fail "Could not discover a non-control-plane worker node for reversible taint test"
+fi
+
+header "17. Stage 4 Proof: Readiness (EndpointSlice, 0 Restarts) vs Liveness (Container Restart)"
+kube apply -f - >/dev/null <<'EOF'
+apiVersion: v1
+kind: Service
+metadata:
+  name: stage4-probe-lab
+  namespace: apollo-airlines-apps
+spec:
+  selector:
+    app: stage4-probe-lab
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: stage4-probe-lab
+  namespace: apollo-airlines-apps
+  labels:
+    app: stage4-probe-lab
+spec:
+  restartPolicy: Always
+  priorityClassName: apollo-airlines-app-low
+  containers:
+    - name: probe
+      image: apollo11/identity:latest
+      imagePullPolicy: IfNotPresent
+      command:
+        - python3
+        - -c
+        - |
+          import http.server, os, socketserver
+          open("/tmp/ready", "w").close()
+          open("/tmp/live", "w").close()
+          class H(http.server.BaseHTTPRequestHandler):
+              def do_GET(self):
+                  if self.path == "/ready":
+                      ok = os.path.exists("/tmp/ready")
+                      self.send_response(200 if ok else 503)
+                      self.end_headers()
+                      self.wfile.write(b"ready" if ok else b"not ready")
+                  elif self.path == "/live":
+                      ok = os.path.exists("/tmp/live")
+                      self.send_response(200 if ok else 500)
+                      self.end_headers()
+                      self.wfile.write(b"live" if ok else b"dead")
+                  else:
+                      self.send_response(200)
+                      self.end_headers()
+              def log_message(self, *args):
+                  pass
+          socketserver.TCPServer.allow_reuse_address = True
+          with socketserver.TCPServer(("", 8080), H) as s:
+              s.serve_forever()
+      ports:
+        - containerPort: 8080
+      readinessProbe:
+        httpGet:
+          path: /ready
+          port: 8080
+        initialDelaySeconds: 1
+        periodSeconds: 2
+        failureThreshold: 1
+      livenessProbe:
+        httpGet:
+          path: /live
+          port: 8080
+        initialDelaySeconds: 2
+        periodSeconds: 2
+        failureThreshold: 2
+      resources:
+        requests: { cpu: 20m, memory: 32Mi }
+        limits: { cpu: 20m, memory: 32Mi }
+EOF
+
+if kube wait --for=condition=Ready pod/stage4-probe-lab -n apollo-airlines-apps --timeout=45s >/dev/null 2>&1; then
+    ep_before=$(kube get endpointslices -n apollo-airlines-apps -l kubernetes.io/service-name=stage4-probe-lab -o jsonpath='{range .items[*].endpoints[?(@.conditions.ready==true)]}{.addresses[*]}{end}' 2>/dev/null || echo "")
+    if [[ -n "$ep_before" ]]; then
+        pass "Probe lab EndpointSlice initially populated with ready IP ($ep_before)"
+    else
+        fail "Probe lab EndpointSlice missing ready IP initially"
+    fi
+
+    kube exec -n apollo-airlines-apps stage4-probe-lab -- rm -f /tmp/ready >/dev/null 2>&1 || true
+    ep_after="pending"
+    for _ in $(seq 1 15); do
+        ready_cond=$(kube get pod stage4-probe-lab -n apollo-airlines-apps -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "")
+        ep_after=$(kube get endpointslices -n apollo-airlines-apps -l kubernetes.io/service-name=stage4-probe-lab -o jsonpath='{range .items[*].endpoints[?(@.conditions.ready==true)]}{.addresses[*]}{end}' 2>/dev/null || echo "")
+        if [[ "$ready_cond" == "False" && -z "$ep_after" ]]; then
+            break
+        fi
+        sleep 2
+    done
+    restarts_after_ready=$(kube get pod stage4-probe-lab -n apollo-airlines-apps -o jsonpath='{.status.containerStatuses[0].restartCount}' 2>/dev/null || echo "99")
+    if [[ -z "$ep_after" && "${restarts_after_ready:-99}" -eq 0 ]]; then
+        pass "Readiness failure removed Pod IP from EndpointSlice with 0 container restarts"
+    else
+        fail "Readiness failure proof failed (ep_after='$ep_after', restarts=$restarts_after_ready)"
+    fi
+
+    kube exec -n apollo-airlines-apps stage4-probe-lab -- rm -f /tmp/live >/dev/null 2>&1 || true
+    restarts_after_live=0
+    for _ in $(seq 1 20); do
+        restarts_after_live=$(kube get pod stage4-probe-lab -n apollo-airlines-apps -o jsonpath='{.status.containerStatuses[0].restartCount}' 2>/dev/null || echo "0")
+        if [[ "${restarts_after_live:-0}" -ge 1 ]]; then
+            break
+        fi
+        sleep 2
+    done
+    if [[ "${restarts_after_live:-0}" -ge 1 ]]; then
+        pass "Liveness failure triggered kubelet container restart (restartCount=$restarts_after_live)"
+    else
+        fail "Liveness failure did not increment restartCount (got $restarts_after_live)"
+    fi
+else
+    fail "stage4-probe-lab pod did not become Ready within 45s"
+fi
+kube delete pod stage4-probe-lab -n apollo-airlines-apps --ignore-not-found --wait=false >/dev/null 2>&1 || true
+kube delete service stage4-probe-lab -n apollo-airlines-apps --ignore-not-found >/dev/null 2>&1 || true
+
+header "18. Stage 4 Proof: OOMKill (ExitCode 137) & CPU Throttling (cpu.stat)"
+kube apply -f - >/dev/null <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: stage4-oom-probe
+  namespace: apollo-airlines-apps
+spec:
+  restartPolicy: Never
+  priorityClassName: apollo-airlines-app-low
+  containers:
+    - name: oom
+      image: apollo11/identity:latest
+      imagePullPolicy: IfNotPresent
+      command: ["python3", "-c", "a = bytearray(64 * 1024 * 1024)"]
+      resources:
+        requests: { cpu: 20m, memory: 16Mi }
+        limits: { cpu: 20m, memory: 16Mi }
+EOF
+
+oom_reason=""
+oom_code=""
+for _ in $(seq 1 20); do
+    oom_reason=$(kube get pod stage4-oom-probe -n apollo-airlines-apps -o jsonpath='{.status.containerStatuses[0].state.terminated.reason}' 2>/dev/null || echo "")
+    oom_code=$(kube get pod stage4-oom-probe -n apollo-airlines-apps -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}' 2>/dev/null || echo "")
+    if [[ -n "$oom_code" ]]; then
+        break
+    fi
+    sleep 2
+done
+if [[ "$oom_reason" == "OOMKilled" && "$oom_code" == "137" ]]; then
+    pass "OOMKill proof verified: Pod terminated with Reason=OOMKilled and ExitCode=137"
+else
+    fail "OOMKill proof failed (reason='${oom_reason:-none}', exitCode='${oom_code:-none}')"
+fi
+kube delete pod stage4-oom-probe -n apollo-airlines-apps --ignore-not-found --wait=false >/dev/null 2>&1 || true
+
+kube apply -f - >/dev/null <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: stage4-cpu-probe
+  namespace: apollo-airlines-apps
+spec:
+  restartPolicy: Never
+  priorityClassName: apollo-airlines-app-low
+  containers:
+    - name: burn
+      image: apollo11/identity:latest
+      imagePullPolicy: IfNotPresent
+      command:
+        - python3
+        - -c
+        - |
+          import time
+          end = time.time() + 3.0
+          x = 0
+          while time.time() < end:
+              x += 1
+          for p in ("/sys/fs/cgroup/cpu.stat", "/sys/fs/cgroup/cpu/cpu.stat"):
+              try:
+                  print(open(p).read())
+                  break
+              except FileNotFoundError:
+                  pass
+      resources:
+        requests: { cpu: 10m, memory: 32Mi }
+        limits: { cpu: 10m, memory: 32Mi }
+EOF
+
+cpu_phase=""
+for _ in $(seq 1 25); do
+    cpu_phase=$(kube get pod stage4-cpu-probe -n apollo-airlines-apps -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+    if [[ "$cpu_phase" == "Succeeded" || "$cpu_phase" == "Failed" ]]; then
+        break
+    fi
+    sleep 2
+done
+cpu_stat_out=$(kube logs -n apollo-airlines-apps stage4-cpu-probe 2>/dev/null || echo "")
+nr_throttled=$(echo "$cpu_stat_out" | awk '$1=="nr_throttled"{print $2}')
+throttled_usec=$(echo "$cpu_stat_out" | awk '$1=="throttled_usec" || $1=="throttled_time"{print $2}')
+if [[ "${nr_throttled:-0}" -gt 0 && "${throttled_usec:-0}" -gt 0 ]]; then
+    pass "CPU throttling proof verified: nr_throttled=${nr_throttled}, throttled_usec=${throttled_usec}"
+else
+    fail "CPU throttling proof failed (phase=${cpu_phase}, nr_throttled=${nr_throttled:-0}, throttled_usec=${throttled_usec:-0})"
+fi
+kube delete pod stage4-cpu-probe -n apollo-airlines-apps --ignore-not-found --wait=false >/dev/null 2>&1 || true
+
+header "19. Stage 4 Proof: Zero-Drop In-Flight Traffic During preStop Rolling Restart"
+if [[ -n "$GATEWAY_IP" ]]; then
+    ROLL_STOP_FILE=$(mktemp -u)
+    ROLL_LOAD_LOG=$(mktemp)
+    (
+        while [[ ! -f "$ROLL_STOP_FILE" ]]; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 -H "Host: booking.apollo.local" "http://${GATEWAY_IP}/healthz" 2>/dev/null || echo "000")
+            echo "$code" >> "$ROLL_LOAD_LOG"
+            sleep 0.1
+        done
+    ) &
+    ROLL_LOAD_PID=$!
+    sleep 1
+    kube rollout restart deployment/booking -n apollo-airlines-apps >/dev/null
+    if kube rollout status deployment/booking -n apollo-airlines-apps --timeout=120s >/dev/null 2>&1; then
+        sleep 1
+        touch "$ROLL_STOP_FILE"
+        wait "$ROLL_LOAD_PID" 2>/dev/null || true
+        ROLL_LOAD_PID=""
+        total_reqs=$(wc -l < "$ROLL_LOAD_LOG" | tr -d ' ')
+        failed_reqs=$(awk '$1 != "200" {c++} END {print c+0}' "$ROLL_LOAD_LOG")
+        if [[ "${total_reqs:-0}" -ge 10 && "${failed_reqs:-1}" -eq 0 ]]; then
+            pass "Zero-drop rolling restart proven ($total_reqs/$total_reqs HTTP 200 across booking rollout)"
+        else
+            fail "Rolling restart dropped requests ($failed_reqs/$total_reqs non-200)"
+        fi
+    else
+        touch "$ROLL_STOP_FILE"
+        wait "$ROLL_LOAD_PID" 2>/dev/null || true
+        ROLL_LOAD_PID=""
+        fail "booking rollout restart did not complete within 120s"
+    fi
+    rm -f "$ROLL_STOP_FILE" "$ROLL_LOAD_LOG"
+    ROLL_STOP_FILE=""
+    ROLL_LOAD_LOG=""
+else
+    fail "GATEWAY_IP unavailable for zero-drop rolling restart proof"
 fi
 
 if KUBE_CONTEXT="$CONTEXT" bash "${SCRIPT_DIR}/verify-tls.sh"; then

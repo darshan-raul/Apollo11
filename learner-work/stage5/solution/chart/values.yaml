@@ -1,0 +1,44 @@
+---
+image:
+  repository: apollo11
+  pullPolicy: IfNotPresent
+  tag: latest
+
+namespaces:
+  apps: apollo-airlines-apps
+
+apps:
+  booking:
+    tier: flagship
+    port: 8082
+    replicas: 2
+    priorityClassName: apollo-airlines-app-critical
+    releaseChannel: stable
+
+tiers:
+  flagship:
+    cpu: 200m
+    memory: 256Mi
+
+probes:
+  startup:
+    httpGet:
+      path: /healthz/startup
+    initialDelaySeconds: 0
+    periodSeconds: 5
+    failureThreshold: 6
+  liveness:
+    httpGet:
+      path: /healthz/live
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    failureThreshold: 3
+  readiness:
+    httpGet:
+      path: /healthz/ready
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 3
+
+terminationGracePeriod:
+  apps: 30

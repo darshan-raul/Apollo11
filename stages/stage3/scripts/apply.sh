@@ -66,7 +66,7 @@ for db in identity-db-0 flight-db-0 booking-db-0 redis-0; do
   kube wait --for=condition=Ready "pod/${db}" -n apollo-airlines-apps --timeout=60s
 done
 
-printf '\n[3/7] Applying idempotent database seed Jobs\n'
+printf '\n[3/7] Applying idempotent database seed Jobs and backup CronJob\n'
 kube delete jobs -n apollo-airlines-apps \
   seed-identity-db seed-flight-db seed-booking-db \
   --ignore-not-found --wait=true

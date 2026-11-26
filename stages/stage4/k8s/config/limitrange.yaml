@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: apollo-airlines-limits
+  namespace: apollo-airlines-apps
+spec:
+  limits:
+    - type: Container
+      min:
+        cpu: 10m
+        memory: 16Mi
+      max:
+        cpu: "2"
+        memory: 2Gi
+      defaultRequest:
+        cpu: 50m
+        memory: 64Mi
+      default:
+        cpu: 100m
+        memory: 128Mi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: apollo-ui-limits
+  namespace: apollo-airlines-ui
+spec:
+  limits:
+    - type: Container
+      min:
+        cpu: 10m
+        memory: 16Mi
+      max:
+        cpu: "1"
+        memory: 1Gi
+      defaultRequest:
+        cpu: 50m
+        memory: 64Mi
+      default:
+        cpu: 100m
+        memory: 128Mi

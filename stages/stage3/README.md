@@ -1,11 +1,7 @@
 ---
 title: "Stage 3: Mission Data — Persistent Storage, StatefulSets"
-description: "Replace emptyDir with PVCs, convert all 4 stateful workloads (3 PG + redis) to StatefulSets, move DB schema to the Postgres entrypoint hook (/docker-entrypoint-initdb.d/), and keep data seeding as one-shot jobs. The Envoy Gateway + MetalLB access stack from Stage 2 carries over unchanged."
+description: "Replace emptyDir with PVCs, convert all 4 stateful workloads (3 PG + redis) to StatefulSets, move DB schema to the Postgres entrypoint hook (/docker-entrypoint-initdb.d/), keep data seeding as one-shot jobs, add scheduled pg_dump CronJob backups, and verify working app initContainers."
 ---
-
-> **Verification status:** a fresh lifecycle passed **69/69** on 2026-10-19,
-> including PVC data survival and the HTTPS certificate break and recovery
-> (`verification-runs/s1-2026-10-19/`). Gaps: tracker G19.
 
 # Stage 3: Mission Data
 
@@ -13,17 +9,17 @@ description: "Replace emptyDir with PVCs, convert all 4 stateful workloads (3 PG
 Convert `identity-db`, `flight-db`, `booking-db`, and `redis` from `Deployment` +
 `emptyDir` to **`StatefulSet` + `PersistentVolumeClaim`**, with stable per-pod
 network identity, schema bootstrapping through the official PostgreSQL
-entrypoint hook, and idempotent
-data seeding via one-shot Jobs. The Stage 2 access stack (Envoy Gateway +
-MetalLB) is unchanged.
+entrypoint hook, idempotent data seeding via one-shot Jobs, scheduled logical
+backups via `CronJob`, and a working `initContainer` on `booking`. The Stage 2
+access stack (Envoy Gateway + MetalLB) is unchanged.
 
 | | |
 |---|---|
-| **New concept** | StatefulSet, VolumeClaimTemplate, Headless Service (`clusterIP: None`), Postgres entrypoint-hook schema bootstrap (`/docker-entrypoint-initdb.d/`), PVC lifecycle, kind `standard` (`rancher.io/local-path`) StorageClass |
-| **Workloads changed** | 4 (3 PostgreSQL + redis) |
-| **Workloads unchanged** | 6 (all app Deployments, frontend, gateway, MetalLB) |
+| **New concept** | StatefulSet, VolumeClaimTemplate, Headless Service (`clusterIP: None`), Postgres entrypoint-hook schema bootstrap (`/docker-entrypoint-initdb.d/`), `CronJob`, working `initContainer`, local-path PV `nodeAffinity` pinning |
+| **Workloads changed** | 4 StatefulSets (3 PostgreSQL + redis), `booking` (`initContainer`), `pg-backup` `CronJob` |
+| **Workloads unchanged** | 5 app Deployments (`identity`, `flight`, `search`, `notification`, `frontend`), gateway, MetalLB |
 | **Code changes** | None (app code doesn't know or care about Deployment vs StatefulSet) |
-| **Verify target** | **70/70 checks pass** |
+| **Verify target** | All checks pass (`0` failures) |
 
 ---
 
@@ -106,10 +102,11 @@ kubectl exec -n apollo-airlines-apps identity-db-0 -- \
 | **DB schema** | One-shot `init-*.yaml` Job | Postgres `/docker-entrypoint-initdb.d/` hook |
 | **DB data** | Combined with schema in the same Job | Idempotent `seed-*.yaml` Job (runs once) |
 | **Network identity** | Deployment pods have random names | Stable ordinals: `identity-db-0.apollo-airlines-apps` |
-| **App Deployments** | Unchanged | Unchanged (still connect via `identity-db`, `flight-db`, etc.) |
+| **App Deployments** | Unchanged | `booking` adds `wait-for-booking-db` `initContainer`; others unchanged |
+| **Scheduled backups** | Manual only | `pg-backup` `CronJob` (`0 2 * * *`) + `pg-backups` 1Gi PVC |
 | **Envoy Gateway + MetalLB** | Stage 2 set 5 access stack | **Carried over verbatim** — persists for all later stages |
 | **Namespaces** | 2 (apps, ui) | 2 (apps, ui) |
-| **ServiceAccounts** | 13 SAs (automount disabled) | 13 SAs (automount disabled) |
+| **ServiceAccounts** | 13 SAs (automount disabled) | 14 SAs (13 in `apollo-airlines-apps` incl. `pg-backup`, 1 in `apollo-airlines-ui`; automount disabled) |
 | **NetworkPolicies** | Deferred to Stage 8 (Calico) | Deferred to Stage 8 (Calico) |
 | **Code (`stages/stage3/code/`)** | Snapshot of stage 2 code | Snapshot of stage 2 code (shared contracts synced) |
 
@@ -121,9 +118,9 @@ kubectl exec -n apollo-airlines-apps identity-db-0 -- \
 stages/stage3/
 ├── README.md                          # this file
 ├── code/                              # snapshot of stages/stage2/code/  (no changes)
-├── scripts/                           # apply.sh, verify.sh, teardown.sh, build-images.sh
+├── scripts/                           # apply.sh, verify.sh, verify-tls.sh, teardown.sh, build-images.sh, generate-certs.sh
 └── k8s/
-    ├── config/                        # 2 namespaces, configmap, secrets, 13 serviceaccounts
+    ├── config/                        # 2 namespaces, configmap, secrets, 14 serviceaccounts (incl. pg-backup)
     ├── apps/
     │   ├── identity-db/               # NEW: sts + svc + headless + init-script (entrypoint hook, not init container)
     │   ├── flight-db/                 # NEW: same shape (UNIQUE (flight_number, departure_time))
@@ -131,11 +128,11 @@ stages/stage3/
     │   ├── redis/                     # NEW: sts + svc + headless (no schema)
     │   ├── identity/                  # Deployment + Service
     │   ├── flight/                    # Deployment + Service
-    │   ├── booking/                   # Deployment + Service
+    │   ├── booking/                   # Deployment (with wait-for-booking-db initContainer) + Service
     │   ├── search/                    # Deployment + Service
     │   ├── notification/              # Deployment + Service
     │   └── frontend/                  # Deployment + Service
-    ├── jobs/                          # NEW: 3 seed-* Jobs + 3 seed ConfigMaps
+    ├── jobs/                          # 3 seed-* Jobs + 3 seed ConfigMaps + pg-backup CronJob & pg-backups PVC
     ├── gateway/                       # Envoy Gateway + EnvoyProxy + HTTPRoutes + ReferenceGrant
     └── metallb/                       # MetalLB L2 Pool + Advertisement
 ```
@@ -258,6 +255,42 @@ rows every time the pod restarts. All seed statements use `ON CONFLICT DO NOTHIN
 
 ---
 
+## Working `initContainer` vs. Same-Pod Deadlock
+
+Not all `initContainers` deadlock—only **self-referential** ones where an init
+container waits for the main container in the **same** Pod:
+
+| Pattern | Example | Why it succeeds or deadlocks |
+|---|---|---|
+| **Same-Pod self-wait (Deadlock)** | `identity-db` init running `pg_isready -h 127.0.0.1` | Kubelet blocks main `containers[]` until every `initContainer` exits `0`. The init waits for Postgres on `127.0.0.1`, while Postgres cannot start until init exits (`Init:0/1` forever). |
+| **External dependency wait (Works)** | `booking` `wait-for-booking-db` running `pg_isready -h booking-db -p 5432` | `booking-db` runs in a **separate Pod** (`booking-db-0`). It starts and becomes Ready independently, `pg_isready` exits `0`, and kubelet then starts the main `booking` container. |
+
+In `stages/stage3/k8s/apps/booking/booking-dep.yaml`, `booking` uses a working
+`initContainer` to wait for `booking-db` before starting the Go server:
+
+```yaml
+initContainers:
+  - name: wait-for-booking-db
+    image: postgres:15-alpine
+    command:
+      - sh
+      - -c
+      - |
+        until pg_isready -h booking-db -p 5432 -U postgres; do
+          echo "Waiting for booking-db:5432..."
+          sleep 2
+        done
+```
+
+Inspect its completion status on running `booking` Pods:
+
+```bash
+kubectl get pods -n apollo-airlines-apps -l app=booking \
+  -o jsonpath='{range .items[*]}{.metadata.name}{" init="}{.status.initContainerStatuses[0].name}{" ready="}{.status.initContainerStatuses[0].ready}{" exit="}{.status.initContainerStatuses[0].state.terminated.exitCode}{"\n"}{end}'
+```
+
+---
+
 ## StorageClass — the bit everyone skips
 
 A `PersistentVolumeClaim` is a **request** for storage. Kubernetes
@@ -357,6 +390,25 @@ volumeClaimTemplates:
 
 ---
 
+## Author Before Bootstrap (`learner-work/stage3/`)
+
+Before running `./scripts/apply.sh` for the full fleet, complete the scoped
+conversion exercise in [`../../learner-work/stage3/`](../../learner-work/stage3/README.md):
+
+1. Copy `learner-work/stage3/starter/` (`booking-db` `Deployment` + `emptyDir` +
+   ClusterIP `Service`) into `learner-work/stage3/work/`.
+2. Convert `booking-db` into a `StatefulSet` (`serviceName: booking-db-headless`,
+   `PGDATA=/var/lib/postgresql/data/pgdata`, `/docker-entrypoint-initdb.d`
+   mount, `ReadWriteOnce` `volumeClaimTemplates`) plus a headless `Service`
+   (`clusterIP: None`).
+3. Validate your manifests before bootstrapping:
+
+```bash
+bash learner-work/stage3/check.sh
+```
+
+---
+
 ## Apply
 
 ```bash
@@ -365,10 +417,10 @@ cd stages/stage3
 ```
 
 `apply.sh` runs 7 deployment steps (after image build and cluster preflight):
-1. **Namespaces, config, secrets & ServiceAccounts** (13 SAs)
+1. **Namespaces, config, secrets & ServiceAccounts** (14 SAs, including `pg-backup`)
 2. **Stateful workloads & wait** — 4 StatefulSets + Headless/ClusterIP Services + schema ConfigMaps; waits for `rollout status` and `Ready`
-3. **Database seed Jobs** — applies and waits for `seed-identity-db`, `seed-flight-db`, `seed-booking-db`
-4. **Application Deployments** — 6 Deployments + ClusterIP Services; waits for `rollout status`
+3. **Database seed Jobs & backup CronJob** — applies and waits for `seed-identity-db`, `seed-flight-db`, `seed-booking-db`, and creates `CronJob/pg-backup` + `PVC/pg-backups`
+4. **Application Deployments** — 6 Deployments (including `booking`'s `wait-for-booking-db` `initContainer`) + ClusterIP Services; waits for `rollout status`
 5. **MetalLB** — native install + IP pool + L2 advertisement
 6. **Envoy Gateway** — controller + CRDs install
 7. **Gateway API resources & IP** — GatewayClass, EnvoyProxy, TLS Secret (`generate-certs.sh`), Gateway, ReferenceGrant, 6 HTTPRoutes, then waits for MetalLB LoadBalancer IP
@@ -402,19 +454,23 @@ curl -H 'Host: frontend.apollo.local' http://frontend.172-18-0-50.nip.io/
 ./scripts/verify.sh
 ```
 
-**Expected: 70/70 checks pass.** Coverage:
+**Expected: All checks pass (`0` failures).** Coverage:
 
-| Group | Checks | Description |
-|---|---|---|
-| Core Namespaces | 4 | `apollo-airlines-apps`, `apollo-airlines-ui`, `envoy-gateway-system`, `metallb-system` |
-| ServiceAccounts | 13 | Token automount disabled on all 13 identities |
-| StatefulSets & Pods | 8 | 4 StatefulSets (1/1 ready) + 4 pods Ready |
-| Storage & PVCs | 5 | 4 PVCs (1Gi, Bound, ReadWriteOnce) + Bound PersistentVolumes |
-| Headless Services & DNS | 8 | 4 headless services (`clusterIP: None`) + CoreDNS resolving to direct pod IPs |
-| App Deployments & Jobs | 9 | 6 Deployments (2/2 ready) + 3 seed jobs completed |
-| Database Seed Integrity | 3 | Seed row counts (2 users, 6 airports, 186 flights across 31 days) |
-| Envoy Gateway & MetalLB | 14 | GatewayClass, Gateway, 6 HTTPRoutes, MetalLB IP, and HTTP 200 checks |
-| Flagship Workflow & Survival | 6 | Passenger auth, flight search, booking creation, Postgres & Redis AOF survival, and trusted HTTPS workflow |
+| Group | Description |
+|---|---|
+| Core Namespaces | `apollo-airlines-apps`, `apollo-airlines-ui`, `envoy-gateway-system`, `metallb-system` |
+| ServiceAccounts | Token automount disabled on all 14 identities (including `pg-backup`) |
+| StatefulSets & Pods | 4 StatefulSets (1/1 ready) + 4 pods Ready |
+| Storage, PVCs & `nodeAffinity` | 4 StatefulSet PVCs (1Gi, Bound, ReadWriteOnce) + Bound PersistentVolumes with `PV.spec.nodeAffinity` |
+| Headless Services & DNS | 4 headless services (`clusterIP: None`) + CoreDNS resolving to direct pod IPs |
+| App Deployments & Seed Jobs | 6 Deployments (2/2 ready) + 3 seed jobs completed |
+| Database Seed Integrity | Seed row counts (2 users, 6 airports, 186 flights across 31 days) |
+| Envoy Gateway & MetalLB | GatewayClass, Gateway, 6 HTTPRoutes, MetalLB IP, and HTTP 200 checks |
+| Flagship Workflow & Survival | Passenger auth, flight search, booking creation, Postgres & Redis AOF survival |
+| Working `initContainer` | `booking` `wait-for-booking-db` spec & Pod `initContainerStatuses` (`ready=true`, `exitCode=0`) |
+| Scheduled Backup `CronJob` | `pg-backup` `CronJob`, manual `--from=cronjob/pg-backup` Job completion, `pg-backups` PVC `Bound`, and `.sql.gz` dumps |
+| PV Node-Pinning Proof | `identity-db-0` pinned node match + multi-worker `cordon` → `Pending` → `uncordon` recovery |
+| Trusted HTTPS Workflow | TLS certificate verification, hostname rejection, and full HTTPS booking flow (`verify-tls.sh`) |
 
 ---
 
@@ -517,6 +573,61 @@ kubectl exec -n apollo-airlines-apps identity-db-0 -- \
 rm -f /tmp/identity-backup.sql
 ```
 
+### Scheduled logical backups (`CronJob` `pg-backup`)
+
+`stages/stage3/k8s/jobs/pg-backup-cronjob.yaml` provisions a dedicated `1Gi`
+`pg-backups` PVC and a daily `CronJob` (`pg-backup`, `schedule: "0 2 * * *"`,
+`concurrencyPolicy: Forbid`, `serviceAccountName: pg-backup`,
+`restartPolicy: OnFailure`) that runs `pg_dump` + `gzip` across `identity-db`,
+`flight-db`, and `booking-db` while pruning backups older than `7` days or
+keeping the last `5` per database.
+
+Because `standard` uses `WaitForFirstConsumer`, `pvc/pg-backups` stays `Pending`
+after `apply.sh` until the first backup Job Pod schedules. Trigger a one-off
+backup Job immediately and verify the `.sql.gz` dumps and `Bound` PVC:
+
+```bash
+kubectl get cronjob pg-backup -n apollo-airlines-apps
+kubectl create job --from=cronjob/pg-backup pg-backup-manual -n apollo-airlines-apps
+kubectl wait --for=condition=Complete job/pg-backup-manual -n apollo-airlines-apps --timeout=120s
+
+# pg-backups transitions from Pending to Bound once the Job Pod schedules:
+kubectl get pvc pg-backups -n apollo-airlines-apps
+kubectl logs job/pg-backup-manual -n apollo-airlines-apps
+
+# Clean up the manual Job (CronJob and pg-backups PVC remain intact):
+kubectl delete job pg-backup-manual -n apollo-airlines-apps
+```
+
+### Local-path PV node pinning (`cordon` → `Pending` → `uncordon`)
+
+Because kind's `standard` (`rancher.io/local-path`) StorageClass provisions
+node-local storage, each bound PV carries `spec.nodeAffinity` pinning the
+StatefulSet Pod back to the worker node that holds its directory. Prove that
+Kubernetes refuses to reschedule `identity-db-0` onto another worker when its
+pinned node is cordoned:
+
+```bash
+# 1. Inspect PV.spec.nodeAffinity and the node running identity-db-0
+PV=$(kubectl get pvc pg-data-identity-db-0 -n apollo-airlines-apps -o jsonpath='{.spec.volumeName}')
+kubectl get pv "$PV" -o jsonpath='{.spec.nodeAffinity}'; echo
+NODE=$(kubectl get pod identity-db-0 -n apollo-airlines-apps -o jsonpath='{.spec.nodeName}')
+echo "Pinned node: $NODE"
+
+# 2. Cordon the pinned node and delete identity-db-0
+kubectl cordon "$NODE"
+kubectl delete pod identity-db-0 -n apollo-airlines-apps
+
+# 3. Observe Pending / Unschedulable (other workers don't match PV.spec.nodeAffinity)
+kubectl get pod identity-db-0 -n apollo-airlines-apps
+kubectl describe pod identity-db-0 -n apollo-airlines-apps | tail -n 15
+
+# 4. Uncordon the node and watch identity-db-0 return Ready on the same pinned node
+kubectl uncordon "$NODE"
+kubectl wait --for=condition=Ready pod/identity-db-0 -n apollo-airlines-apps --timeout=60s
+kubectl get pod identity-db-0 -n apollo-airlines-apps -o wide
+```
+
 ---
 
 ## Teardown
@@ -525,26 +636,28 @@ rm -f /tmp/identity-backup.sql
 ./scripts/teardown.sh
 ```
 
-Deletes the 4 PVCs (releases the local-path PVs), both namespaces, Envoy
-Gateway, and MetalLB. Safe to re-run.
+Deletes the PVCs (4 StatefulSet PVCs plus `pg-backups`, releasing the local-path PVs), both namespaces, Envoy Gateway, and MetalLB. Safe to re-run.
 
 ---
 
-## Concepts you should be able to answer
+## Explain
 
 1. Why does a StatefulSet require a Headless Service (`clusterIP: None`)?
 2. What's the difference between `volumeClaimTemplates` and a normal
    `volumes:` entry?
-3. Why is the schema mounted at `/docker-entrypoint-initdb.d/` instead
-   of running in a separate `initContainers[]` block?
+3. Why is the DB schema mounted at `/docker-entrypoint-initdb.d/` instead
+   of running in a same-Pod `initContainer`, whereas `booking`'s
+   `wait-for-booking-db` `initContainer` works cleanly?
 4. What would break if we kept the schema in a Job (Stage 2 style) and
    only added a PVC?
-5. Why does Stage 3 still have Jobs at all (the seed jobs)?
-6. What is a `StorageClass`? Why didn't we set `storageClassName` on
-   the PVCs?
-7. Where is the data physically stored (on the node)? What happens if
-   the node is wiped?
-8. Why did we make redis a StatefulSet in Stage 3 instead of waiting
+5. Why does Stage 3 still have Jobs at all (`seed-*` Jobs and `pg-backup`
+   `CronJob`)?
+6. What is a `StorageClass` (`WaitForFirstConsumer`), and why does
+   `pvc/pg-backups` remain `Pending` until the first `pg-backup` Job runs?
+7. What happens when you `cordon` the node pinned in `PV.spec.nodeAffinity`
+   and delete `identity-db-0`? How does network-attached CSI storage (Stage 9
+   EBS) differ?
+8. Why did we make `redis` a StatefulSet in Stage 3 instead of waiting
    for Stage 7?
 
 ---
@@ -552,42 +665,32 @@ Gateway, and MetalLB. Safe to re-run.
 ## What comes next (Stage 4)
 
 `livenessProbe`, `readinessProbe`, `startupProbe`, `resources.requests`,
-`resources.limits`, and `PodDisruptionBudget` for the frontend + booking
-services. Probes give Kubernetes the signal to restart unhealthy pods
-(whereas right now, a stuck Postgres pod will sit there forever).
+`resources.limits`, `PodDisruptionBudget`, `LimitRange`, `ResourceQuota`, and
+scheduling controls (`PriorityClass`, taints/tolerations, `nodeAffinity`,
+`topologySpreadConstraints`). Probes give Kubernetes the signal to restart
+unhealthy pods and pull unready pods from `EndpointSlice`s.
 
-## Local HTTPS and certificate ownership
+---
 
-The canonical Gateway offers HTTP on port 80 and HTTPS on port 443. Frontend
-API URLs are now baked as HTTPS; rebuild images before switching snapshots.
-The certificate Secret is generated at installation time and preserved across
-reapplication. Use `bash scripts/generate-certs.sh --rotate` to renew it
-deliberately.
+## Local HTTPS & Container Images
 
-Export `KUBE_CONTEXT=kind-apollo11` (or `kind-apollo11-dev`) before using the
-scripts.
+Envoy Gateway terminates TLS on `:443` using the runtime Secret
+`apollo-tls-secret` in `apollo-airlines-apps` (created by
+`scripts/generate-certs.sh`, preserved across `apply.sh` re-runs, and rotated
+with `--rotate`). Local images are built and loaded into `kind` as
+`apollo11/<service>:latest` via `scripts/build-images.sh --cluster <name>`,
+with `https://` API URLs baked into the `frontend` bundle—always rebuild when
+switching from an HTTP stage or another stage.
 
-Extract the public certificate, then check the actual DNS hostname and trust:
+See the shared guides for full certificate, DNS, `mkcert`, and image-build
+details:
+
+- [Local HTTPS, TLS Certificates & Gateway Routing](../../docs/local-https.md)
+- [CI Pipeline, Published GHCR Images & Local Image Contract](../../docs/ci-images.md)
+
+Quick HTTPS verification in Stage 3 (`verify.sh` runs this automatically via `scripts/verify-tls.sh`):
 
 ```bash
-kubectl --context "$KUBE_CONTEXT" -n apollo-airlines-apps get secret apollo-tls-secret \
-  -o jsonpath='{.data.tls\.crt}' | base64 -d > /tmp/apollo-ca.crt
-gateway_ip=$(kubectl --context "$KUBE_CONTEXT" -n envoy-gateway-system get service \
-  -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway \
-  -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}')
-curl --cacert /tmp/apollo-ca.crt --resolve "identity.apollo.local:443:$gateway_ip" \
-  https://identity.apollo.local/healthz
+export KUBE_CONTEXT=kind-apollo11   # or kind-apollo11-dev
+bash scripts/verify-tls.sh
 ```
-
-Add the Gateway address and all five hostnames to local name resolution before
-using the browser. Trust the local certificate using your browser/OS's local
-certificate facility, then open `https://frontend.apollo.local`. Verify login,
-flight search, and a reversible booking in the browser's Network panel: all API
-requests must use HTTPS. A successful HTML response alone does not establish
-that behavior. `curl -k` skips trust verification and is only a diagnostic.
-
-Delete the apps-namespace certificate to break the HTTPS listener. HTTP should
-remain available. Re-run the certificate generator and require a trusted HTTPS
-response plus login/search recovery. If the old certificate was deleted,
-extract the replacement and update local trust. Teardown removes the runtime
-certificate when it deletes the owned namespace.

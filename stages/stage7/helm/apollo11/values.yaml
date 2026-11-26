@@ -1,6 +1,6 @@
 ---
-# Stage 7: Apollo Airlines — autoscaling, Redis search caching, priority,
-# and scheduling policy built on top of the Stage 6 observable chart.
+# Stage 7: Apollo Airlines — autoscaling (HPA/VPA) and Redis search caching
+# built on top of the Stage 6 observable chart and Stage 4 scheduling baseline.
 
 # ----------------------------------------------------------------------------
 # Image configuration
@@ -216,7 +216,7 @@ apps:
     tier: flagship
     port: 8082
     replicas: 2
-    # Stage 7: app-critical priority — booking is the revenue path.
+    # Baseline app-critical priority (from Stage 4) — booking is the revenue path.
     priorityClassName: apollo-airlines-app-critical
     dependsOn: [booking-db, flight, identity, notification]
   search:
@@ -225,10 +225,8 @@ apps:
     port: 8083
     # HPA manages replicas at runtime; this is the floor.
     replicas: 2
-    # Stage 7: app-critical priority + observable scheduling policy.
-    # scripts/scaling-lab.sh labels and taints one worker. Search can tolerate
-    # that taint and prefers the labeled worker, while topology spread keeps
-    # replicas balanced across eligible hostnames when capacity allows.
+    # Baseline scheduling policy preserved from Stage 4 (app-critical priority,
+    # search-pool toleration/affinity, and hostname topology spread).
     priorityClassName: apollo-airlines-app-critical
     tolerations:
       - key: workload
@@ -260,7 +258,7 @@ apps:
     tier: low
     port: 8084
     replicas: 2
-    # Stage 7: app-low priority — pre-empted under node pressure.
+    # Baseline app-low priority (from Stage 4) — preempted under node pressure.
     priorityClassName: apollo-airlines-app-low
     dependsOn: []
 
@@ -376,7 +374,7 @@ metallb:
 imagePullSecrets: []
 
 # ----------------------------------------------------------------------------
-# Stage 7: PriorityClass definitions
+# PriorityClass definitions (baseline from Stage 4)
 # ----------------------------------------------------------------------------
 # Two priority classes. Higher value = higher priority. The system has
 # its own classes (system-cluster-critical=2000000000, system-node-critical=2000001000)

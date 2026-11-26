@@ -3,11 +3,6 @@ title: "Stage 2: Guidance — Networking & Edge Access"
 description: "Progressive networking ladder from internal ClusterIP and cross-namespace DNS to Envoy Gateway API on MetalLB."
 ---
 
-> **Verification status:** substages 3, 4 and 5 passed fresh lifecycles on
-> 2026-10-19 (49, 46 and 61 checks; `verification-runs/s1-2026-10-19/`), and
-> substages 1 and 2 on 2026-10-24 (46 and 48 checks; `verification-runs/g1c-2026-10-24/`).
-> Known gaps: tracker G18.
-
 # Stage 2: Guidance — Networking & Edge Access
 
 Stage 2 takes the single-namespace baseline from Stage 1 and establishes Kubernetes networking across two production namespaces:
@@ -34,7 +29,7 @@ Endpoints & Slices         30080–30084           Local TLS termination     Por
 | **02-nodeport** | `Service type: NodePort` | `localhost:30080–30084` | L4 host-to-container forwarding via `kube-proxy`, port target mapping |
 | **03-traefik-ingress-tls** | Traefik v3 IngressController | `*.apollo.local:30080 / 30443` | L7 Host routing, Ingress resources, wildcard TLS termination with Secrets |
 | **04-metallb** | MetalLB L2 + `type: LoadBalancer` | `*.apollo.local` on MetalLB IP | ARP-based external IP allocation in local clusters, elimination of high NodePorts |
-| **05-envoy-gateway** | Envoy Gateway v1.5.0 + MetalLB | `*.apollo.local` on MetalLB IP | Gateway API standard: GatewayClass, Gateway, HTTPRoute, cross-namespace ReferenceGrant |
+| **05-envoy-gateway** | Envoy Gateway v1.5.0 + MetalLB | `*.apollo.local` on MetalLB IP | Gateway API standard: GatewayClass, Gateway, HTTPRoute, cross-namespace ReferenceGrant, RequestRedirect |
 
 > [!IMPORTANT]
 > **Envoy Gateway + MetalLB (Substage 5)** forms the **canonical access stack** that carries forward into Stage 3 and all subsequent stages. Traefik is a required transitional learning experience; Headless Services are introduced in Stage 3 alongside StatefulSets, and NetworkPolicies are deferred to Stage 8 where Calico enforcement makes them observable.
@@ -60,7 +55,9 @@ stages/stage2/
 └── scripts/
     ├── build-images.sh          # Builds all 6 application images and loads into kind
     ├── apply.sh                 # Progressive deployment orchestrator (--substage 1-5)
-    ├── verify.sh                # 46–61 checks, depending on the active substage
+    ├── verify.sh                # Automated checks, depending on the active substage
+    ├── verify-tls.sh            # Trusted HTTPS (--cacert) and hostname-rejection checks
+    ├── fault-drill.sh           # Randomized blind troubleshooting drill (--inject/--verify/--restore)
     └── teardown.sh              # Clean resource teardown and residue verification
 ```
 
@@ -69,7 +66,7 @@ stages/stage2/
 ## Hands-On Lab Walkthrough
 
 ### 1. Build and Prepare Cluster
-Ensure your local `kind-apollo11` cluster is active, then build the service images (use `--scheme http` for Substages 1–4, or `--scheme https` for Substage 5; `apply.sh` automatically selects the right scheme when run without `--skip-build`):
+Ensure your local `kind-apollo11` cluster is active, then build the service images (use `--scheme http` for Substages 1–4, or `--scheme https` for Substage 5; `apply.sh` automatically selects the right scheme when run without `--skip-build` — see [CI & Local Image Contract](../../docs/ci-images.md)):
 
 ```bash
 ./stages/stage2/scripts/build-images.sh --cluster apollo11
@@ -82,8 +79,8 @@ Ensure your local `kind-apollo11` cluster is active, then build the service imag
 >   ```text
 >   172.18.0.50  frontend.apollo.local identity.apollo.local flight.apollo.local booking.apollo.local search.apollo.local
 >   ```
-> - **Substage 5 (Envoy Gateway):** Rebuild the frontend with `--scheme https` (or run `apply.sh --substage 5` without `--skip-build`) before opening `https://frontend.apollo.local`, so browser API calls use HTTPS and avoid mixed-content blocks.
-> - **Docker Desktop (macOS / Windows + WSL2):** MetalLB Layer-2 IPs on the `kind` bridge network are directly routable on Linux Docker Engine, but Docker Desktop isolates the Linux VM network from the host; use `kubectl port-forward` or `curl` inside the VM/node there (see the docs `labs/local-access.md` page).
+> - **Substage 5 (Envoy Gateway):** Rebuild the frontend with `--scheme https` (or run `apply.sh --substage 5` without `--skip-build`) before opening `https://frontend.apollo.local`, so browser API calls use HTTPS and avoid mixed-content blocks (see [Local HTTPS & Gateway Routing](../../docs/local-https.md)).
+> - **Docker Desktop (macOS / Windows + WSL2):** MetalLB Layer-2 IPs on the `kind` bridge network are directly routable on Linux Docker Engine, but Docker Desktop isolates the Linux VM network from the host; use the [macOS / WSL2 networking fallback](../../README.md#macos-and-windows-wsl2--docker-desktop-networking-fallback) (`kubectl port-forward` or `cloud-provider-kind`) there.
 
 ### 2. Walk Through the Substages
 
@@ -134,10 +131,27 @@ Decommission Traefik and transition to the modern Gateway API standard:
 ```bash
 ./stages/stage2/scripts/apply.sh --substage 5 --skip-build
 ```
-- **Inspect:** Examine CRDs (`kubectl get crd | grep gateway`). Check Gateway status (`Accepted=True`, `Programmed=True`). Verify HTTPRoute attachments and access via the Envoy Proxy LoadBalancer IP.
-- **Break:** Patch the `frontend` HTTPRoute's backend port to `9999`. Inspect route status `ResolvedRefs=False` and HTTP 500 error.
-- **Recover:** Restore port `3000`. Route recovers to `Accepted=True`.
+- **Inspect:** Examine CRDs (`kubectl get crd | grep gateway`). Check Gateway status (`Accepted=True`, `Programmed=True`). Verify `HTTPRoute` attachments, cross-namespace `ReferenceGrant` (`cross-ns.apollo.local` -> `apollo-airlines-ui/frontend`), HTTP-to-HTTPS `RequestRedirect` (`curl -i -H "Host: redirect.apollo.local" "http://${EG_IP}/"` -> `301` `Location: https://redirect.apollo.local/`), and access via the Envoy Proxy LoadBalancer IP.
+- **Break (Backend Port):** Patch the `frontend` HTTPRoute's backend port to `9999`. Inspect route status `ResolvedRefs=False` and HTTP 500 error, then restore port `3000`.
+- **Break (`ReferenceGrant` / `RefNotPermitted`):** Delete `01a-referencegrant.yaml` (`kubectl delete -f stages/stage2/k8s/substages/05-envoy-gateway/01a-referencegrant.yaml`). Observe `HTTPRoute/frontend-cross-ns` in `apollo-airlines-apps` transition to `ResolvedRefs=False` with reason `RefNotPermitted` and `cross-ns.apollo.local` return HTTP 500 (while `frontend.apollo.local` keeps working).
+- **Recover:** Re-apply `01a-referencegrant.yaml`. `frontend-cross-ns` returns to `ResolvedRefs=True` and `cross-ns.apollo.local` serves HTTP 200 again.
 - **Details:** See [`stages/stage2/k8s/substages/05-envoy-gateway/README.md`](k8s/substages/05-envoy-gateway/README.md).
+
+---
+
+## Blind Troubleshooting Capstone (Fault Drill)
+
+Once Substage 5 is healthy, test your diagnostic workflow without spoilers using the Stage 2 fault drill:
+```bash
+./stages/stage2/scripts/fault-drill.sh --inject
+```
+1. Read only the observed symptom and follow the **Ignition 5-Rung Evidence Ladder** (`Status -> Events -> Detail -> Logs -> Behavior` from [`stages/ignition/README.md`](../ignition/README.md)).
+2. Record your investigation in [`learner-work/EVIDENCE_TEMPLATE.md`](../../learner-work/EVIDENCE_TEMPLATE.md).
+3. Fix the cluster manually, prove behavioral recovery with `curl`, and validate with:
+   ```bash
+   ./stages/stage2/scripts/fault-drill.sh --verify
+   ```
+   (Use `--restore` to reset cleanly if needed, or `--list` to inspect the scenario catalog.)
 
 ---
 
@@ -170,24 +184,27 @@ To cleanly remove all Stage 2 resources while retaining the underlying kind clus
 
 ---
 
+## Stage 2 Notes: HTTPS & Container Images
+
+- **TLS Secret (`apollo-tls-secret`):** Stage 2 uses `apollo-tls-secret` in `apollo-airlines-apps` (and `apollo-airlines-ui` for Substage 3 Traefik), created by `stages/stage2/k8s/substages/03-traefik-ingress-tls/generate-certs.sh` (`--rotate` to renew). Substage 5's Envoy Gateway HTTPS listener terminates TLS using `apollo-tls-secret`, verified by `stages/stage2/scripts/verify-tls.sh` with `curl --cacert`. See [Local HTTPS, TLS Certificates & Gateway Routing](../../docs/local-https.md) for the full `generate-certs.sh` / `mkcert` / break-recover reference.
+- **Frontend scheme rebuild:** Substages 1–4 build `frontend` with `--scheme http`; Substage 5 builds with `--scheme https` (`apply.sh` passes `--scheme` automatically unless `--skip-build` is set). See [CI Pipeline, Published GHCR Images & Local Image Contract](../../docs/ci-images.md).
+
+---
+
+## Explain
+
+You should now be able to answer:
+
+1. **ClusterIP & CoreDNS:** Why does `curl http://identity:8080` work inside `apollo-airlines-apps` but fail from `apollo-airlines-ui`, and how does an `EndpointSlice` connect a `Service` selector to Pod IPs?
+2. **NodePort:** How does `kube-proxy` forward traffic arriving on a node port (`30080–30084`) to a Service's backing Pods, and why do high NodePorts create friction for browser apps?
+3. **Ingress vs. LoadBalancer:** What layer does an Ingress operate at compared to a `Service type: LoadBalancer`, and why does Traefik fall back to `TRAEFIK DEFAULT CERT` only when `apollo-tls-secret` is removed from *both* namespaces?
+4. **MetalLB:** Why does a `LoadBalancer` Service stay `<pending>` in a bare `kind` cluster without MetalLB, and how does MetalLB Layer 2 mode advertise `172.18.0.50` on the Docker bridge?
+5. **Gateway API:** How do `GatewayClass`, `Gateway`, and `HTTPRoute` separate cluster-operator, infrastructure, and application-developer responsibilities compared to monolithic `Ingress` objects?
+6. **`ReferenceGrant` (`RefNotPermitted`):** Why does `Gateway.spec.listeners[].allowedRoutes` not authorize cross-namespace `backendRefs`, and what status condition appears on `HTTPRoute/frontend-cross-ns` when `apollo-gateway-grant` is deleted?
+7. **`RequestRedirect`:** How does `HTTPRoute/https-redirect` return an HTTP `301` `Location: https://...` response at the Envoy edge without routing to a backend Pod?
+
+---
+
 ## Next Stage: Stage 3 (Mission Data)
 
 In **Stage 3**, we replace ephemeral database Deployments with **StatefulSets**, mount persistent **1Gi PVCs**, introduce **Headless Services** for stable Pod network identities, and bootstrap schemas using PostgreSQL entrypoint hooks (`/docker-entrypoint-initdb.d/`). The **Envoy Gateway + MetalLB** access layer configured in Substage 5 carries over seamlessly as the ingress baseline.
-
-## HTTPS in the canonical Envoy substage
-
-Substage 5 now carries local TLS forward. Its installer generates and preserves
-`apollo-tls-secret` in the application namespaces and builds frontend API URLs
-as HTTPS. Use `--context kind-apollo11` (or the supported dev context) for both
-installation and certificate recovery. The certificate generator accepts
-`--rotate` for deliberate renewal. It binds all Secret changes to the selected
-context, independently of the current kubeconfig context.
-
-Inspect the HTTPS listener's `ResolvedRefs` condition, extract the public
-certificate from the Secret, and use `curl --cacert` with `--resolve` for a DNS
-hostname. `curl -k` proves neither hostname validity nor browser trust. Configure
-local DNS and trust before opening `https://frontend.apollo.local`, then verify
-that login, search, and booking requests use HTTPS in the browser Network panel.
-Delete the apps-namespace TLS Secret to break HTTPS; HTTP remains the separate
-baseline. Re-run the generator with the same context, extract its replacement
-certificate, and prove trusted HTTPS and an application workflow recover.

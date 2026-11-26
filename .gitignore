@@ -9,5 +9,13 @@ node_modules
 **/.env
 !**/.env.example
 
-# Ignored directory for learner-owned manifests and experiment files
-learner-work/
+# Track learner exercise templates, instructions, starters, solutions, and checks;
+# ignore learner-authored scratch and work directories.
+learner-work/*
+!learner-work/EVIDENCE_TEMPLATE.md
+!learner-work/stage*/
+learner-work/stage*/*
+!learner-work/stage*/README.md
+!learner-work/stage*/starter/
+!learner-work/stage*/solution/
+!learner-work/stage*/check.sh

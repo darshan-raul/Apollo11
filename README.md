@@ -275,6 +275,65 @@ Defined in [`mise.toml`](./mise.toml):
 
 AWS/EKS track only: `mise use -g awscli terraform`.
 
+---
+
+## Hardware, Compatibility & OS Fallback
+
+### Per-Stage Compatibility Matrix
+
+> **One stage at a time:** Always run `bash scripts/teardown.sh` (pass `--purge` in Stages 5–7) before starting the next stage, and avoid concurrent `docker build` jobs on 6-core / 16 GB hosts.
+
+| Stage | Cluster / Topology | Est. Time | Min / Rec RAM | Min / Rec CPU | Single-Node (`kind-apollo11-dev`) | Resource-Saving Flags & Notes |
+|---|---|---|---|---|---|---|
+| **Launchpad** | Docker Compose (no `kind`) | 45–60 min | 2 GB / 4 GB | 2 / 4 cores | N/A (Compose) | Optional `--profile tools` adds Dozzle log viewer. |
+| **Ignition** | 3-node `kind-apollo11` (or `kind-apollo11-dev`) | 30–45 min | 2 GB / 4 GB | 2 / 4 cores | Yes | First cluster lifecycle & 5-rung evidence ladder. |
+| **Stage 1 (Liftoff)** | `kind-apollo11` or `kind-apollo11-dev` | 45–60 min | 3 GB / 4 GB | 2 / 4 cores | Yes | 10 workloads + init Jobs in one namespace. |
+| **Stage 2 (Guidance)** | `kind-apollo11` or `kind-apollo11-dev` | 60–90 min | 3 GB / 4 GB | 2 / 4 cores | Yes | 5-substage networking ladder + MetalLB + Envoy Gateway (`apollo-tls-secret`). |
+| **Stage 3 (Mission Data)** | `kind-apollo11` or `kind-apollo11-dev` | 60 min | 3 GB / 4 GB | 2 / 4 cores | Yes (multi-worker for PV pinning proof) | 4 StatefulSets + local-path PVCs + backup CronJob. |
+| **Stage 4 (Flight Control)** | 3-node `kind-apollo11` | 60–90 min | 4 GB / 6 GB | 4 / 6 cores | **Partial** | `apply.sh` works on 1 node; `verify.sh` worker-taint & spread/drain labs require `kind-apollo11`. 16 pods (`1.9` CPU / `2.4 GiB` RAM req=lim, Guaranteed QoS) + Envoy/MetalLB. |
+| **Stage 5 (Payload Integration)** | `kind-apollo11` or `kind-apollo11-dev` | 60–90 min | 4 GB / 6 GB (`dev`) | 4 / 6 cores | Yes (`dev`) | `dev` uses `1.3` CPU / `1.7 GiB` RAM (10 pods); `staging` uses 2x replicas (`1.9` CPU / `2.4 GiB`). Optional Argo CD Substage 5B converges on 6 cores / 16 GB. |
+| **Stage 6 (Mission Operations)** | `kind-apollo11` or `kind-apollo11-dev` | 90 min | 8 GB / 16 GB | 4 / 6 cores (quiet host) | Yes (`dev`) | Full observability (`18+` pods/DaemonSets, `1.9–3.4` CPU / `2.6–3.6 GiB` RAM + controllers). Pass `--without-observability` to cut to the 10-pod baseline (`1.4` CPU / `1.8 GiB`). |
+| **Stage 7 (Orbital Maneuvering)** | 3-node `kind-apollo11` | 90 min | 8 GB / 16 GB (`>= 4 GiB` free headroom) | 4 / 6 cores (quiet host) | **Partial** | `apply.sh --env dev` & `verify.sh --env dev` run on 1 node; `scaling-lab.sh` & `replicas >= 2` (`DoNotSchedule` spread) require `>= 2` `node-role=worker` nodes. Pass `--with-vpa` on `dev` for `Off`-mode VPA without doubling replicas in `staging`; `--without-observability` also reduces footprint. |
+| **Stage 8 (Command Module)** | 3-node `kind-apollo11` recommended | 90–120 min | 8 GB / 16 GB | 4 / 6 cores | Partial (multi-node recommended) | Clean security rebuild: Calico CNI (replaces kindnet), PSA `restricted`, Vault/ESO + Reloader, Kyverno/Trivy/Cosign. |
+| **Stage 9 (Lunar Orbit)** | AWS EKS via Terraform (no `kind`) | 90–120 min | Local CLI only | 2 cores local | N/A (Cloud) | Requires AWS account; incurs cloud costs until ownership-scoped teardown completes. |
+
+See also the shared guides for [Local HTTPS & TLS Certificates](docs/local-https.md) and [CI Pipeline & Container Images](docs/ci-images.md).
+
+### macOS and Windows (WSL2 / Docker Desktop) Networking Fallback
+
+On Linux Docker Engine, MetalLB Layer-2 IPs (`172.18.0.50-172.18.0.100`) on the `kind` Docker bridge are directly routable from your host. On **macOS** and **Windows (WSL2 + Docker Desktop)**, Docker Desktop runs containers inside an isolated Linux VM, so `172.18.0.50` is not directly reachable from your host browser or terminal.
+
+Use one of these two fallbacks after MetalLB / Envoy Gateway is running:
+
+#### Option A: `kubectl port-forward` to the Envoy Gateway Service
+
+1. Discover the Envoy Gateway Service name in `envoy-gateway-system`:
+   ```bash
+   ENVOY_SVC=$(kubectl get svc -n envoy-gateway-system \
+     -l gateway.envoyproxy.io/owning-gateway-name=apollo-gateway \
+     -o jsonpath='{.items[0].metadata.name}')
+   ```
+2. Forward ports to localhost:
+   - **Non-privileged ports (`8443` / `8080`, ideal for `curl --resolve`):**
+     ```bash
+     kubectl port-forward -n envoy-gateway-system "svc/${ENVOY_SVC}" 8443:443 8080:80
+     ```
+     Then test HTTPS with SNI resolution (extract `/tmp/apollo-ca.crt` per [docs/local-https.md](docs/local-https.md)):
+     ```bash
+     curl --cacert /tmp/apollo-ca.crt \
+       --resolve "identity.apollo.local:8443:127.0.0.1" \
+       https://identity.apollo.local:8443/healthz
+     ```
+   - **Standard ports (`443` / `80`, required for browser SPA because `VITE_*` URLs omit ports):**
+     Map `frontend.apollo.local`, `identity.apollo.local`, `flight.apollo.local`, `booking.apollo.local`, `search.apollo.local` (and `grafana.apollo.local` in Stage 6+) to `127.0.0.1` in `/etc/hosts` (or `C:\Windows\System32\drivers\etc\hosts`), then run with elevated privileges:
+     ```bash
+     sudo -E kubectl port-forward -n envoy-gateway-system "svc/${ENVOY_SVC}" 443:443 80:80
+     ```
+
+#### Option B: `cloud-provider-kind`
+
+Run [`cloud-provider-kind`](https://github.com/kubernetes-sigs/cloud-provider-kind) on the host to automatically provision host-reachable tunnels/endpoints for `type: LoadBalancer` Services on Docker Desktop.
+
 ### 3. Start with Launchpad
 
 ```bash

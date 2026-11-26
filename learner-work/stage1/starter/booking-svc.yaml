@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking
+  namespace: apollo-airlines
+spec:
+  # TODO: Keep Stage 1 Services strictly ClusterIP
+  type: ClusterIP
+  selector:
+    # TODO: Must match the booking Deployment Pod template label
+    app: CHANGE_ME
+  ports:
+    # TODO: Expose port 8082 targeting containerPort 8082
+    - port: 80
+      targetPort: 8080

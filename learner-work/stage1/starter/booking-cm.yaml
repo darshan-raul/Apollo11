@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: booking-config
+  namespace: TODO_NAMESPACE
+data:
+  PORT: "8082"
+  # TODO: Add FLIGHT_SERVICE_URL, IDENTITY_SERVICE_URL, and NOTIFICATION_SERVICE_URL
+  # matching the Stage 1 ClusterIP Service DNS names and ports:
+  #   FLIGHT_SERVICE_URL: "http://flight:8081"
+  #   IDENTITY_SERVICE_URL: "http://identity:8080"
+  #   NOTIFICATION_SERVICE_URL: "http://notification:8084"

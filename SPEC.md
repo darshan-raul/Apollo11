@@ -23,7 +23,7 @@ The application is simple enough for beginners at Launchpad but complex enough t
 | Stages | Remapped to Apollo11 stage numbers | Align with existing 13-phase structure |
 | Redis | Present from Launchpad | Notification service uses it from day 1 |
 | Frontend | Served via NGINX in Docker, no npm on host | All builds happen in Docker |
-| Test scripts | Per-stage verification scripts | Each stage has a `test/stageN_test.sh` |
+| Test scripts | Per-stage verification scripts | Each stage has `scripts/verify.sh` (wrapped by `test/stageN_test.sh`) |
 
 ---
 
@@ -55,13 +55,13 @@ Infrastructure (auto-provisioned via Docker Compose init or k8s StatefulSets):
 
 | Apollo11 Stage | Focus | What's Deployed |
 |---|---|---|
-| Launchpad | Docker Compose | All 10 components, stub code |
+| Launchpad | Docker Compose | All 10 components (real PostgreSQL/Redis-backed Go & Python services + React SPA) |
 | Ignition | kind cluster | — |
 | Stage 1 (Liftoff) | K8s: Deployments, ConfigMaps, Secrets, Jobs | All 10 components on cluster |
-| Stage 2 (Guidance/N&C) | K8s: Namespaces, DNS, NetworkPolicies, Ingress | Network isolation, Traefik Ingress |
+| Stage 2 (Guidance/N&C) | K8s: Namespaces, DNS, NodePort, Ingress, MetalLB, Gateway API | 5-step networking ladder: ClusterIP -> NodePort -> Traefik Ingress (transitional) -> MetalLB -> Envoy Gateway API (canonical); NetworkPolicies wait until Stage 8 |
 | Stage 3 (Mission Data) | K8s: StatefulSets, PVCs, PostgreSQL entrypoint schema bootstrap | DBs become StatefulSets |
-| Stage 4 (Flight Control) | K8s: Probes, resource limits, QoS | Code adds `/healthz/startup`, `/healthz/live`, `/healthz/ready` |
-| Stage 5 (Payload Integration) | K8s: Helm, Kustomize, GitHub Actions | Packaging + CI/CD |
+| Stage 4 (Flight Control) | K8s: Probes, `preStop`, QoS, PDBs, scheduling, `LimitRange`/`ResourceQuota` | Code adds `/healthz/startup`, `/healthz/live`, `/healthz/ready` + SIGTERM drain |
+| Stage 5 (Payload Integration) | K8s: Helm, Kustomize, GitHub Actions, optional Argo CD | Packaging + CI/CD + optional GitOps track (Substage 5B) |
 | Stage 6 (Mission Ops) | K8s: Prometheus, Grafana, OTEL | Code adds `/metrics`, OTEL SDK |
 | Stage 7 (Orbital Maneuvering) | K8s: HPA, VPA, Redis cache | Search gets Redis caching |
 | Stage 8 (Command Module) | K8s: RBAC, SecurityContext, Calico, Vault/ESO, Reloader, Kyverno, Trivy/Cosign | Code: non-root, service accounts |
@@ -504,10 +504,11 @@ Manages flight reservations. The most operationally complex service in the platf
 
 Booking Service is the flagship service for:
 
+- Lifecycle probes and graceful disruption/PDB drills (Stage 4)
 - OpenTelemetry distributed tracing (Stage 6)
-- Service mesh traffic management (Stage 10)
-- Load testing (Stage 9)
-- Chaos/fault injection (Stage 10)
+- Load testing with k6 (Stage 7; reused in Stage 9)
+- Service mesh traffic management (Stage 10, optional)
+- Chaos/fault injection (Stage 10, optional)
 
 ### Database
 
@@ -591,7 +592,7 @@ Response `201`
 
 ##### Create Booking — Execution Steps
 
-This is the trace that students will see in Jaeger/Tempo at Stage 6.
+This is the trace that students will see in Tempo at Stage 6.
 
 ```text
 1. Validate JWT locally (verify signature, check expiry)
@@ -887,7 +888,7 @@ Booking Service ──► Identity Service  (is user active?)
     └──────────────► Notification Svc (BOOKING_CONFIRMED)
 ```
 
-This workflow generates the distributed trace that students observe in Jaeger/Tempo at Stage 6. Every arrow is a span. Every service boundary is a new span parent.
+This workflow generates the distributed trace that students observe in Tempo at Stage 6. Every arrow is a span. Every service boundary is a new span parent.
 
 ---
 
@@ -982,18 +983,18 @@ This single trace demonstrates:
 
 | Stage | Code Changes |
 |---|---|
-| Launchpad | Stub code — all services return hardcoded JSON. `/healthz`, `/readyz`, `/metrics` implemented. Structured logging with trace_id/span_id fields. Frontend: React/Tailwind CSS with VITE env var configuration for API URLs. |
+| Launchpad | Real PostgreSQL/Redis-backed Go/Gin and Python/FastAPI implementations. `/healthz`, `/readyz`, `/metrics` implemented. Structured logging with trace_id/span_id fields. Frontend: React/Tailwind CSS with VITE env var configuration for API URLs. |
 | Stage 1 | (no code change — k8s deployment layer only) |
 | Stage 2 | (no code change — networking layer only) |
 | Stage 3 | (no code change — storage layer only) |
-| Stage 4 | `/healthz/startup`, `/healthz/live`, `/healthz/ready` probe handlers. Graceful shutdown on SIGTERM. Frontend: Go stub replaced with React/Tailwind app (multi-stage Docker build). |
-| Stage 5 | (no code change — packaging layer only) |
+| Stage 4 | `/healthz/startup`, `/healthz/live`, `/healthz/ready` probe handlers. Graceful shutdown on SIGTERM. Frontend remains the React/Tailwind app served by NGINX (multi-stage Docker build). |
+| Stage 5 | (no code change — packaging layer only; numeric non-root UIDs `10001:10001` / `101:101` enforced in Dockerfiles) |
 | Stage 6 | Full `/metrics` endpoint (Prometheus format). OTEL SDK integrated (traces + metrics). Trace context propagates through all calls. |
 | Stage 7 | Search Service: Redis caching (key: `search:{origin}:{destination}:{date}`, TTL 5min). `X-Cache: HIT/MISS` header. |
-| Stage 8 | Non-root user in all Dockerfiles. Service account annotations. |
+| Stage 8 | PSA `restricted`, `readOnlyRootFilesystem`, `drop: [ALL]`, RBAC, Calico NetworkPolicies, Vault/ESO/Reloader, Kyverno/Cosign, native sidecar, and `kubectl debug`. |
 | Stage 9 | (no code change — cloud provisioning layer only) |
-| Stage 10 | (no code change — service mesh + progressive delivery) |
-| Stage 11 | Custom operator for flight status management. KEDA scaledobject for booking service. Graceful shutdown fully implemented. |
+| Stage 10 | (no core code change — optional operational missions such as CloudNativePG, Falco, Linkerd, Argo Rollouts, Chaos Mesh) |
+| Stage 11 | (planned optional specializations — CRD/operator authoring, KEDA, k3s, Backstage, Kubecost, Cluster API) |
 
 ---
 
@@ -1017,12 +1018,14 @@ This single trace demonstrates:
 ## Docker Image Base Images
 
 ```text
-Go services (flight, booking, search, notification):  golang:1.22-alpine
-Python service (identity):                           python:3.12-slim
-Frontend (React):                                     node:20-alpine
-NGINX (for frontend serving):                         nginx:alpine
-PostgreSQL:                                           postgres:15-alpine
-Redis:                                                redis:7-alpine
+Go services (Launchpad–Stage 4):   golang:1.22-alpine
+Go services (Stages 5–7):          golang:1.27.3-alpine3.24 (builder) / alpine:3.24.2 (runtime)
+Python service (Launchpad–Stage 4): python:3.12-slim
+Python service (Stages 5–7):       python:3.12.15-slim-trixie
+Frontend React (Launchpad–Stage 4): node:20-alpine / nginx:alpine
+Frontend React (Stages 5–7):       node:22.23.4-alpine3.24 / nginx:1.30.6-alpine3.24
+PostgreSQL:                        postgres:15-alpine
+Redis:                             redis:7-alpine
 ```
 
 ---
@@ -1032,24 +1035,23 @@ Redis:                                                redis:7-alpine
 Starting Stage 1:
 
 ```text
-apollo-airlines          — single namespace (stage1)
-apollo-airlines-infra    — infra DBs (stage2 onward)
-apollo-airlines-apps    — app services (stage2 onward)
-apollo-airlines-ui      — frontend (stage2 onward)
+apollo-airlines       — single namespace (Stage 1)
+apollo-airlines-apps  — app services and stateful data stores (Stage 2 onward)
+apollo-airlines-ui    — frontend (Stage 2 onward)
+apollo-observability  — Prometheus, Grafana, Tempo, Loki, Alloy, OTEL (Stage 6 onward)
 ```
 
 ---
 
 ## Test Scripts
 
-Each stage has a `test/stageN_test.sh` that verifies:
-- All expected k8s resources exist
-- Services are healthy
-- Network policies are in place
-- Seed data is present
-- Ingress routes work
+Each implemented stage provides `scripts/verify.sh` (and a top-level wrapper `test/stageN_test.sh` for Stages 1–7) plus static CI validation via `bash test/ci.sh`, verifying:
+- Expected Kubernetes resources exist and pass contract checks
+- Services and probes are healthy
+- Seed data is present and flagship API workflows succeed
+- Stage 2 substage routes and Gateway API / `HTTPRoute` routes work (NetworkPolicy enforcement begins in Stage 8)
 
-Run with: `bash stages/stageN/test/stageN_test.sh`
+Run with: `bash stages/stageN/scripts/verify.sh` (or `bash test/stageN_test.sh`) and `bash test/ci.sh`
 
 ---
 

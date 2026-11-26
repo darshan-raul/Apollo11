@@ -4,6 +4,7 @@ metadata:
   name: flight-db
   namespace: apollo-airlines
 spec:
+  type: ClusterIP
   selector:
     app: flight-db
   ports:

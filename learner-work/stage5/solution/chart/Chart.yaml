@@ -1,0 +1,6 @@
+apiVersion: v2
+name: apollo11
+description: Scoped Apollo Airlines booking chart for Stage 5 Author-Before-Bootstrap exercise
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

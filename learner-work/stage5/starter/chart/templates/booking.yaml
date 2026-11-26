@@ -1,0 +1,91 @@
+{{- $name := "booking" -}}
+{{- $appCfg := index .Values.apps $name -}}
+{{- $tier := index .Values.tiers $appCfg.tier -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ $name }}
+  ports:
+    - port: {{ $appCfg.port }}
+      targetPort: {{ $appCfg.port }}
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "apollo11.labels" . | nindent 4 }}
+spec:
+  replicas: {{ $appCfg.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        {{- include "apollo11.podLabels" (dict "root" . "name" $name) | nindent 8 }}
+      # TODO (2): Add `annotations:` here and include `apollo11.releaseAnnotations`
+      # with `(dict "channel" $appCfg.releaseChannel) | nindent 8`.
+    spec:
+      {{- if $appCfg.priorityClassName }}
+      priorityClassName: {{ $appCfg.priorityClassName }}
+      {{- end }}
+      serviceAccountName: {{ $name }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriod.apps }}
+      containers:
+        - name: {{ $name }}
+          image: "{{ .Values.image.repository }}/{{ $name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
+          ports:
+            - containerPort: {{ $appCfg.port }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: {{ $appCfg.port | quote }}
+          {{- with .Values.probes.startup }}
+          startupProbe:
+            httpGet:
+              path: {{ .httpGet.path }}
+              port: {{ $appCfg.port }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
+          {{- with .Values.probes.liveness }}
+          livenessProbe:
+            httpGet:
+              path: {{ .httpGet.path }}
+              port: {{ $appCfg.port }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
+          {{- with .Values.probes.readiness }}
+          readinessProbe:
+            httpGet:
+              path: {{ .httpGet.path }}
+              port: {{ $appCfg.port }}
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
+          resources:
+            requests:
+              cpu: {{ $tier.cpu }}
+              memory: {{ $tier.memory }}
+            limits:
+              cpu: {{ $tier.cpu }}
+              memory: {{ $tier.memory }}

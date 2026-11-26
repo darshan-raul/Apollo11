@@ -5,13 +5,13 @@ description: "Status and intended modular shape for advanced Apollo Airlines ope
 
 # Stage 10: Mission Extensions
 
-> **Status: two new optional missions added; live validation status is recorded in the gap tracker. Legacy code/k8s files remain untrusted and must not be applied.**
+> **Status: two optional missions implemented (`missions/cloudnativepg/`, `missions/falco/`); remaining catalog items are planned.**
 
 The approved mission catalog is defined in [`ROADMAP.md`](../../ROADMAP.md).
 
-The existing files contain unverified legacy scaffolding from a different
-application. Stage 10 will be rebuilt from the last trusted Apollo Airlines
-snapshot.
+Legacy scaffolding has been removed. Each implemented mission lives under
+[`missions/`](missions/), and remaining Stage 10 missions will be built from
+the last trusted Apollo Airlines snapshot.
 
 This stage is not one linear prerequisite chain. It will be a set of optional,
 independently runnable missions:

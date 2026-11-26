@@ -1,0 +1,62 @@
+# Starter manifest (Stage 3 baseline).
+# Upgrade this Deployment in learner-work/stage4/work/ and add booking-pdb.yaml:
+#   1. TODO: Add startupProbe (/healthz/startup), livenessProbe (/healthz/live), readinessProbe (/healthz/ready) on port 8082
+#   2. TODO: Set terminationGracePeriodSeconds: 30 and lifecycle.preStop exec sleep 5
+#   3. TODO: Set equal CPU and memory requests & limits on all containers for Guaranteed QoS
+#   4. TODO: Author a PodDisruptionBudget (booking-pdb.yaml) targeting app: booking
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking
+  namespace: apollo-airlines-apps
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: booking
+  template:
+    metadata:
+      labels:
+        app: booking
+        tier: public
+    spec:
+      serviceAccountName: booking
+      containers:
+        - name: booking
+          image: apollo11/booking:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: "postgresql://postgres:$(POSTGRES_PASSWORD)@booking-db:5432/booking?sslmode=disable"
+            - name: FLIGHT_SERVICE_URL
+              value: "http://flight:8081"
+            - name: IDENTITY_SERVICE_URL
+              value: "http://identity:8080"
+            - name: NOTIFICATION_SERVICE_URL
+              value: "http://notification:8084"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: apollo-airlines-secrets
+                  key: JWT_SECRET
+            - name: PORT
+              value: "8082"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8082
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8082
+            initialDelaySeconds: 5
+            periodSeconds: 5

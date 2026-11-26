@@ -4,6 +4,7 @@ metadata:
   name: notification
   namespace: apollo-airlines
 spec:
+  type: ClusterIP
   selector:
     app: notification
   ports:
